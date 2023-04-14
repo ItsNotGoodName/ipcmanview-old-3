@@ -5,6 +5,17 @@ use rpc::license;
 use rpc::magicbox;
 use rpc::rpclogin;
 
+pub fn require_env(name: &str) -> Result<String, String> {
+    std::env::var(name).map_err(|_| format!("{} not set", name))
+}
+
+pub fn new_agent() -> ureq::Agent {
+    ureq::AgentBuilder::new()
+        .timeout_read(std::time::Duration::from_secs(5))
+        .timeout_write(std::time::Duration::from_secs(5))
+        .build()
+}
+
 pub fn man_print(man: &mut rpclogin::Manager) {
     println!("Cookie: {}", man.client.cookie());
     println!(
@@ -60,3 +71,6 @@ pub fn man_print(man: &mut rpclogin::Manager) {
         man.rpc(|rpc| license::get_license_info(rpc)),
     );
 }
+
+pub mod core;
+pub mod db;

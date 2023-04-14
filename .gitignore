@@ -14,4 +14,9 @@ Cargo.lock
 
 /target
 
+# dotenvy and sqlx
 .env
+
+# Sqlite
+*.db
+*.db-*

@@ -22,8 +22,20 @@ pub struct ResponseError {
 }
 
 #[derive(Debug)]
+pub enum LoginError {
+    NotReady,
+    UserOrPasswordNotValid,
+    UserNotValid,
+    PasswordNotValid,
+    InBlackList,
+    HasBeedUsed,
+    HasBeenLocked,
+}
+
+#[derive(Debug)]
 pub enum Error {
     Response(ResponseError),
+    Login(LoginError),
     Request(String),
     Parse(String),
     InvalidSession(String),
@@ -31,6 +43,14 @@ pub enum Error {
     MethodNotFound(String),
     InterfaceNotFound(String),
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self)
+    }
+}
+
+impl std::error::Error for Error {}
 
 impl Error {
     pub fn no_params() -> Error {
@@ -44,7 +64,7 @@ impl Error {
     pub fn from_response_error(response_error: ResponseError) -> Error {
         match response_error {
             ResponseError {
-                code: 287637505,
+                code: 287637505 | 287637504,
                 message,
             } => Error::InvalidSession(message),
             ResponseError {
@@ -122,6 +142,10 @@ impl Config {
     pub fn next_id(&mut self) -> i32 {
         self.last_id += 1;
         self.last_id
+    }
+
+    pub fn session(&self) -> bool {
+        !self.session.is_empty()
     }
 }
 

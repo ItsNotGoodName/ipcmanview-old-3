@@ -1,33 +1,21 @@
+use core::time;
+use std::thread;
 use std::time::Instant;
 
-use crate::rpc::{self, utils};
-
-#[derive(Debug)]
-pub enum Error {
-    UserOrPasswordNotValid,
-    UserNotValid,
-    PasswordNotValid,
-    InBlackList,
-    HasBeedUsed,
-    HasBeenLocked,
-    BadFirstLogin,
-    Unknown(rpc::Error),
-}
+use crate::rpc::{self, utils, Error, LoginError};
 
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
 
 fn login(client: &mut rpc::Client, username: &str, password: &str) -> Result<bool, Error> {
-    let (first_login, res) = client
-        .global_first_login(username)
-        .map_err(|e| Error::Unknown(e))?;
+    let (first_login, res) = client.global_first_login(username)?;
 
     match res.error {
         Some(err) => match err.code {
             268632079 | 401 => {}
-            _ => return Err(Error::Unknown(rpc::Error::Response(err))),
+            _ => return Err(rpc::Error::Response(err)),
         },
-        None => return Err(Error::BadFirstLogin),
+        None => return Err(Error::Parse("Bad Error Code".to_string())),
     }
 
     let login_type = match first_login.encryption.as_str() {
@@ -44,83 +32,73 @@ fn login(client: &mut rpc::Client, username: &str, password: &str) -> Result<boo
 
     match res {
         Ok(res) => Ok(res),
-        Err(err) => match err {
-            rpc::Error::Response(err) if err.code == 268632085 => {
-                Err(Error::UserOrPasswordNotValid)
+        Err(err) => Err(Error::Login(match err {
+            Error::Response(err) if err.code == 268632085 => LoginError::UserOrPasswordNotValid,
+            Error::Response(err) if err.code == 268632081 => LoginError::HasBeenLocked,
+            Error::Response(err) if err.message == "UserNotValidt" => LoginError::UserNotValid,
+            Error::Response(err) if err.message == "PasswordNotValid" => {
+                LoginError::PasswordNotValid
             }
-            rpc::Error::Response(err) if err.code == 268632081 => Err(Error::HasBeenLocked),
-            rpc::Error::Response(err) if err.message == "UserNotValidt" => Err(Error::UserNotValid),
-            rpc::Error::Response(err) if err.message == "PasswordNotValid" => {
-                Err(Error::PasswordNotValid)
-            }
-            rpc::Error::Response(err) if err.message == "InBlackList" => Err(Error::InBlackList),
-            rpc::Error::Response(err) if err.message == "HasBeedUsed" => Err(Error::HasBeedUsed),
-            rpc::Error::Response(err) if err.message == "HasBeenLocked" => {
-                Err(Error::HasBeenLocked)
-            }
-            _ => Err(Error::Unknown(err)),
-        },
+            Error::Response(err) if err.message == "InBlackList" => LoginError::InBlackList,
+            Error::Response(err) if err.message == "HasBeedUsed" => LoginError::HasBeedUsed,
+            Error::Response(err) if err.message == "HasBeenLocked" => LoginError::HasBeenLocked,
+            _ => return Err(err),
+        })),
     }
 }
 
 pub struct Manager {
     pub client: rpc::Client,
-    username: String,
-    password: String,
-    invalid: bool,
+    pub username: String,
+    pub password: String,
+    lock: bool,
 }
 
 impl Manager {
-    pub fn new(client: rpc::Client, username: String, password: String) -> Manager {
-        Manager {
-            client,
-            username,
-            password,
-            invalid: false,
-        }
-    }
-
-    pub fn from(client: rpc::Client) -> Manager {
+    pub fn new(client: rpc::Client) -> Manager {
         Manager {
             client,
             username: "".to_string(),
             password: "".to_string(),
-            invalid: true,
+            lock: true,
         }
     }
 
     pub fn username(mut self, username: String) -> Manager {
         self.username = username;
-        self.invalid = false;
         self
     }
 
     pub fn password(mut self, password: String) -> Manager {
         self.password = password;
-        self.invalid = false;
+        self
+    }
+
+    pub fn unlock(mut self) -> Manager {
+        self.lock = false;
         self
     }
 
     pub fn logout(&mut self) -> Result<bool, Error> {
-        self.client.global_logout().map_err(|e| Error::Unknown(e))
+        self.client.global_logout()
     }
 
-    pub fn login_or_relogin(&mut self) -> Result<bool, Error> {
-        if self.invalid {
-            return Err(Error::UserOrPasswordNotValid);
+    pub fn login(&mut self) -> Result<bool, Error> {
+        if self.lock {
+            return Err(Error::Login(LoginError::NotReady));
         }
 
-        if !self.client.config.session.is_empty() {
+        if self.client.config.session() {
             _ = self.logout();
         }
 
         match login(&mut self.client, &self.username, &self.password) {
             Ok(res) => Ok(res),
-            Err(err @ Error::Unknown(_) | err @ Error::BadFirstLogin) => Err(err),
-            Err(err) => {
-                self.invalid = true;
+            Err(err @ Error::Login(_)) => {
+                self.lock = true;
                 Err(err)
             }
+            Err(err) => Err(err),
         }
     }
 
@@ -133,19 +111,22 @@ impl Manager {
 
                 match self.client.global_keep_alive() {
                     Ok(_) => Ok(true),
-                    Err(rpc::Error::InvalidSession(_)) => self.login_or_relogin(),
-                    Err(err) => Err(Error::Unknown(err)),
+                    Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
+                    Err(_) => {
+                        thread::sleep(time::Duration::from_millis(10)); // TODO find a better way to drop current idle connection
+                        self.login()
+                    } // Let's just assume that our session is invalid
                 }
             }
-            None => self.login_or_relogin(),
+            None => self.login(),
         }
     }
 
     pub fn rpc<T>(
         &mut self,
-        op: fn(r: rpc::RequestBuilder) -> Result<T, rpc::Error>,
+        op: fn(r: rpc::RequestBuilder) -> Result<T, Error>,
     ) -> Result<T, Error> {
         self.keep_alive_or_login()?;
-        op(self.client.rpc()).map_err(|e| Error::Unknown(e))
+        op(self.client.rpc())
     }
 }

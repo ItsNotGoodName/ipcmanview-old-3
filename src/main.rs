@@ -1,30 +1,67 @@
-use dotenv::dotenv;
-use ipcmanview::man_print;
+use dotenvy::dotenv;
 use ipcmanview::rpc::{self, mediafilefind, rpclogin};
+use ipcmanview::{db, new_agent};
+use ipcmanview::{man_print, require_env};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
 
     match std::env::args().skip(1).next() {
         Some(command) => match command.as_str() {
             "cli" => cli(),
             "debug" => debug(),
+            "db" => db().await,
+            "http" => http().await,
             _ => Err("Invalid Command".into()),
         },
-        None => Ok(println!("No Command")),
+        None => Err("No Command".into()),
     }
 }
 
-fn get_agent() -> ureq::Agent {
-    ureq::AgentBuilder::new()
-        .timeout_read(Duration::from_secs(5))
-        .timeout_write(Duration::from_secs(5))
-        .build()
+async fn http() -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::ConnectOptions;
+use std::str::FromStr;
+
+async fn db() -> Result<(), Box<dyn std::error::Error>> {
+    // Connect
+    let mut pool = SqliteConnectOptions::from_str(
+        &std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()),
+    )?
+    .create_if_missing(true)
+    .connect()
+    .await?;
+
+    // Migrate
+    sqlx::migrate!().run(&mut pool).await?;
+
+    let agent = new_agent();
+
+    let man = rpclogin::Manager::new(rpc::Client::new(require_env("IPCMANVIEW_IP")?, agent))
+        .username(require_env("IPCMANVIEW_USERNAME")?)
+        .password(require_env("IPCMANVIEW_PASSWORD")?)
+        .unlock();
+
+    let mut cam = db::camera_add(&mut pool, man).await?;
+
+    // let mut cam = db::camera_manager_get(&mut pool, 1, agent).await?;
+
+    println!("{}", cam.id);
+
+    db::camera_detail_update(&mut pool, &mut cam).await?;
+    db::camera_software_version_update(&mut pool, &mut cam).await?;
+
+    cam.man.logout()?;
+
+    Ok(())
 }
 
 use std::io;
 use std::io::Write;
-use std::time::Duration;
 
 fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
     print!("{}", message);
@@ -35,32 +72,17 @@ fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn cli_add(
-    agent: ureq::Agent,
-    ip: String,
-    username: String,
-    password: String,
-) -> Option<rpclogin::Manager> {
-    let client = rpc::Client::new(ip.clone(), agent.clone());
-    let mut man = rpclogin::Manager::new(client, username, password);
-    println!("...Logging in to {ip}");
-    match man.login_or_relogin() {
-        Ok(_) => Some(man),
-        Err(err) => {
-            println!("Error: {:?}", err);
-            None
-        }
-    }
-}
-
 fn cli() -> Result<(), Box<dyn std::error::Error>> {
-    let agent = get_agent();
+    let agent = new_agent();
     let mut man: Option<rpclogin::Manager> = if let Some(ip) = std::env::var("IPCMANVIEW_IP").ok() {
-        let username =
-            std::env::var("IPCMANVIEW_USERNAME").map_err(|_| "IPCMANVIEW_USERNAME not set")?;
-        let password =
-            std::env::var("IPCMANVIEW_PASSWORD").map_err(|_| "IPCMANVIEW_PASSWORD not set")?;
-        cli_add(agent.clone(), ip, username, password)
+        let username = require_env("IPCMANVIEW_USERNAME")?;
+        let password = require_env("IPCMANVIEW_PASSWORD")?;
+        Some(
+            rpclogin::Manager::new(rpc::Client::new(ip, agent.clone()))
+                .username(username)
+                .password(password)
+                .unlock(),
+        )
     } else {
         println!("Manager: None");
         None
@@ -84,7 +106,12 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                 cli_get_input(&mut input, "Password: ")?;
                 let password = input.clone();
 
-                man = cli_add(agent.clone(), ip, username, password);
+                man = Some(
+                    rpclogin::Manager::new(rpc::Client::new(ip, agent.clone()))
+                        .username(username)
+                        .password(password)
+                        .unlock(),
+                )
             }
             "print" | "p" => {
                 let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
@@ -147,7 +174,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 };
 
-                match man.login_or_relogin() {
+                match man.login() {
                     Ok(res) => println!("Login: {res}"),
                     Err(err) => println!("Error: {:?}", err),
                 }
@@ -193,13 +220,10 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn debug() -> Result<(), Box<dyn std::error::Error>> {
-    let agent: ureq::Agent = ureq::AgentBuilder::new()
-        .timeout_read(Duration::from_secs(5))
-        .timeout_write(Duration::from_secs(5))
-        .build();
+    let agent = new_agent();
 
-    let password = std::env::var("IPCMANVIEW_PASSWORD").map_err(|_| "IPCVIEW_PASSWORD not set")?;
-    let ips = std::env::var("IPCMANVIEW_IPS").map_err(|_| "IPCMANVIEW_IPS not set")?;
+    let password = require_env("IPCMANVIEW_PASSWORD")?;
+    let ips = require_env("IPCMANVIEW_IPS")?;
     let ips = ips.trim();
     if ips == "" {
         return Err("IP_IPS is empty".into());
@@ -221,9 +245,12 @@ fn debug() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn debug_run(agent: ureq::Agent, ip: String, username: String, password: String) {
-    let mut man = rpclogin::Manager::new(rpc::Client::new(ip, agent), username, password);
+    let mut man = rpclogin::Manager::new(rpc::Client::new(ip, agent))
+        .username(username)
+        .password(password)
+        .unlock();
 
     man_print(&mut man);
 
-    man.logout().unwrap();
+    println!("Logout: {:?}", man.logout());
 }
