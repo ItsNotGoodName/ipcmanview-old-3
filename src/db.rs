@@ -170,7 +170,7 @@ pub async fn camera_scan(
     end_time: DateTime<chrono::Utc>,
 ) -> Result<CameraScan> {
     let mut man = cam.man.lock().unwrap();
-    let mut iter = mediafilefind::find_next_file_info_iterator(
+    let mut stream = mediafilefind::find_next_file_info_stream(
         &mut man,
         mediafilefind::Condition::new(start_time, end_time).picture(),
     )
@@ -180,13 +180,13 @@ pub async fn camera_scan(
     let timestamp = chrono::Utc::now();
 
     let mut rows_upserted: u64 = 0;
-    while let Some(files) = iter.next().await {
+    while let Some(files) = stream.next().await {
         rows_upserted += camera_scan_files(&mut tx, cam.id, files, &timestamp)
             .await?
             .rows_affected();
     }
 
-    if let Some(err) = iter.error {
+    if let Some(err) = stream.error {
         return Err(err).context("Error after scanning files");
     }
 

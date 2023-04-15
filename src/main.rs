@@ -147,7 +147,7 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 println!("Pictures - Last 24 hours");
-                match mediafilefind::find_next_file_info_iterator(
+                match mediafilefind::find_next_file_info_stream(
                     man,
                     mediafilefind::Condition::new(
                         chrono::Utc::now() - chrono::Duration::hours(24),

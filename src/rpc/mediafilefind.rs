@@ -174,7 +174,7 @@ impl Condition {
     }
 }
 
-pub struct FindNextFileInfoIterator<'a> {
+pub struct FindNextFileInfoStream<'a> {
     man: &'a mut rpclogin::Manager,
     object: i64,
     pub error: Option<Error>,
@@ -182,17 +182,17 @@ pub struct FindNextFileInfoIterator<'a> {
     closed: bool,
 }
 
-pub async fn find_next_file_info_iterator(
+pub async fn find_next_file_info_stream(
     man: &mut rpclogin::Manager,
     condition: Condition,
-) -> Result<FindNextFileInfoIterator, Error> {
+) -> Result<FindNextFileInfoStream, Error> {
     if let Err(e) = man.keep_alive_or_login().await {
         return Err(e);
     };
 
     let object = create(man.client.rpc()).await?;
     find_file(man.client.rpc(), object, condition).await?;
-    Ok(FindNextFileInfoIterator {
+    Ok(FindNextFileInfoStream {
         man,
         object,
         error: None,
@@ -201,7 +201,7 @@ pub async fn find_next_file_info_iterator(
     })
 }
 
-impl FindNextFileInfoIterator<'_> {
+impl FindNextFileInfoStream<'_> {
     pub async fn next(&mut self) -> Option<Vec<FindNextFileInfo>> {
         if self.closed {
             return None;

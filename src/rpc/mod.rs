@@ -23,7 +23,7 @@ pub struct ResponseError {
 
 #[derive(Debug)]
 pub enum LoginError {
-    NotReady,
+    Lock,
     UserOrPasswordNotValid,
     UserNotValid,
     PasswordNotValid,
@@ -32,6 +32,7 @@ pub enum LoginError {
     HasBeenLocked,
 }
 
+// TODO implement anyerror
 #[derive(Debug)]
 pub enum Error {
     Response(ResponseError),

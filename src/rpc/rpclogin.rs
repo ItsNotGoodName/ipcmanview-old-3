@@ -79,7 +79,7 @@ impl Manager {
 
     pub async fn login(&mut self) -> Result<bool, Error> {
         if self.lock {
-            return Err(Error::Login(LoginError::NotReady));
+            return Err(Error::Login(LoginError::Lock));
         }
 
         if self.client.config.session() {
