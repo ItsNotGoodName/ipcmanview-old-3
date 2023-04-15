@@ -23,7 +23,7 @@ struct Camera {
 pub async fn camera_manager_get(
     pool: &mut SqliteConnection,
     id: i64,
-    agent: ureq::Agent,
+    client: reqwest::Client,
 ) -> Result<core::Camera> {
     let camera = sqlx::query_as!(
         Camera,
@@ -36,7 +36,7 @@ pub async fn camera_manager_get(
     .await
     .with_context(|| format!("Could not find camera with id {}", id))?;
 
-    let man = rpclogin::Manager::new(rpc::Client::new(camera.ip, agent))
+    let man = rpclogin::Manager::new(rpc::Client::new(camera.ip, client))
         .username(camera.username)
         .password(camera.password)
         .unlock();
@@ -171,15 +171,16 @@ pub async fn camera_scan(
 ) -> Result<CameraScan> {
     let mut man = cam.man.lock().unwrap();
     let mut iter = mediafilefind::find_next_file_info_iterator(
-        &mut man.client,
+        &mut man,
         mediafilefind::Condition::new(start_time, end_time).picture(),
-    )?;
+    )
+    .await?;
     let mut tx = pool.begin().await?;
 
     let timestamp = chrono::Utc::now();
 
     let mut rows_upserted: u64 = 0;
-    while let Some(files) = iter.next() {
+    while let Some(files) = iter.next().await {
         rows_upserted += camera_scan_files(&mut tx, cam.id, files, &timestamp)
             .await?
             .rows_affected();

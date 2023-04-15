@@ -1,5 +1,3 @@
-use core::time;
-use std::thread;
 use std::time::Instant;
 
 use crate::rpc::{self, utils, Error, LoginError};
@@ -7,8 +5,8 @@ use crate::rpc::{self, utils, Error, LoginError};
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
 
-fn login(client: &mut rpc::Client, username: &str, password: &str) -> Result<bool, Error> {
-    let (first_login, res) = client.global_first_login(username)?;
+async fn login(client: &mut rpc::Client, username: &str, password: &str) -> Result<bool, Error> {
+    let (first_login, res) = client.global_first_login(username).await?;
 
     match res.error {
         Some(err) => match err.code {
@@ -23,14 +21,10 @@ fn login(client: &mut rpc::Client, username: &str, password: &str) -> Result<boo
         _ => "Direct",
     };
 
-    let res = client.global_second_login(
-        username,
-        &utils::get_auth(username, password, &first_login),
-        login_type,
-        &first_login.encryption,
-    );
+    let password = utils::get_auth(username, password, &first_login);
+    let res = client.global_second_login(username, &password, login_type, &first_login.encryption);
 
-    match res {
+    match res.await {
         Ok(res) => Ok(res),
         Err(err) => Err(Error::Login(match err {
             Error::Response(err) if err.code == 268632085 => LoginError::UserOrPasswordNotValid,
@@ -79,11 +73,11 @@ impl Manager {
         self
     }
 
-    pub fn logout(&mut self) -> Result<bool, Error> {
-        self.client.global_logout()
+    pub async fn logout(&mut self) -> Result<bool, Error> {
+        self.client.global_logout().await
     }
 
-    pub fn login(&mut self) -> Result<bool, Error> {
+    pub async fn login(&mut self) -> Result<bool, Error> {
         if self.lock {
             return Err(Error::Login(LoginError::NotReady));
         }
@@ -92,7 +86,7 @@ impl Manager {
             _ = self.logout();
         }
 
-        match login(&mut self.client, &self.username, &self.password) {
+        match login(&mut self.client, &self.username, &self.password).await {
             Ok(res) => Ok(res),
             Err(err @ Error::Login(_)) => {
                 self.lock = true;
@@ -102,31 +96,25 @@ impl Manager {
         }
     }
 
-    pub fn keep_alive_or_login(&mut self) -> Result<bool, Error> {
+    pub async fn keep_alive_or_login(&mut self) -> Result<bool, Error> {
         match self.client.config.last_login {
             Some(last_login) => {
                 if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
                     return Ok(true);
                 }
 
-                match self.client.global_keep_alive() {
+                match self.client.global_keep_alive().await {
                     Ok(_) => Ok(true),
                     Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
-                    Err(_) => {
-                        thread::sleep(time::Duration::from_millis(10)); // TODO find a better way to drop current idle connection
-                        self.login()
-                    } // Let's just assume that our session is invalid
+                    Err(_) => self.login().await, // Let's just assume that our session is invalid
                 }
             }
-            None => self.login(),
+            None => self.login().await,
         }
     }
 
-    pub fn rpc<T>(
-        &mut self,
-        op: fn(r: rpc::RequestBuilder) -> Result<T, Error>,
-    ) -> Result<T, Error> {
-        self.keep_alive_or_login()?;
-        op(self.client.rpc())
-    }
+    // pub async fn rpc(&mut self) -> Result<rpc::RequestBuilder, rpc::Error> {
+    //     self.keep_alive_or_login().await?;
+    //     Ok(self.client.rpc())
+    // }
 }

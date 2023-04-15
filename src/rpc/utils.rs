@@ -2,6 +2,10 @@ use base64::Engine as _;
 use chrono::{DateTime, NaiveDateTime};
 use serde::{de, Deserialize, Deserializer, Serializer};
 
+pub fn new_client() -> reqwest::Client {
+    reqwest::Client::builder().no_deflate().build().unwrap()
+}
+
 pub fn de_string_to_date_time<'de, D>(deserializer: D) -> Result<DateTime<chrono::Utc>, D::Error>
 where
     D: Deserializer<'de>,

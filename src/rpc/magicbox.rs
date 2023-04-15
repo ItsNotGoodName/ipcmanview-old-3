@@ -75,75 +75,89 @@ struct GetMarketArea {
     abroad_info: String,
 }
 
-pub fn reboot(rpc: RequestBuilder) -> Result<bool, Error> {
-    rpc.method("magicBox.reboot").send::<Value>()?.result()
+pub async fn reboot(rpc: RequestBuilder) -> Result<bool, Error> {
+    rpc.method("magicBox.reboot")
+        .send::<Value>()
+        .await?
+        .result()
 }
 
-pub fn need_reboot(rpc: RequestBuilder) -> Result<bool, Error> {
+pub async fn need_reboot(rpc: RequestBuilder) -> Result<bool, Error> {
     rpc.method("magicBox.needReboot")
-        .send::<NeedReboot>()?
+        .send::<NeedReboot>()
+        .await?
         .params_as(|p, _| p.need_reboot != 0)
 }
 
-pub fn get_serial_no(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_serial_no(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getSerialNo")
-        .send::<GetSerialNo>()?
+        .send::<GetSerialNo>()
+        .await?
         .params_as(|p, _| p.sn)
 }
 
-pub fn get_device_type(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_device_type(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getDeviceType")
-        .send::<GetType>()?
+        .send::<GetType>()
+        .await?
         .params_as(|p, _| p.r#type)
 }
 
-pub fn get_memory_info(rpc: RequestBuilder) -> Result<GetMemoryInfo, Error> {
+pub async fn get_memory_info(rpc: RequestBuilder) -> Result<GetMemoryInfo, Error> {
     rpc.method("magicBox.getMemoryInfo")
-        .send::<GetMemoryInfo>()?
+        .send::<GetMemoryInfo>()
+        .await?
         .params_as(|p, _| p)
 }
 
-pub fn get_cpu_usage(rpc: RequestBuilder) -> Result<i32, Error> {
+pub async fn get_cpu_usage(rpc: RequestBuilder) -> Result<i32, Error> {
     rpc.method("magicBox.getCPUUsage")
         .params(json!({
             "index": 0,
         }))
-        .send::<GetCPUUsage>()?
+        .send::<GetCPUUsage>()
+        .await?
         .params_as(|p, _| p.usage)
 }
 
-pub fn get_device_class(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_device_class(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getDeviceClass")
-        .send::<GetType>()?
+        .send::<GetType>()
+        .await?
         .params_as(|p, _| p.r#type)
 }
 
-pub fn get_process_info(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_process_info(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getProcessInfo")
-        .send::<GetProcessInfo>()?
+        .send::<GetProcessInfo>()
+        .await?
         .params_as(|p, _| p.info)
 }
 
-pub fn get_hardware_version(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_hardware_version(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getHardwareVersion")
-        .send::<GetHardwareVersion>()?
+        .send::<GetHardwareVersion>()
+        .await?
         .params_as(|p, _| p.version)
 }
 
-pub fn get_vendor(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_vendor(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getVendor")
-        .send::<GetVendor>()?
+        .send::<GetVendor>()
+        .await?
         .params_as(|p, _| p.vendor)
 }
 
-pub fn get_software_version(rpc: RequestBuilder) -> Result<GetSoftwareVersion, Error> {
+pub async fn get_software_version(rpc: RequestBuilder) -> Result<GetSoftwareVersion, Error> {
     rpc.method("magicBox.getSoftwareVersion")
-        .send::<GetSoftwareVersionInternal>()?
+        .send::<GetSoftwareVersionInternal>()
+        .await?
         .params_as(|p, _| p.version)
 }
 
-pub fn get_market_area(rpc: RequestBuilder) -> Result<String, Error> {
+pub async fn get_market_area(rpc: RequestBuilder) -> Result<String, Error> {
     rpc.method("magicBox.getMarketArea")
-        .send::<GetMarketArea>()?
+        .send::<GetMarketArea>()
+        .await?
         .params_as(|p, _| p.abroad_info)
 }

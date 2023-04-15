@@ -20,7 +20,7 @@ pub struct CameraDetail {
 impl Camera {
     pub async fn detail(&self) -> Result<CameraDetail, rpc::Error> {
         let mut man = self.man.lock().unwrap();
-        man.keep_alive_or_login()?;
+        man.keep_alive_or_login().await?;
         let sn_rpc = man.client.rpc();
         let device_class_rpc = man.client.rpc();
         let device_type_rpc = man.client.rpc();
@@ -30,28 +30,26 @@ impl Camera {
         let vendor_rpc = man.client.rpc();
         drop(man);
 
-        Ok(tokio::task::spawn_blocking(|| CameraDetail {
-            sn: magicbox::get_serial_no(sn_rpc).ok(),
-            device_class: magicbox::get_device_class(device_class_rpc).ok(),
-            device_type: magicbox::get_device_type(device_type_rpc).ok(),
-            hardware_version: magicbox::get_hardware_version(hardware_version_rpc).ok(),
-            market_area: magicbox::get_market_area(market_area_rpc).ok(),
-            process_info: magicbox::get_process_info(process_info_rpc).ok(),
-            vendor: magicbox::get_vendor(vendor_rpc).ok(),
+        Ok(CameraDetail {
+            sn: magicbox::get_serial_no(sn_rpc).await.ok(),
+            device_class: magicbox::get_device_class(device_class_rpc).await.ok(),
+            device_type: magicbox::get_device_type(device_type_rpc).await.ok(),
+            hardware_version: magicbox::get_hardware_version(hardware_version_rpc)
+                .await
+                .ok(),
+            market_area: magicbox::get_market_area(market_area_rpc).await.ok(),
+            process_info: magicbox::get_process_info(process_info_rpc).await.ok(),
+            vendor: magicbox::get_vendor(vendor_rpc).await.ok(),
         })
-        .await
-        .unwrap())
     }
 
     pub async fn version(&self) -> Result<magicbox::GetSoftwareVersion, rpc::Error> {
         let mut man = self.man.lock().unwrap();
-        man.keep_alive_or_login()?;
+        man.keep_alive_or_login().await?;
         let rpc = man.client.rpc();
         drop(man);
 
-        tokio::task::spawn_blocking(|| magicbox::get_software_version(rpc))
-            .await
-            .unwrap()
+        magicbox::get_software_version(rpc).await
     }
 }
 

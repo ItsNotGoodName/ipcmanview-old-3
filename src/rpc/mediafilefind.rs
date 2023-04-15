@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::{
+    rpclogin,
     utils::{de_string_to_date_time, se_date_time_to_string},
-    Client, Error, RequestBuilder,
+    Error, RequestBuilder,
 };
 
 #[derive(Serialize, Debug)]
@@ -84,50 +85,64 @@ struct GetCount {
     count: i32,
 }
 
-pub fn create(rpc: RequestBuilder) -> Result<i64, Error> {
+pub async fn create(rpc: RequestBuilder) -> Result<i64, Error> {
     rpc.method("mediaFileFind.factory.create")
-        .send::<Value>()?
+        .send::<Value>()
+        .await?
         .result_number()
 }
 
-pub fn find_file(rpc: RequestBuilder, object: i64, condition: Condition) -> Result<bool, Error> {
+pub async fn find_file(
+    rpc: RequestBuilder,
+    object: i64,
+    condition: Condition,
+) -> Result<bool, Error> {
     rpc.method("mediaFileFind.findFile")
         .params(json!({
             "condition": condition,
         }))
         .object(object)
-        .send::<Value>()?
+        .send::<Value>()
+        .await?
         .result()
 }
 
-pub fn find_next_file(rpc: RequestBuilder, object: i64, count: i32) -> Result<FindNextFile, Error> {
+pub async fn find_next_file(
+    rpc: RequestBuilder,
+    object: i64,
+    count: i32,
+) -> Result<FindNextFile, Error> {
     rpc.method("mediaFileFind.findNextFile")
         .params(json!({
             "count": count,
         }))
         .object(object)
-        .send::<FindNextFile>()?
+        .send::<FindNextFile>()
+        .await?
         .params()
 }
 
-pub fn get_count(rpc: RequestBuilder, object: i64) -> Result<i32, Error> {
+pub async fn get_count(rpc: RequestBuilder, object: i64) -> Result<i32, Error> {
     rpc.method("mediaFileFind.getCount")
         .object(object)
-        .send::<GetCount>()?
+        .send::<GetCount>()
+        .await?
         .params_as(|p, _| p.count)
 }
 
-pub fn close(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
+pub async fn close(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
     rpc.method("mediaFileFind.close")
         .object(object)
-        .send::<Value>()?
+        .send::<Value>()
+        .await?
         .result()
 }
 
-pub fn destroy(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
+pub async fn destroy(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
     rpc.method("mediaFileFind.destroy")
         .object(object)
-        .send::<Value>()?
+        .send::<Value>()
+        .await?
         .result()
 }
 
@@ -160,21 +175,25 @@ impl Condition {
 }
 
 pub struct FindNextFileInfoIterator<'a> {
-    client: &'a mut Client,
+    man: &'a mut rpclogin::Manager,
     object: i64,
     pub error: Option<Error>,
     count: i32,
     closed: bool,
 }
 
-pub fn find_next_file_info_iterator(
-    client: &mut Client,
+pub async fn find_next_file_info_iterator(
+    man: &mut rpclogin::Manager,
     condition: Condition,
 ) -> Result<FindNextFileInfoIterator, Error> {
-    let object = create(client.rpc())?;
-    find_file(client.rpc(), object, condition)?;
+    if let Err(e) = man.keep_alive_or_login().await {
+        return Err(e);
+    };
+
+    let object = create(man.client.rpc()).await?;
+    find_file(man.client.rpc(), object, condition).await?;
     Ok(FindNextFileInfoIterator {
-        client,
+        man,
         object,
         error: None,
         count: 64,
@@ -182,26 +201,29 @@ pub fn find_next_file_info_iterator(
     })
 }
 
-impl Iterator for FindNextFileInfoIterator<'_> {
-    type Item = Vec<FindNextFileInfo>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+impl FindNextFileInfoIterator<'_> {
+    pub async fn next(&mut self) -> Option<Vec<FindNextFileInfo>> {
         if self.closed {
             return None;
         }
 
-        match find_next_file(self.client.rpc(), self.object, self.count) {
+        if let Err(e) = self.man.keep_alive_or_login().await {
+            self.error = Some(e);
+            return None;
+        };
+
+        match find_next_file(self.man.client.rpc(), self.object, self.count).await {
             Ok(FindNextFile {
                 found,
                 infos: Some(infos),
             }) => {
                 if found < self.count {
-                    self.close();
+                    self.close().await;
                 }
                 Some(infos)
             }
             res => {
-                self.close();
+                self.close().await;
                 if let Err(err) = res {
                     self.error = Some(err);
                 }
@@ -209,12 +231,20 @@ impl Iterator for FindNextFileInfoIterator<'_> {
             }
         }
     }
-}
 
-impl FindNextFileInfoIterator<'_> {
-    fn close(&mut self) {
-        _ = close(self.client.rpc(), self.object);
-        _ = destroy(self.client.rpc(), self.object);
+    pub async fn close(&mut self) {
+        if self.closed {
+            return;
+        }
+
+        if let Err(e) = self.man.keep_alive_or_login().await {
+            self.error = Some(e);
+            return;
+        };
+
+        _ = close(self.man.client.rpc(), self.object).await;
+        _ = destroy(self.man.client.rpc(), self.object).await;
+
         self.closed = true;
     }
 }

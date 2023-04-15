@@ -16,14 +16,15 @@ struct KeepAlive {
     timeout: i32,
 }
 
-pub fn get_current_time(rpc: RequestBuilder) -> Result<GetCurrentTime, Error> {
+pub async fn get_current_time(rpc: RequestBuilder) -> Result<GetCurrentTime, Error> {
     rpc.method("global.getCurrentTime")
-        .send::<GetCurrentTime>()?
+        .send::<GetCurrentTime>()
+        .await?
         .params()
 }
 
 impl Client {
-    pub(crate) fn global_first_login(
+    pub(crate) async fn global_first_login(
         &mut self,
         username: &str,
     ) -> Result<(AuthParam, Response<AuthParam>), Error> {
@@ -36,14 +37,15 @@ impl Client {
                 "loginType": "Direct",
                 "clientType": "Web3.0",
             }))
-            .send_raw::<AuthParam>()?
+            .send_raw::<AuthParam>()
+            .await?
             .params_as(|params, res| {
                 self.config.session = res.session.clone();
                 (params, res)
             })
     }
 
-    pub(crate) fn global_second_login(
+    pub(crate) async fn global_second_login(
         &mut self,
         username: &str,
         password: &str,
@@ -60,12 +62,13 @@ impl Client {
                 "loginType": login_type,
                 "authorityType": authority_type,
             }))
-            .send::<Value>()?;
+            .send::<Value>()
+            .await?;
         self.config.last_login = Some(Instant::now());
         res.result()
     }
 
-    pub(crate) fn global_keep_alive(&mut self) -> Result<i32, Error> {
+    pub(crate) async fn global_keep_alive(&mut self) -> Result<i32, Error> {
         match self
             .rpc()
             .method("global.keepAlive")
@@ -74,6 +77,7 @@ impl Client {
                 "active": true
             }))
             .send::<KeepAlive>()
+            .await
         {
             Ok(res) => {
                 self.config.last_login = Some(Instant::now());
@@ -87,10 +91,10 @@ impl Client {
         }
     }
 
-    pub(crate) fn global_logout(&mut self) -> Result<bool, Error> {
+    pub(crate) async fn global_logout(&mut self) -> Result<bool, Error> {
         let res = self.rpc().method("global.logout").send::<Value>();
         self.config = Config::default();
-        match res {
+        match res.await {
             Ok(res) => Ok(res.result()?),
             Err(Error::InvalidSession(_)) => Ok(false),
             Err(err) => Err(err),

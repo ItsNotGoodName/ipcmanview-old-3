@@ -1,6 +1,7 @@
 use dotenvy::dotenv;
+use ipcmanview::db;
+use ipcmanview::rpc::utils::new_client;
 use ipcmanview::rpc::{self, mediafilefind, rpclogin};
-use ipcmanview::{db, new_agent};
 use ipcmanview::{man_print, require_env};
 
 #[tokio::main]
@@ -9,8 +10,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match std::env::args().skip(1).next() {
         Some(command) => match command.as_str() {
-            "cli" => cli(),
-            "debug" => debug(),
+            "cli" => cli().await,
+            "debug" => debug().await,
             "db" => db().await,
             "http" => http().await,
             _ => Err("Invalid Command".into()),
@@ -40,7 +41,7 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
     // Migrate
     sqlx::migrate!().run(&mut pool).await?;
 
-    let agent = new_agent();
+    let client = new_client();
 
     // let man = rpclogin::Manager::new(rpc::Client::new(require_env("IPCMANVIEW_IP")?, agent))
     //     .username(require_env("IPCMANVIEW_USERNAME")?)
@@ -48,7 +49,7 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
     //     .unlock();
     // let cam = db::camera_add(&mut pool, man).await?;
 
-    let cam = db::camera_manager_get(&mut pool, 1, agent).await?;
+    let cam = db::camera_manager_get(&mut pool, 1, client).await?;
     let res = db_run(&cam, pool).await;
 
     _ = cam.man.lock().unwrap().logout();
@@ -69,8 +70,8 @@ async fn db_run(
         chrono::Utc::now(),
     )
     .await?;
-
     println!("CameraScan: {:?}", camera_scan);
+
     Ok(())
 }
 
@@ -86,13 +87,13 @@ fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn cli() -> Result<(), Box<dyn std::error::Error>> {
-    let agent = new_agent();
+async fn cli() -> Result<(), Box<dyn std::error::Error>> {
+    let client = new_client();
     let mut man: Option<rpclogin::Manager> = if let Some(ip) = std::env::var("IPCMANVIEW_IP").ok() {
         let username = require_env("IPCMANVIEW_USERNAME")?;
         let password = require_env("IPCMANVIEW_PASSWORD")?;
         Some(
-            rpclogin::Manager::new(rpc::Client::new(ip, agent.clone()))
+            rpclogin::Manager::new(rpc::Client::new(ip, client.clone()))
                 .username(username)
                 .password(password)
                 .unlock(),
@@ -121,7 +122,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                 let password = input.clone();
 
                 man = Some(
-                    rpclogin::Manager::new(rpc::Client::new(ip, agent.clone()))
+                    rpclogin::Manager::new(rpc::Client::new(ip, client.clone()))
                         .username(username)
                         .password(password)
                         .unlock(),
@@ -135,7 +136,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 };
 
-                man_print(man);
+                man_print(man).await;
             }
             "file" | "f" => {
                 let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
@@ -145,22 +146,19 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 };
 
-                if let Err(err) = man.keep_alive_or_login() {
-                    println!("Error: keep_alive: {:?}", err);
-                    continue;
-                }
-
                 println!("Pictures - Last 24 hours");
                 match mediafilefind::find_next_file_info_iterator(
-                    &mut man.client,
+                    man,
                     mediafilefind::Condition::new(
                         chrono::Utc::now() - chrono::Duration::hours(24),
                         chrono::Utc::now(),
                     )
                     .picture(),
-                ) {
-                    Ok(iter) => {
-                        for files in iter {
+                )
+                .await
+                {
+                    Ok(mut iter) => {
+                        while let Some(files) = iter.next().await {
                             for file in files {
                                 println!("file_path: {}", file.file_path);
                             }
@@ -177,7 +175,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 };
 
-                match man.keep_alive_or_login() {
+                match man.keep_alive_or_login().await {
                     Ok(sec) => println!("Keep Alive: {sec}"),
                     Err(err) => println!("Error: {:?}", err),
                 }
@@ -190,7 +188,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 };
 
-                match man.login() {
+                match man.login().await {
                     Ok(res) => println!("Login: {res}"),
                     Err(err) => println!("Error: {:?}", err),
                 }
@@ -203,7 +201,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     continue;
                 };
 
-                match man.logout() {
+                match man.logout().await {
                     Ok(res) => println!("Logout: {res}"),
                     Err(err) => println!("Error: {:?}", err),
                 }
@@ -227,7 +225,7 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
 
     if let Some(mut man) = man {
         println!("...Logging out {}", man.client.ip);
-        if let Err(err) = man.logout() {
+        if let Err(err) = man.logout().await {
             println!("Error: {ip}: {err:?}", ip = man.client.ip)
         }
     }
@@ -235,8 +233,8 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn debug() -> Result<(), Box<dyn std::error::Error>> {
-    let agent = new_agent();
+async fn debug() -> Result<(), Box<dyn std::error::Error>> {
+    let client = new_client();
 
     let password = require_env("IPCMANVIEW_PASSWORD")?;
     let ips = require_env("IPCMANVIEW_IPS")?;
@@ -250,23 +248,24 @@ fn debug() -> Result<(), Box<dyn std::error::Error>> {
     for i in ips {
         println!("----------- {}", i);
         debug_run(
-            agent.clone(),
+            client.clone(),
             String::from(i),
             username.clone(),
             password.clone(),
-        );
+        )
+        .await;
     }
 
     Ok(())
 }
 
-fn debug_run(agent: ureq::Agent, ip: String, username: String, password: String) {
-    let mut man = rpclogin::Manager::new(rpc::Client::new(ip, agent))
+async fn debug_run(client: reqwest::Client, ip: String, username: String, password: String) {
+    let mut man = rpclogin::Manager::new(rpc::Client::new(ip, client))
         .username(username)
         .password(password)
         .unlock();
 
-    man_print(&mut man);
+    man_print(&mut man).await;
 
-    println!("Logout: {:?}", man.logout());
+    println!("Logout: {:?}", man.logout().await);
 }

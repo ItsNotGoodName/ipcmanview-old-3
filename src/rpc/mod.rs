@@ -152,7 +152,7 @@ impl Config {
 pub struct RequestBuilder {
     req: Request,
     url: String,
-    agent: ureq::Agent,
+    client: reqwest::Client,
     require_session: bool,
 }
 
@@ -160,7 +160,7 @@ impl RequestBuilder {
     pub fn new(
         config: &mut Config,
         url: String,
-        agent: ureq::Agent,
+        client: reqwest::Client,
         require_session: bool,
     ) -> RequestBuilder {
         RequestBuilder {
@@ -172,7 +172,7 @@ impl RequestBuilder {
                 object: None,
             },
             url,
-            agent,
+            client,
             require_session,
         }
     }
@@ -192,20 +192,23 @@ impl RequestBuilder {
         self
     }
 
-    pub fn send_raw<T: DeserializeOwned>(self) -> Result<Response<T>, Error> {
+    pub async fn send_raw<T: DeserializeOwned>(self) -> Result<Response<T>, Error> {
         if self.require_session && self.req.session == "" {
             return Err(Error::no_session());
         }
-        self.agent
+        self.client
             .post(&self.url)
-            .send_json(self.req)
+            .json(&self.req)
+            .send()
+            .await
             .map_err(|e| Error::Request(e.to_string()))?
-            .into_json::<Response<T>>()
+            .json::<Response<T>>()
+            .await
             .map_err(|e| Error::Parse(e.to_string()))
     }
 
-    pub fn send<T: DeserializeOwned>(self) -> Result<Response<T>, Error> {
-        let res = self.send_raw()?;
+    pub async fn send<T: DeserializeOwned>(self) -> Result<Response<T>, Error> {
+        let res = self.send_raw().await?;
         match res.error {
             Some(err) => Err(Error::from_response_error(err)),
             None => Ok(res),
@@ -219,11 +222,11 @@ pub struct Client {
     url: String,
     url_rpc: String,
     url_rpc_login: String,
-    agent: ureq::Agent,
+    client: reqwest::Client,
 }
 
 impl Client {
-    pub fn new(ip: String, agent: ureq::Agent) -> Client {
+    pub fn new(ip: String, client: reqwest::Client) -> Client {
         let url = format!("http://{ip}");
         let url_rpc = format!("{url}/RPC2");
         let url_rpc_login = format!("{url}/RPC2_Login");
@@ -233,7 +236,7 @@ impl Client {
             url,
             url_rpc,
             url_rpc_login,
-            agent,
+            client,
         }
     }
 
@@ -241,7 +244,7 @@ impl Client {
         RequestBuilder::new(
             &mut self.config,
             self.url_rpc.clone(),
-            self.agent.clone(),
+            self.client.clone(),
             true,
         )
     }
@@ -250,7 +253,7 @@ impl Client {
         RequestBuilder::new(
             &mut self.config,
             self.url_rpc_login.clone(),
-            self.agent.clone(),
+            self.client.clone(),
             false,
         )
     }

@@ -30,8 +30,9 @@ pub struct Info {
     pub info: InfoInfo,
 }
 
-pub fn get_license_info(rpc: RequestBuilder) -> Result<Vec<Info>, Error> {
+pub async fn get_license_info(rpc: RequestBuilder) -> Result<Vec<Info>, Error> {
     rpc.method("License.getLicenseInfo")
-        .send::<Vec<Info>>()?
+        .send::<Vec<Info>>()
+        .await?
         .params()
 }

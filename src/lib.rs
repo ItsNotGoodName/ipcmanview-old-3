@@ -9,66 +9,60 @@ pub fn require_env(name: &str) -> Result<String, String> {
     std::env::var(name).map_err(|_| format!("{} not set", name))
 }
 
-pub fn new_agent() -> ureq::Agent {
-    ureq::AgentBuilder::new()
-        .timeout_read(std::time::Duration::from_secs(5))
-        .timeout_write(std::time::Duration::from_secs(5))
-        .build()
-}
-
-pub fn man_print(man: &mut rpclogin::Manager) {
+pub async fn man_print(man: &mut rpclogin::Manager) {
+    println!("Keep Alive: {:?}", man.keep_alive_or_login().await);
     println!("Cookie: {}", man.client.cookie());
     println!(
         "global.getCurrentTime: {:?}",
-        man.rpc(|rpc| global::get_current_time(rpc)),
+        global::get_current_time(man.client.rpc()).await,
     );
     println!(
         "magicBox.needReboot: {:?}",
-        man.rpc(|rpc| magicbox::need_reboot(rpc)),
+        magicbox::need_reboot(man.client.rpc()).await,
     );
     println!(
         "magicBox.getSerialNo: {:?}",
-        man.rpc(|rpc| magicbox::get_serial_no(rpc)),
+        magicbox::get_serial_no(man.client.rpc()).await,
     );
     println!(
         "magicBox.getDeviceType: {:?}",
-        man.rpc(|rpc| magicbox::get_device_type(rpc)),
+        magicbox::get_device_type(man.client.rpc()).await,
     );
     println!(
         "magicBox.getMemoryInfo: {:?}",
-        man.rpc(|rpc| magicbox::get_memory_info(rpc)),
+        magicbox::get_memory_info(man.client.rpc()).await,
     );
     println!(
         "magicBox.getCPUUsage: {:?}",
-        man.rpc(|rpc| magicbox::get_cpu_usage(rpc)),
+        magicbox::get_cpu_usage(man.client.rpc()).await,
     );
     println!(
         "magicBox.getDeviceClass: {:?}",
-        man.rpc(|rpc| magicbox::get_device_class(rpc)),
+        magicbox::get_device_class(man.client.rpc()).await,
     );
     println!(
         "magicBox.getProcessInfo: {:?}",
-        man.rpc(|rpc| magicbox::get_process_info(rpc)),
+        magicbox::get_process_info(man.client.rpc()).await,
     );
     println!(
         "magicBox.getHardwareVersion: {:?}",
-        man.rpc(|rpc| magicbox::get_hardware_version(rpc)),
+        magicbox::get_hardware_version(man.client.rpc()).await,
     );
     println!(
         "magicBox.getVendor: {:?}",
-        man.rpc(|rpc| magicbox::get_vendor(rpc)),
+        magicbox::get_vendor(man.client.rpc()).await,
     );
     println!(
         "magicBox.getSoftwareVersion: {:?}",
-        man.rpc(|rpc| magicbox::get_software_version(rpc)),
+        magicbox::get_software_version(man.client.rpc()).await,
     );
     println!(
         "magicBox.getMarketArea: {:?}",
-        man.rpc(|rpc| magicbox::get_market_area(rpc)),
+        magicbox::get_market_area(man.client.rpc()).await,
     );
     println!(
         "License.getLicenseInfo: {:?}",
-        man.rpc(|rpc| license::get_license_info(rpc)),
+        license::get_license_info(man.client.rpc()).await,
     );
 }
 
