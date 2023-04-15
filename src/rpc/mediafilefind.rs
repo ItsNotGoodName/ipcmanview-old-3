@@ -1,11 +1,9 @@
-use std::vec;
-
-use chrono::NaiveDateTime;
+use chrono::DateTime;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::{
-    utils::{de_string_to_naive_date_time, se_naive_date_time_to_string},
+    utils::{de_string_to_date_time, se_date_time_to_string},
     Client, Error, RequestBuilder,
 };
 
@@ -29,10 +27,10 @@ pub struct Condition {
     pub redundant: &'static str,
     #[serde(rename = "Events")]
     pub events: Option<Vec<&'static str>>,
-    #[serde(rename = "StartTime", serialize_with = "se_naive_date_time_to_string")]
-    pub start_time: NaiveDateTime,
-    #[serde(rename = "EndTime", serialize_with = "se_naive_date_time_to_string")]
-    pub end_time: NaiveDateTime,
+    #[serde(rename = "StartTime", serialize_with = "se_date_time_to_string")]
+    pub start_time: DateTime<chrono::Utc>,
+    #[serde(rename = "EndTime", serialize_with = "se_date_time_to_string")]
+    pub end_time: DateTime<chrono::Utc>,
     #[serde(rename = "Flags")]
     pub flags: Vec<&'static str>,
 }
@@ -41,13 +39,10 @@ pub struct Condition {
 pub struct FindNextFileInfo {
     #[serde(rename = "Channel")]
     pub channel: i32,
-    #[serde(
-        rename = "StartTime",
-        deserialize_with = "de_string_to_naive_date_time"
-    )]
-    pub start_time: NaiveDateTime,
-    #[serde(rename = "EndTime", deserialize_with = "de_string_to_naive_date_time")]
-    pub end_time: NaiveDateTime,
+    #[serde(rename = "StartTime", deserialize_with = "de_string_to_date_time")]
+    pub start_time: DateTime<chrono::Utc>,
+    #[serde(rename = "EndTime", deserialize_with = "de_string_to_date_time")]
+    pub end_time: DateTime<chrono::Utc>,
     #[serde(rename = "Length")]
     pub length: i32,
     #[serde(rename = "Type")]
@@ -137,7 +132,7 @@ pub fn destroy(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
 }
 
 impl Condition {
-    pub fn new(start_time: NaiveDateTime, end_time: NaiveDateTime) -> Condition {
+    pub fn new(start_time: DateTime<chrono::Utc>, end_time: DateTime<chrono::Utc>) -> Condition {
         Condition {
             channel: 0,
             dirs: vec![],
@@ -168,7 +163,6 @@ pub struct FindNextFileInfoIterator<'a> {
     client: &'a mut Client,
     object: i64,
     pub error: Option<Error>,
-    iter: vec::IntoIter<FindNextFileInfo>,
     count: i32,
     closed: bool,
 }
@@ -183,20 +177,15 @@ pub fn find_next_file_info_iterator(
         client,
         object,
         error: None,
-        iter: vec![].into_iter(),
-        count: 50,
+        count: 64,
         closed: false,
     })
 }
 
 impl Iterator for FindNextFileInfoIterator<'_> {
-    type Item = FindNextFileInfo;
+    type Item = Vec<FindNextFileInfo>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some(info) = self.iter.next() {
-            return Some(info);
-        }
-
         if self.closed {
             return None;
         }
@@ -206,23 +195,19 @@ impl Iterator for FindNextFileInfoIterator<'_> {
                 found,
                 infos: Some(infos),
             }) => {
-                self.iter = infos.into_iter();
-
                 if found < self.count {
                     self.close();
                 }
+                Some(infos)
             }
-            Err(err) => {
-                self.error = Some(err);
-
+            res => {
                 self.close();
+                if let Err(err) = res {
+                    self.error = Some(err);
+                }
+                None
             }
-            _ => {
-                self.close();
-            }
-        };
-
-        self.iter.next()
+        }
     }
 }
 

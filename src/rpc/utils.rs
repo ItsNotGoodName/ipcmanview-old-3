@@ -1,27 +1,31 @@
 use base64::Engine as _;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime};
 use serde::{de, Deserialize, Deserializer, Serializer};
 
-pub fn de_string_to_naive_date_time<'de, D>(deserializer: D) -> Result<NaiveDateTime, D::Error>
+pub fn de_string_to_date_time<'de, D>(deserializer: D) -> Result<DateTime<chrono::Utc>, D::Error>
 where
     D: Deserializer<'de>,
 {
     match serde_json::Value::deserialize(deserializer)? {
-        serde_json::Value::String(n) => {
-            from_timestamp(&n).map_err(|e| de::Error::custom(e.to_string()))
-        }
+        serde_json::Value::String(n) => match from_timestamp(&n)
+            .map_err(|e| de::Error::custom(e.to_string()))?
+            .and_local_timezone(chrono::Local)
+        {
+            chrono::LocalResult::Single(tz) => Ok(tz.with_timezone(&chrono::Utc)),
+            _ => Err(de::Error::custom("could not convert to local timezone")),
+        },
         _ => Err(de::Error::custom("expected string")),
     }
 }
 
-pub fn se_naive_date_time_to_string<S>(
-    native_date_time: &NaiveDateTime,
+pub fn se_date_time_to_string<S>(
+    date_time: &DateTime<chrono::Utc>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    serializer.serialize_str(&to_timestamp(native_date_time))
+    serializer.serialize_str(&to_timestamp(&date_time.naive_local()))
 }
 
 pub fn de_int_bool_to_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>

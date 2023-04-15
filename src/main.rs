@@ -23,8 +23,9 @@ async fn http() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+use ipcmanview::core;
 use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::ConnectOptions;
+use sqlx::{ConnectOptions, SqliteConnection};
 use std::str::FromStr;
 
 async fn db() -> Result<(), Box<dyn std::error::Error>> {
@@ -41,22 +42,35 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
 
     let agent = new_agent();
 
-    let man = rpclogin::Manager::new(rpc::Client::new(require_env("IPCMANVIEW_IP")?, agent))
-        .username(require_env("IPCMANVIEW_USERNAME")?)
-        .password(require_env("IPCMANVIEW_PASSWORD")?)
-        .unlock();
+    // let man = rpclogin::Manager::new(rpc::Client::new(require_env("IPCMANVIEW_IP")?, agent))
+    //     .username(require_env("IPCMANVIEW_USERNAME")?)
+    //     .password(require_env("IPCMANVIEW_PASSWORD")?)
+    //     .unlock();
+    // let cam = db::camera_add(&mut pool, man).await?;
 
-    let mut cam = db::camera_add(&mut pool, man).await?;
+    let cam = db::camera_manager_get(&mut pool, 1, agent).await?;
+    let res = db_run(&cam, pool).await;
 
-    // let mut cam = db::camera_manager_get(&mut pool, 1, agent).await?;
+    _ = cam.man.lock().unwrap().logout();
 
-    println!("{}", cam.id);
+    res
+}
 
-    db::camera_detail_update(&mut pool, &mut cam).await?;
-    db::camera_software_version_update(&mut pool, &mut cam).await?;
+async fn db_run(
+    cam: &core::Camera,
+    mut pool: SqliteConnection,
+) -> Result<(), Box<dyn std::error::Error>> {
+    db::camera_detail_update(&mut pool, cam.id, cam.detail().await?).await?;
+    db::camera_software_version_update(&mut pool, cam.id, cam.version().await?).await?;
+    let camera_scan = db::camera_scan(
+        &mut pool,
+        cam,
+        chrono::Utc::now() - chrono::Duration::hours(24),
+        chrono::Utc::now(),
+    )
+    .await?;
 
-    cam.man.logout()?;
-
+    println!("CameraScan: {:?}", camera_scan);
     Ok(())
 }
 
@@ -140,14 +154,16 @@ fn cli() -> Result<(), Box<dyn std::error::Error>> {
                 match mediafilefind::find_next_file_info_iterator(
                     &mut man.client,
                     mediafilefind::Condition::new(
-                        chrono::Local::now().naive_local() - chrono::Duration::hours(24),
-                        chrono::Local::now().naive_local(),
+                        chrono::Utc::now() - chrono::Duration::hours(24),
+                        chrono::Utc::now(),
                     )
                     .picture(),
                 ) {
                     Ok(iter) => {
-                        for file in iter {
-                            println!("file_path: {}", file.file_path);
+                        for files in iter {
+                            for file in files {
+                                println!("file_path: {}", file.file_path);
+                            }
                         }
                     }
                     Err(err) => println!("Error: {:?}", err),
