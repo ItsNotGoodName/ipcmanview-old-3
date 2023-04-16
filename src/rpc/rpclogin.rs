@@ -45,7 +45,7 @@ pub struct Manager {
     pub client: rpc::Client,
     pub username: String,
     pub password: String,
-    lock: bool,
+    blocked: bool,
 }
 
 impl Manager {
@@ -54,7 +54,7 @@ impl Manager {
             client,
             username: "".to_string(),
             password: "".to_string(),
-            lock: true,
+            blocked: true,
         }
     }
 
@@ -68,8 +68,8 @@ impl Manager {
         self
     }
 
-    pub fn unlock(mut self) -> Manager {
-        self.lock = false;
+    pub fn unblock(mut self) -> Manager {
+        self.blocked = false;
         self
     }
 
@@ -78,8 +78,8 @@ impl Manager {
     }
 
     pub async fn login(&mut self) -> Result<bool, Error> {
-        if self.lock {
-            return Err(Error::Login(LoginError::Lock));
+        if self.blocked {
+            return Err(Error::Login(LoginError::Blocked));
         }
 
         if self.client.config.session() {
@@ -89,7 +89,7 @@ impl Manager {
         match login(&mut self.client, &self.username, &self.password).await {
             Ok(res) => Ok(res),
             Err(err @ Error::Login(_)) => {
-                self.lock = true;
+                self.blocked = true;
                 Err(err)
             }
             Err(err) => Err(err),

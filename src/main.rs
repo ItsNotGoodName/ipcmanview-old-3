@@ -40,19 +40,28 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
 
     // Migrate
     sqlx::migrate!().run(&mut pool).await?;
+    db::camera_tasks_delete_running(&mut pool).await?;
 
     let client = new_client();
 
-    // let man = rpclogin::Manager::new(rpc::Client::new(require_env("IPCMANVIEW_IP")?, agent))
-    //     .username(require_env("IPCMANVIEW_USERNAME")?)
-    //     .password(require_env("IPCMANVIEW_PASSWORD")?)
-    //     .unlock();
-    // let cam = db::camera_add(&mut pool, man).await?;
+    let cam = match db::camera_manager_get(&mut pool, 1, client.clone()).await {
+        Ok(cam) => cam,
+        Err(err) => {
+            println!("Creating client due to err: {}", err);
+            let man = rpclogin::Manager::new(rpc::Client::new(
+                require_env("IPCMANVIEW_IP")?,
+                client.clone(),
+            ))
+            .username(require_env("IPCMANVIEW_USERNAME")?)
+            .password(require_env("IPCMANVIEW_PASSWORD")?)
+            .unblock();
+            db::camera_add(&mut pool, man).await?
+        }
+    };
 
-    let cam = db::camera_manager_get(&mut pool, 1, client).await?;
     let res = db_run(&cam, pool).await;
 
-    _ = cam.man.lock().unwrap().logout();
+    _ = cam.man.lock().unwrap().logout().await;
 
     res
 }
@@ -63,14 +72,7 @@ async fn db_run(
 ) -> Result<(), Box<dyn std::error::Error>> {
     db::camera_detail_update(&mut pool, cam.id, cam.detail().await?).await?;
     db::camera_software_version_update(&mut pool, cam.id, cam.version().await?).await?;
-    let camera_scan = db::camera_scan(
-        &mut pool,
-        cam,
-        chrono::Utc::now() - chrono::Duration::hours(24),
-        chrono::Utc::now(),
-    )
-    .await?;
-    println!("CameraScan: {:?}", camera_scan);
+    ipcmanview::scan::full(&mut pool, cam).await?;
 
     Ok(())
 }
@@ -96,7 +98,7 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
             rpclogin::Manager::new(rpc::Client::new(ip, client.clone()))
                 .username(username)
                 .password(password)
-                .unlock(),
+                .unblock(),
         )
     } else {
         println!("Manager: None");
@@ -125,7 +127,7 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
                     rpclogin::Manager::new(rpc::Client::new(ip, client.clone()))
                         .username(username)
                         .password(password)
-                        .unlock(),
+                        .unblock(),
                 )
             }
             "print" | "p" => {
@@ -263,7 +265,7 @@ async fn debug_run(client: reqwest::Client, ip: String, username: String, passwo
     let mut man = rpclogin::Manager::new(rpc::Client::new(ip, client))
         .username(username)
         .password(password)
-        .unlock();
+        .unblock();
 
     man_print(&mut man).await;
 

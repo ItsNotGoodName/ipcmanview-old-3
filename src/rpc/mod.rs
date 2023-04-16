@@ -18,40 +18,49 @@ pub mod utils;
 #[derive(Deserialize, Debug)]
 pub struct ResponseError {
     pub code: i32,
+    #[serde(default)]
     pub message: String,
 }
 
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum LoginError {
-    Lock,
+    #[error("Blocked to prevent account lockout")]
+    Blocked,
+    #[error("User or password not valid")]
     UserOrPasswordNotValid,
+    #[error("User not valid")]
     UserNotValid,
+    #[error("Password not valid")]
     PasswordNotValid,
+    #[error("User in blackList")]
     InBlackList,
+    #[error("User has be used")]
     HasBeedUsed,
+    #[error("User locked")]
     HasBeenLocked,
 }
 
-// TODO implement anyerror
-#[derive(Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("{0:?}")]
     Response(ResponseError),
+    #[error("Login: {0}")]
     Login(LoginError),
+    #[error("Request: {0}")]
     Request(String),
+    #[error("Parse: {0}")]
     Parse(String),
+    #[error("InvalidSession: {0}")]
     InvalidSession(String),
+    #[error("InvalidRequest: {0}")]
     InvalidRequest(String),
+    #[error("MethodNotFound: {0}")]
     MethodNotFound(String),
+    #[error("InterfaceNotFound: {0}")]
     InterfaceNotFound(String),
+    #[error("NoData: {0}")]
+    NoData(String),
 }
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)
-    }
-}
-
-impl std::error::Error for Error {}
 
 impl Error {
     pub fn no_params() -> Error {
@@ -80,6 +89,10 @@ impl Error {
                 code: 268632064,
                 message,
             } => Error::InterfaceNotFound(message),
+            ResponseError {
+                code: 285409284,
+                message,
+            } => Error::NoData(message),
             _ => Error::Response(response_error),
         }
     }

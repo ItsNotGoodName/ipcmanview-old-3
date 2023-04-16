@@ -11,13 +11,14 @@ where
     D: Deserializer<'de>,
 {
     match serde_json::Value::deserialize(deserializer)? {
-        serde_json::Value::String(n) => match from_timestamp(&n)
-            .map_err(|e| de::Error::custom(e.to_string()))?
-            .and_local_timezone(chrono::Local)
-        {
-            chrono::LocalResult::Single(tz) => Ok(tz.with_timezone(&chrono::Utc)),
-            _ => Err(de::Error::custom("could not convert to local timezone")),
-        },
+        serde_json::Value::String(n) => {
+            match from_timestamp(&n).map(|t| t.and_local_timezone(chrono::Local)) {
+                Ok(chrono::LocalResult::Ambiguous(tz, _)) | Ok(chrono::LocalResult::Single(tz)) => {
+                    Ok(tz.with_timezone(&chrono::Utc))
+                }
+                _ => Err(de::Error::custom("could not convert to local timezone")),
+            }
+        }
         _ => Err(de::Error::custom("expected string")),
     }
 }
@@ -29,7 +30,9 @@ pub fn se_date_time_to_string<S>(
 where
     S: Serializer,
 {
-    serializer.serialize_str(&to_timestamp(&date_time.naive_local()))
+    serializer.serialize_str(&to_timestamp(
+        &date_time.with_timezone(&chrono::Local).naive_local(),
+    ))
 }
 
 pub fn de_int_bool_to_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>

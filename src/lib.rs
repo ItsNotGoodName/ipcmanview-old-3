@@ -68,3 +68,4 @@ pub async fn man_print(man: &mut rpclogin::Manager) {
 
 pub mod core;
 pub mod db;
+pub mod scan;

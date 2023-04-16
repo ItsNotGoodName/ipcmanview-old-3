@@ -72,10 +72,10 @@ impl CameraStore {
         None
     }
 
-    pub fn clear(mut self) -> Self {
+    pub async fn clear(mut self) -> Self {
         for cam in self.cams.iter() {
             if let Ok(mut cam) = cam.man.lock() {
-                _ = cam.logout()
+                _ = cam.logout().await;
             }
         }
         self.cams.clear();

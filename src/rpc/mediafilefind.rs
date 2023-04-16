@@ -1,10 +1,10 @@
-use chrono::DateTime;
+use chrono::{DateTime, Timelike};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::{
     rpclogin,
-    utils::{de_string_to_date_time, se_date_time_to_string},
+    utils::{self, de_string_to_date_time, se_date_time_to_string},
     Error, RequestBuilder,
 };
 
@@ -72,6 +72,35 @@ pub struct FindNextFileInfo {
     pub work_dir: Option<String>,
     #[serde(rename = "WorkDirSN")]
     pub work_dir_sn: Option<i32>,
+}
+
+impl FindNextFileInfo {
+    fn to_num(s: Option<&str>) -> u32 {
+        match s {
+            Some(s) => match s.parse() {
+                Ok(o) => o,
+                Err(_) => 0,
+            },
+            None => 0,
+        }
+    }
+
+    pub fn unique_time(&self) -> (DateTime<chrono::Utc>, DateTime<chrono::Utc>) {
+        let mut tags = utils::parse_file_path_tags(&self.file_path)
+            .into_iter()
+            .skip(2);
+
+        let ns = ((Self::to_num(tags.next()) + Self::to_num(tags.next())) % 500) * 1_000_000;
+
+        (
+            self.start_time
+                .with_nanosecond(ns)
+                .unwrap_or_else(|| self.start_time),
+            self.end_time
+                .with_nanosecond(ns)
+                .unwrap_or_else(|| self.end_time),
+        )
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -191,13 +220,19 @@ pub async fn find_next_file_info_stream(
     };
 
     let object = create(man.client.rpc()).await?;
-    find_file(man.client.rpc(), object, condition).await?;
+
+    let closed = match find_file(man.client.rpc(), object, condition).await {
+        Ok(o) => !o,
+        Err(Error::NoData(_)) => true,
+        Err(err) => return Err(err),
+    };
+
     Ok(FindNextFileInfoStream {
         man,
         object,
         error: None,
         count: 64,
-        closed: false,
+        closed,
     })
 }
 
