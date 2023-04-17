@@ -1,5 +1,4 @@
 use std::ops::AddAssign;
-use std::sync::Mutex;
 use std::time::Instant;
 
 use anyhow::{Context, Result};
@@ -9,18 +8,15 @@ use chrono::{DateTime, Utc};
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{Acquire, QueryBuilder, Sqlite, SqliteConnection, Transaction};
 
-use crate::core;
+use crate::core::{Camera, CameraDetail, CameraState, FindNextFileInfoStream};
 use crate::rpc::mediafilefind::{self, FindNextFileInfo};
-use crate::rpc::{
-    self, magicbox,
-    rpclogin::{self, Manager},
-};
+use crate::rpc::{self, magicbox, rpclogin};
 
 pub async fn camera_manager_get(
     pool: &mut SqliteConnection,
     camera_id: i64,
     client: reqwest::Client,
-) -> Result<core::Camera> {
+) -> Result<Camera> {
     let camera = sqlx::query!(
         r#"
         SELECT ip, username, password FROM cameras WHERE id = ?
@@ -31,33 +27,33 @@ pub async fn camera_manager_get(
     .await
     .with_context(|| format!("Failed to find camera {}", camera_id))?;
 
-    let man = rpclogin::Manager::new(rpc::Client::new(camera.ip, client))
-        .username(camera.username)
-        .password(camera.password)
-        .unblock();
+    let state = CameraState {
+        user: rpclogin::User::new()
+            .username(camera.username)
+            .password(camera.password)
+            .unblock(),
+        client: rpc::Client::new(camera.ip, client),
+    };
 
-    Ok(core::Camera {
-        id: camera_id,
-        man: Mutex::new(man),
-    })
+    Ok(Camera::new(camera_id, state))
 }
 
 pub async fn camera_add(
     pool: &mut SqliteConnection,
-    man: Manager,
-) -> Result<core::Camera, sqlx::Error> {
+    state: CameraState,
+) -> Result<Camera, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
-    let id = sqlx::query!(
+    let camera_id = sqlx::query!(
         r#"
         INSERT INTO cameras
         (ip, username, password)
         VALUES
         (?1, ?2, ?3)
         "#,
-        man.client.ip,
-        man.username,
-        man.password,
+        state.client.ip,
+        state.user.username,
+        state.user.password,
     )
     .execute(&mut *tx)
     .await?
@@ -70,7 +66,7 @@ pub async fn camera_add(
         VALUES
         (?1)
         "#,
-        id
+        camera_id
     )
     .execute(&mut *tx)
     .await?;
@@ -82,23 +78,20 @@ pub async fn camera_add(
         VALUES
         (?1)
         "#,
-        id
+        camera_id
     )
     .execute(&mut *tx)
     .await?;
 
     tx.commit().await?;
 
-    Ok(core::Camera {
-        id,
-        man: Mutex::new(man),
-    })
+    Ok(Camera::new(camera_id, state))
 }
 
 pub async fn camera_detail_update(
     pool: &mut SqliteConnection,
     camera_id: i64,
-    data: core::CameraDetail,
+    data: CameraDetail,
 ) -> Result<SqliteQueryResult, sqlx::Error> {
     sqlx::query!(
         r#"
@@ -167,13 +160,12 @@ impl AddAssign for CameraScanResult {
 
 pub async fn camera_scan(
     pool: &mut SqliteConnection,
-    cam: &core::Camera,
+    cam: &Camera,
     start_time: DateTime<Utc>,
     end_time: DateTime<Utc>,
 ) -> Result<CameraScanResult> {
-    let mut man = cam.man.lock().unwrap();
-    let mut stream = mediafilefind::find_next_file_info_stream(
-        &mut man,
+    let mut stream = FindNextFileInfoStream::new(
+        cam,
         mediafilefind::Condition::new(start_time, end_time).picture(),
     )
     .await?;
@@ -242,10 +234,7 @@ pub async fn camera_tasks_delete_running(pool: &mut SqliteConnection) -> Result<
         .context("Failed to delete running tasks")
 }
 
-pub async fn camera_tasks_start(
-    pool: &mut SqliteConnection,
-    cam: &core::Camera,
-) -> Result<Instant> {
+pub async fn camera_tasks_start(pool: &mut SqliteConnection, cam: &Camera) -> Result<Instant> {
     let started_at = Utc::now();
 
     sqlx::query!(
@@ -266,7 +255,7 @@ struct CameraRunningTask {
 
 pub async fn camera_tasks_end(
     pool: &mut SqliteConnection,
-    cam: &core::Camera,
+    cam: &Camera,
     instant: Instant,
 ) -> Result<()> {
     let mut tx = pool.begin().await?;

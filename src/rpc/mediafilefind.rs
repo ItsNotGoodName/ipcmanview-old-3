@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::{
-    rpclogin,
     utils::{self, de_string_to_date_time, se_date_time_to_string},
     Error, RequestBuilder,
 };
@@ -200,86 +199,5 @@ impl Condition {
         self.types = vec!["jpg"];
         self.flags = vec!["Timing", "Event", "Event"];
         self
-    }
-}
-
-pub struct FindNextFileInfoStream<'a> {
-    man: &'a mut rpclogin::Manager,
-    object: i64,
-    pub error: Option<Error>,
-    count: i32,
-    closed: bool,
-}
-
-pub async fn find_next_file_info_stream(
-    man: &mut rpclogin::Manager,
-    condition: Condition,
-) -> Result<FindNextFileInfoStream, Error> {
-    if let Err(e) = man.keep_alive_or_login().await {
-        return Err(e);
-    };
-
-    let object = create(man.client.rpc()).await?;
-
-    let closed = match find_file(man.client.rpc(), object, condition).await {
-        Ok(o) => !o,
-        Err(Error::NoData(_)) => true,
-        Err(err) => return Err(err),
-    };
-
-    Ok(FindNextFileInfoStream {
-        man,
-        object,
-        error: None,
-        count: 64,
-        closed,
-    })
-}
-
-impl FindNextFileInfoStream<'_> {
-    pub async fn next(&mut self) -> Option<Vec<FindNextFileInfo>> {
-        if self.closed {
-            return None;
-        }
-
-        if let Err(e) = self.man.keep_alive_or_login().await {
-            self.error = Some(e);
-            return None;
-        };
-
-        match find_next_file(self.man.client.rpc(), self.object, self.count).await {
-            Ok(FindNextFile {
-                found,
-                infos: Some(infos),
-            }) => {
-                if found < self.count {
-                    self.close().await;
-                }
-                Some(infos)
-            }
-            res => {
-                self.close().await;
-                if let Err(err) = res {
-                    self.error = Some(err);
-                }
-                None
-            }
-        }
-    }
-
-    pub async fn close(&mut self) {
-        if self.closed {
-            return;
-        }
-
-        if let Err(e) = self.man.keep_alive_or_login().await {
-            self.error = Some(e);
-            return;
-        };
-
-        _ = close(self.man.client.rpc(), self.object).await;
-        _ = destroy(self.man.client.rpc(), self.object).await;
-
-        self.closed = true;
     }
 }

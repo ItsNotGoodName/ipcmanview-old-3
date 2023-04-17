@@ -1,8 +1,9 @@
 use dotenvy::dotenv;
 use ipcmanview::db;
+use ipcmanview::rpc::rpclogin::User;
 use ipcmanview::rpc::utils::new_client;
-use ipcmanview::rpc::{self, mediafilefind, rpclogin};
-use ipcmanview::{man_print, require_env};
+use ipcmanview::rpc::{self, rpclogin};
+use ipcmanview::{client_print, require_env};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,7 +25,7 @@ async fn http() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-use ipcmanview::core;
+use ipcmanview::core::{self, CameraState};
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{ConnectOptions, SqliteConnection};
 use std::str::FromStr;
@@ -48,20 +49,19 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
         Ok(cam) => cam,
         Err(err) => {
             println!("Creating client due to err: {}", err);
-            let man = rpclogin::Manager::new(rpc::Client::new(
-                require_env("IPCMANVIEW_IP")?,
-                client.clone(),
-            ))
-            .username(require_env("IPCMANVIEW_USERNAME")?)
-            .password(require_env("IPCMANVIEW_PASSWORD")?)
-            .unblock();
-            db::camera_add(&mut pool, man).await?
+            let user = rpclogin::User::new()
+                .username(require_env("IPCMANVIEW_USERNAME")?)
+                .password(require_env("IPCMANVIEW_PASSWORD")?)
+                .unblock();
+            let client = rpc::Client::new(require_env("IPCMANVIEW_IP")?, client.clone());
+            let state = CameraState { user, client };
+            db::camera_add(&mut pool, state).await?
         }
     };
 
     let res = db_run(&cam, pool).await;
 
-    _ = cam.man.lock().unwrap().logout().await;
+    cam.logout().await.ok();
 
     res
 }
@@ -70,8 +70,13 @@ async fn db_run(
     cam: &core::Camera,
     mut pool: SqliteConnection,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    db::camera_detail_update(&mut pool, cam.id, cam.detail().await?).await?;
-    db::camera_software_version_update(&mut pool, cam.id, cam.version().await?).await?;
+    db::camera_detail_update(&mut pool, cam.id, core::CameraDetail::get(cam).await?).await?;
+    db::camera_software_version_update(
+        &mut pool,
+        cam.id,
+        core::CameraSoftwareVersion::get(cam).await?,
+    )
+    .await?;
     ipcmanview::scan::full(&mut pool, cam).await?;
 
     Ok(())
@@ -90,18 +95,17 @@ fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
 }
 
 async fn cli() -> Result<(), Box<dyn std::error::Error>> {
-    let client = new_client();
-    let mut man: Option<rpclogin::Manager> = if let Some(ip) = std::env::var("IPCMANVIEW_IP").ok() {
+    let mut cam: Option<CameraState> = if let Some(ip) = std::env::var("IPCMANVIEW_IP").ok() {
         let username = require_env("IPCMANVIEW_USERNAME")?;
         let password = require_env("IPCMANVIEW_PASSWORD")?;
-        Some(
-            rpclogin::Manager::new(rpc::Client::new(ip, client.clone()))
-                .username(username)
-                .password(password)
-                .unblock(),
-        )
+        let client = rpc::Client::new(ip, new_client());
+        let user = rpclogin::User::new()
+            .username(username)
+            .password(password)
+            .unblock();
+        Some(CameraState { client, user })
     } else {
-        println!("Manager: None");
+        println!("Camera: None");
         None
     };
     let mut input = String::new();
@@ -111,8 +115,8 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
 
         match input.as_str() {
             "add" | "a" => {
-                if let Some(ref man) = man {
-                    println!("Error: already added: {}", man.client.ip);
+                if let Some(ref cam) = cam {
+                    println!("Error: already added: {}", cam.client.ip);
                     continue;
                 }
 
@@ -122,101 +126,74 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
                 let username = input.clone();
                 cli_get_input(&mut input, "Password: ")?;
                 let password = input.clone();
-
-                man = Some(
-                    rpclogin::Manager::new(rpc::Client::new(ip, client.clone()))
-                        .username(username)
-                        .password(password)
-                        .unblock(),
-                )
+                let client = rpc::Client::new(ip, new_client());
+                let user = rpclogin::User::new()
+                    .username(username)
+                    .password(password)
+                    .unblock();
+                cam = Some(CameraState { client, user })
             }
             "print" | "p" => {
-                let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
-                    man
+                let cam: &mut CameraState = if let Some(ref mut cam) = cam {
+                    cam
                 } else {
-                    println!("Error: No Manager");
+                    println!("Error: No Camera");
                     continue;
                 };
 
-                man_print(man).await;
+                client_print(&mut cam.client).await;
             }
             "file" | "f" => {
-                let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
-                    man
-                } else {
-                    println!("Error: No Manager");
-                    continue;
-                };
-
-                println!("Pictures - Last 24 hours");
-                match mediafilefind::find_next_file_info_stream(
-                    man,
-                    mediafilefind::Condition::new(
-                        chrono::Utc::now() - chrono::Duration::hours(24),
-                        chrono::Utc::now(),
-                    )
-                    .picture(),
-                )
-                .await
-                {
-                    Ok(mut iter) => {
-                        while let Some(files) = iter.next().await {
-                            for file in files {
-                                println!("file_path: {}", file.file_path);
-                            }
-                        }
-                    }
-                    Err(err) => println!("Error: {:?}", err),
-                }
+                println!("whoops");
             }
             "keepalive" | "k" => {
-                let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
-                    man
+                let cam: &mut CameraState = if let Some(ref mut cam) = cam {
+                    cam
                 } else {
-                    println!("Error: No Manager");
+                    println!("Error: No Camera");
                     continue;
                 };
 
-                match man.keep_alive_or_login().await {
-                    Ok(sec) => println!("Keep Alive: {sec}"),
+                match cam.user.keep_alive_or_login(&mut cam.client).await {
+                    Ok(_) => println!("Keep Alive: true"),
                     Err(err) => println!("Error: {:?}", err),
                 }
             }
             "login" | "l" => {
-                let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
-                    man
+                let cam: &mut CameraState = if let Some(ref mut cam) = cam {
+                    cam
                 } else {
-                    println!("Error: No Manager");
+                    println!("Error: No Camera");
                     continue;
                 };
 
-                match man.login().await {
-                    Ok(res) => println!("Login: {res}"),
+                match cam.user.login(&mut cam.client).await {
+                    Ok(_) => println!("Login: true"),
                     Err(err) => println!("Error: {:?}", err),
                 }
             }
             "logout" | "L" => {
-                let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
-                    man
+                let cam: &mut CameraState = if let Some(ref mut cam) = cam {
+                    cam
                 } else {
-                    println!("Error: No Manager");
+                    println!("Error: No Camera");
                     continue;
                 };
 
-                match man.logout().await {
-                    Ok(res) => println!("Logout: {res}"),
+                match User::logout(&mut cam.client).await {
+                    Ok(_) => println!("Logout: true"),
                     Err(err) => println!("Error: {:?}", err),
                 }
             }
             "config" | "c" => {
-                let man: &mut rpclogin::Manager = if let Some(ref mut man) = man {
-                    man
+                let cam: &mut CameraState = if let Some(ref mut cam) = cam {
+                    cam
                 } else {
-                    println!("Error: No Manager");
+                    println!("Error: No Camera");
                     continue;
                 };
 
-                println!("{:?}", man.client.config)
+                println!("{:?}", cam.client.config)
             }
             "quit" | "q" => {
                 break;
@@ -225,10 +202,10 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if let Some(mut man) = man {
-        println!("...Logging out {}", man.client.ip);
-        if let Err(err) = man.logout().await {
-            println!("Error: {ip}: {err:?}", ip = man.client.ip)
+    if let Some(mut cam) = cam {
+        println!("...Logging out {}", cam.client.ip);
+        if let Err(err) = User::logout(&mut cam.client).await {
+            println!("Error: {ip}: {err:?}", ip = cam.client.ip)
         }
     }
 
@@ -261,13 +238,13 @@ async fn debug() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-async fn debug_run(client: reqwest::Client, ip: String, username: String, password: String) {
-    let mut man = rpclogin::Manager::new(rpc::Client::new(ip, client))
-        .username(username)
-        .password(password)
-        .unblock();
-
-    man_print(&mut man).await;
-
-    println!("Logout: {:?}", man.logout().await);
+async fn debug_run(_client: reqwest::Client, _ip: String, _username: String, _password: String) {
+    // let mut man = rpclogin::Manager::new()
+    //     .username(username)
+    //     .password(password)
+    //     .unblock();
+    // rpc::Client::new(ip, client);
+    //
+    // man_print(&mut man).await;
+    // println!("Logout: {:?}", man.logout().await);
 }
