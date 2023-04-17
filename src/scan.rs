@@ -3,8 +3,8 @@ use sqlx::SqliteConnection;
 
 use anyhow::Result;
 
-use crate::core::Camera;
-use crate::db::{self, CameraScanResult};
+use crate::core::CameraManager;
+use crate::db::CameraScanResult;
 
 pub struct ScanRange {
     start: DateTime<Utc>,
@@ -56,26 +56,26 @@ impl Iterator for ScanRangeIterator {
 
 async fn run(
     pool: &mut SqliteConnection,
-    cam: &Camera,
+    man: &CameraManager,
     range: ScanRange,
 ) -> Result<CameraScanResult> {
-    let task = db::camera_tasks_start(pool, &cam).await?;
+    let task = man.tasks_start(pool).await?;
 
     let mut res = CameraScanResult::default();
     for range in range.into_iter() {
         dbg!(range.start);
         dbg!(range.end);
-        res += db::camera_scan(pool, cam, range.start, range.end).await?;
+        res += man.scan(pool, range.start, range.end).await?;
     }
 
-    if let Err(err) = db::camera_tasks_end(pool, &cam, task).await {
+    if let Err(err) = man.tasks_end(pool, task).await {
         eprint!("scan::run: {}", err);
     };
 
     Ok(res)
 }
 
-pub async fn full(pool: &mut SqliteConnection, cam: &Camera) -> Result<CameraScanResult> {
+pub async fn full(pool: &mut SqliteConnection, man: &CameraManager) -> Result<CameraScanResult> {
     let start_range = Local
         .with_ymd_and_hms(2010, 1, 1, 0, 0, 0)
         .unwrap()
@@ -83,13 +83,13 @@ pub async fn full(pool: &mut SqliteConnection, cam: &Camera) -> Result<CameraSca
     let end_range = Utc::now();
     let range = ScanRange::new(start_range, end_range);
 
-    run(pool, cam, range).await
+    run(pool, man, range).await
 }
 
 pub async fn range(
     pool: &mut SqliteConnection,
-    cam: &Camera,
+    man: &CameraManager,
     range: ScanRange,
 ) -> Result<CameraScanResult> {
-    run(pool, cam, range).await
+    run(pool, man, range).await
 }
