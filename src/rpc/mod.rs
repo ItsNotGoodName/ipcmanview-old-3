@@ -15,11 +15,33 @@ pub mod rpclogin;
 
 pub mod utils;
 
+#[derive(thiserror::Error, Debug)]
+pub enum ResponseKind {
+    #[error("InvalidRequest")]
+    InvalidRequest,
+    #[error("MethodNotFound")]
+    MethodNotFound,
+    #[error("InterfaceNotFound")]
+    InterfaceNotFound,
+    #[error("NoData")]
+    NoData,
+    #[error("Unknown")]
+    Unknown,
+}
+
+impl Default for ResponseKind {
+    fn default() -> Self {
+        ResponseKind::Unknown
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct ResponseError {
     pub code: i32,
     #[serde(default)]
     pub message: String,
+    #[serde(skip_deserializing)]
+    pub kind: ResponseKind,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -42,24 +64,21 @@ pub enum LoginError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("{0:?}")]
-    Response(ResponseError),
+    // This can only occurs on login requests.
     #[error("Login: {0}")]
     Login(LoginError),
+    // The request could not be made for any reason.
     #[error("Request: {0}")]
     Request(String),
+    //  The response could not be deserialized.
     #[error("Parse: {0}")]
     Parse(String),
+    // The response contains an error field.
+    #[error("{0:?}")]
+    Response(ResponseError),
+    // No session or the server says your session is invalid.
     #[error("InvalidSession: {0}")]
-    InvalidSession(String),
-    #[error("InvalidRequest: {0}")]
-    InvalidRequest(String),
-    #[error("MethodNotFound: {0}")]
-    MethodNotFound(String),
-    #[error("InterfaceNotFound: {0}")]
-    InterfaceNotFound(String),
-    #[error("NoData: {0}")]
-    NoData(String),
+    Session(String),
 }
 
 impl Error {
@@ -68,33 +87,19 @@ impl Error {
     }
 
     pub fn no_session() -> Error {
-        Error::InvalidSession("No Session".to_string())
+        Error::Session("No Session".to_string())
     }
 
-    pub fn from_response_error(response_error: ResponseError) -> Error {
-        match response_error {
-            ResponseError {
-                code: 287637505 | 287637504,
-                message,
-            } => Error::InvalidSession(message),
-            ResponseError {
-                code: 268894209,
-                message,
-            } => Error::InvalidRequest(message),
-            ResponseError {
-                code: 268894210,
-                message,
-            } => Error::MethodNotFound(message),
-            ResponseError {
-                code: 268632064,
-                message,
-            } => Error::InterfaceNotFound(message),
-            ResponseError {
-                code: 285409284,
-                message,
-            } => Error::NoData(message),
-            _ => Error::Response(response_error),
-        }
+    pub fn from_response_error(mut error: ResponseError) -> Error {
+        error.kind = match error.code {
+            287637505 | 287637504 => return Error::Session(error.message),
+            268894209 => ResponseKind::InvalidRequest,
+            268894210 => ResponseKind::MethodNotFound,
+            268632064 => ResponseKind::InterfaceNotFound,
+            285409284 => ResponseKind::NoData,
+            _ => ResponseKind::Unknown,
+        };
+        Error::Response(error)
     }
 }
 

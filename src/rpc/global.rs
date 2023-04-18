@@ -83,7 +83,7 @@ impl Client {
                 self.config.last_login = Some(Instant::now());
                 res.params_as(|p, _| p.timeout)
             }
-            Err(err @ Error::InvalidSession(_)) => {
+            Err(err @ Error::Session(_)) => {
                 self.config = Config::default();
                 Err(err)
             }
@@ -96,7 +96,7 @@ impl Client {
         self.config = Config::default();
         match res.await {
             Ok(res) => Ok(res.result()?),
-            Err(Error::InvalidSession(_)) => Ok(false),
+            Err(Error::Session(_)) => Ok(false),
             Err(err) => Err(err),
         }
     }

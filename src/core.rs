@@ -4,7 +4,7 @@ use tokio::{
     sync::{mpsc, oneshot},
 };
 
-use crate::rpc::{self, magicbox, mediafilefind, rpclogin, Client};
+use crate::rpc::{self, magicbox, mediafilefind, rpclogin, Client, ResponseError, ResponseKind};
 
 pub struct CameraState {
     pub user: rpclogin::User,
@@ -81,9 +81,9 @@ impl CameraManager {
         self.rpc_tx
             .send(tx)
             .await
-            .map_err(|_| rpc::Error::NoData("Camera thread dead".to_string()))?;
+            .map_err(|_| rpc::Error::Request("Camera thread dead".to_string()))?;
         rx.await
-            .map_err(|_| rpc::Error::NoData("Camera thread dead".to_string()))?
+            .map_err(|_| rpc::Error::Request("Camera thread dead".to_string()))?
     }
 
     pub async fn close(self) -> Result<CameraState> {
@@ -187,7 +187,10 @@ impl CameraFileStream<'_> {
 
         let closed = match mediafilefind::find_file(man.rpc().await?, object, condition).await {
             Ok(o) => !o,
-            Err(rpc::Error::NoData(_)) => true,
+            Err(rpc::Error::Response(ResponseError {
+                kind: ResponseKind::NoData,
+                ..
+            })) => true,
             Err(err) => return Err(err),
         };
 
