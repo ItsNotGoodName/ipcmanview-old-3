@@ -6,7 +6,7 @@ const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
 
 async fn login(client: &mut Client, username: &str, password: &str) -> Result<(), Error> {
-    if client.config.session() {
+    if !client.config.session.is_empty() {
         client.global_logout().await.ok();
     }
 
@@ -116,10 +116,10 @@ impl User {
     }
 
     pub async fn logout(client: &mut Client) -> Result<(), Error> {
-        if client.config.session() {
-            client.global_logout().await.map(|_| ())
-        } else {
+        if client.config.session.is_empty() {
             Ok(())
+        } else {
+            client.global_logout().await.map(|_| ())
         }
     }
 }

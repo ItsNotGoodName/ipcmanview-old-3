@@ -1,9 +1,9 @@
-use chrono::{DateTime, Timelike};
+use chrono::{DateTime, Timelike, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::{
-    utils::{self, de_string_to_date_time, se_date_time_to_string},
+    utils::{de_string_to_date_time, parse_file_path_tags, se_date_time_to_string},
     Error, RequestBuilder,
 };
 
@@ -28,11 +28,39 @@ pub struct Condition {
     #[serde(rename = "Events")]
     pub events: Option<Vec<&'static str>>,
     #[serde(rename = "StartTime", serialize_with = "se_date_time_to_string")]
-    pub start_time: DateTime<chrono::Utc>,
+    pub start_time: DateTime<Utc>,
     #[serde(rename = "EndTime", serialize_with = "se_date_time_to_string")]
-    pub end_time: DateTime<chrono::Utc>,
+    pub end_time: DateTime<Utc>,
     #[serde(rename = "Flags")]
     pub flags: Vec<&'static str>,
+}
+
+impl Condition {
+    pub fn new(start_time: DateTime<Utc>, end_time: DateTime<Utc>) -> Condition {
+        Condition {
+            channel: 0,
+            dirs: vec![],
+            types: vec!["dav"],
+            order: ConditionOrder::Ascent,
+            redundant: "Exclusion",
+            events: None,
+            start_time,
+            end_time,
+            flags: vec![""],
+        }
+    }
+
+    pub fn video(mut self) -> Condition {
+        self.types = vec!["dav"];
+        self.flags = vec!["Timing", "Event", "Event", "Manual"];
+        self
+    }
+
+    pub fn picture(mut self) -> Condition {
+        self.types = vec!["jpg"];
+        self.flags = vec!["Timing", "Event", "Event"];
+        self
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -40,9 +68,9 @@ pub struct FindNextFileInfo {
     #[serde(rename = "Channel")]
     pub channel: i32,
     #[serde(rename = "StartTime", deserialize_with = "de_string_to_date_time")]
-    pub start_time: DateTime<chrono::Utc>,
+    pub start_time: DateTime<Utc>,
     #[serde(rename = "EndTime", deserialize_with = "de_string_to_date_time")]
-    pub end_time: DateTime<chrono::Utc>,
+    pub end_time: DateTime<Utc>,
     #[serde(rename = "Length")]
     pub length: i32,
     #[serde(rename = "Type")]
@@ -84,10 +112,8 @@ impl FindNextFileInfo {
         }
     }
 
-    pub fn unique_time(&self) -> (DateTime<chrono::Utc>, DateTime<chrono::Utc>) {
-        let mut tags = utils::parse_file_path_tags(&self.file_path)
-            .into_iter()
-            .skip(2);
+    pub fn unique_time(&self) -> (DateTime<Utc>, DateTime<Utc>) {
+        let mut tags = parse_file_path_tags(&self.file_path).into_iter().skip(2);
 
         let ns = ((Self::to_num(tags.next()) + Self::to_num(tags.next())) % 500) * 1_000_000;
 
@@ -172,32 +198,4 @@ pub async fn destroy(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
         .send::<Value>()
         .await?
         .result()
-}
-
-impl Condition {
-    pub fn new(start_time: DateTime<chrono::Utc>, end_time: DateTime<chrono::Utc>) -> Condition {
-        Condition {
-            channel: 0,
-            dirs: vec![],
-            types: vec!["dav"],
-            order: ConditionOrder::Ascent,
-            redundant: "Exclusion",
-            events: None,
-            start_time,
-            end_time,
-            flags: vec![""],
-        }
-    }
-
-    pub fn video(mut self) -> Condition {
-        self.types = vec!["dav"];
-        self.flags = vec!["Timing", "Event", "Event", "Manual"];
-        self
-    }
-
-    pub fn picture(mut self) -> Condition {
-        self.types = vec!["jpg"];
-        self.flags = vec!["Timing", "Event", "Event"];
-        self
-    }
 }

@@ -1,12 +1,12 @@
 use base64::Engine as _;
-use chrono::{DateTime, NaiveDateTime};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serializer};
 
 pub fn new_client() -> reqwest::Client {
     reqwest::Client::builder().no_deflate().build().unwrap()
 }
 
-pub fn de_string_to_date_time<'de, D>(deserializer: D) -> Result<DateTime<chrono::Utc>, D::Error>
+pub fn de_string_to_date_time<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -14,7 +14,7 @@ where
         serde_json::Value::String(n) => {
             match from_timestamp(&n).map(|t| t.and_local_timezone(chrono::Local)) {
                 Ok(chrono::LocalResult::Ambiguous(tz, _)) | Ok(chrono::LocalResult::Single(tz)) => {
-                    Ok(tz.with_timezone(&chrono::Utc))
+                    Ok(tz.with_timezone(&Utc))
                 }
                 _ => Err(de::Error::custom("could not convert to local timezone")),
             }
@@ -24,7 +24,7 @@ where
 }
 
 pub fn se_date_time_to_string<S>(
-    date_time: &DateTime<chrono::Utc>,
+    date_time: &DateTime<Utc>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where

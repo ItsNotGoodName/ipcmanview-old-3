@@ -77,7 +77,7 @@ pub enum Error {
     #[error("{0:?}")]
     Response(ResponseError),
     // No session or the server says your session is invalid.
-    #[error("InvalidSession: {0}")]
+    #[error("Session: {0}")]
     Session(String),
 }
 
@@ -162,10 +162,6 @@ impl Config {
         self.last_id += 1;
         self.last_id
     }
-
-    pub fn session(&self) -> bool {
-        !self.session.is_empty()
-    }
 }
 
 pub struct RequestBuilder {
@@ -212,7 +208,7 @@ impl RequestBuilder {
     }
 
     pub async fn send_raw<T: DeserializeOwned>(self) -> Result<Response<T>, Error> {
-        if self.require_session && self.req.session == "" {
+        if self.require_session && self.req.session.is_empty() {
             return Err(Error::no_session());
         }
         self.client

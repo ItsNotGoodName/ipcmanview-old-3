@@ -95,7 +95,7 @@ impl Client {
         let res = self.rpc().method("global.logout").send::<Value>();
         self.config = Config::default();
         match res.await {
-            Ok(res) => Ok(res.result()?),
+            Ok(res) => res.result(),
             Err(Error::Session(_)) => Ok(false),
             Err(err) => Err(err),
         }
