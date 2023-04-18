@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS cameras (
     id INTEGER PRIMARY KEY,
     ip TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    scan_cursor DATETIME NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS camera_details (
@@ -38,15 +39,21 @@ CREATE TABLE IF NOT EXISTS camera_files (
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS camera_running_tasks (
+CREATE TABLE IF NOT EXISTS active_scans (
     camera_id INTEGER PRIMARY KEY,
+    kind STRING NOT NULL, -- Full, Cursor, Manual
+    range_start DATETIME NOT NULL,
+    range_end DATETIME NOT NULL,
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    FOREIGN KEY (camera_id) REFERENCES cameras (id)
+    FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS camera_past_tasks (
+CREATE TABLE IF NOT EXISTS completed_scans (
     id INTEGER PRIMARY KEY,
     camera_id INTEGER NOT NULL,
+    kind STRING NOT NULL, -- Full, Cursor, Manual
+    range_start DATETIME NOT NULL,
+    range_end DATETIME NOT NULL,
     started_at DATETIME NOT NULL,
     duration INTEGER NOT NULL,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE

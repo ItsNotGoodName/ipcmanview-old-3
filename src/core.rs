@@ -1,3 +1,4 @@
+use anyhow::{bail, Context, Result};
 use tokio::{
     select,
     sync::{mpsc, oneshot},
@@ -129,8 +130,6 @@ impl CameraSoftwareVersion {
         magicbox::get_software_version(man.rpc().await?).await
     }
 }
-
-use anyhow::{bail, Context, Result};
 
 pub struct CameraManagerStore {
     mans: Vec<CameraManager>,

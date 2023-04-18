@@ -1,5 +1,4 @@
 use std::ops::AddAssign;
-use std::time::Instant;
 
 use anyhow::{Context, Result};
 
@@ -11,10 +10,11 @@ use sqlx::{Acquire, QueryBuilder, Sqlite, SqliteConnection, Transaction};
 use crate::core::{
     CameraDetail, CameraFileStream, CameraManager, CameraSoftwareVersion, CameraState,
 };
+use crate::models::{CameraScanCursor, Scan, ScanHandle, ScanTask};
 use crate::rpc::mediafilefind::{self, FindNextFileInfo};
 use crate::rpc::{self, rpclogin};
 
-pub async fn camera_manager_get(
+pub async fn camera_manager_find(
     pool: &mut SqliteConnection,
     camera_id: i64,
     client: reqwest::Client,
@@ -28,7 +28,6 @@ pub async fn camera_manager_get(
     .fetch_one(pool)
     .await
     .with_context(|| format!("Failed to find camera {}", camera_id))?;
-
     let state = CameraState {
         user: rpclogin::User::new()
             .username(camera.username)
@@ -44,16 +43,18 @@ impl CameraState {
     pub async fn create(self, pool: &mut SqliteConnection) -> Result<CameraManager> {
         let mut tx = pool.begin().await?;
 
+        let cursor = Scan::current_cursor();
         let camera_id = sqlx::query!(
             r#"
-        INSERT INTO cameras
-        (ip, username, password)
-        VALUES
-        (?1, ?2, ?3)
-        "#,
+            INSERT INTO cameras
+            (ip, username, password, scan_cursor)
+            VALUES
+            (?, ?, ?, ?)
+            "#,
             self.client.ip,
             self.user.username,
             self.user.password,
+            cursor
         )
         .execute(&mut *tx)
         .await?
@@ -61,11 +62,11 @@ impl CameraState {
 
         sqlx::query!(
             r#"
-        INSERT INTO camera_details
-        (id)
-        VALUES
-        (?1)
-        "#,
+            INSERT INTO camera_details
+            (id)
+            VALUES
+            (?)
+            "#,
             camera_id
         )
         .execute(&mut *tx)
@@ -73,11 +74,11 @@ impl CameraState {
 
         sqlx::query!(
             r#"
-        INSERT INTO camera_software_versions
-        (id)
-        VALUES
-        (?1)
-        "#,
+            INSERT INTO camera_software_versions
+            (id)
+            VALUES
+            (?)
+            "#,
             camera_id
         )
         .execute(&mut *tx)
@@ -93,16 +94,16 @@ impl CameraDetail {
     pub async fn save(&self, pool: &mut SqliteConnection, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
-        UPDATE camera_details SET 
-        sn = coalesce(?2, sn),
-        device_class = coalesce(?3, device_class),
-        device_type = coalesce(?4, device_type),
-        hardware_version = coalesce(?5, hardware_version),
-        market_area = coalesce(?6, market_area),
-        process_info = coalesce(?7, process_info),
-        vendor = coalesce(?8, vendor)
-        WHERE id = ?1
-        "#,
+            UPDATE camera_details SET 
+            sn = coalesce(?2, sn),
+            device_class = coalesce(?3, device_class),
+            device_type = coalesce(?4, device_type),
+            hardware_version = coalesce(?5, hardware_version),
+            market_area = coalesce(?6, market_area),
+            process_info = coalesce(?7, process_info),
+            vendor = coalesce(?8, vendor)
+            WHERE id = ?1
+            "#,
             camera_id,
             self.sn,
             self.device_class,
@@ -123,14 +124,14 @@ impl CameraSoftwareVersion {
     pub async fn save(&self, pool: &mut SqliteConnection, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
-        UPDATE camera_software_versions SET 
-        build = ?2,
-        build_date = ?3,
-        security_base_line_version = ?4,
-        version = ?5,
-        web_version = ?6
-        WHERE id = ?1
-        "#,
+            UPDATE camera_software_versions SET 
+            build = ?2,
+            build_date = ?3,
+            security_base_line_version = ?4,
+            version = ?5,
+            web_version = ?6
+            WHERE id = ?1
+            "#,
             camera_id,
             self.build,
             self.build_date,
@@ -165,7 +166,7 @@ impl AddAssign for CameraScanResult {
 }
 
 impl CameraManager {
-    pub async fn scan(
+    pub async fn scan_files(
         &self,
         pool: &mut SqliteConnection,
         start_time: DateTime<Utc>,
@@ -178,10 +179,9 @@ impl CameraManager {
         .await
         .with_context(|| format!("Failed to create file info stream with camera {}", self.id))?;
         let mut tx = pool.begin().await?;
-
         let timestamp = Utc::now();
-
         let mut rows_upserted: u64 = 0;
+
         while let Some(files) = stream.next().await {
             rows_upserted += camera_scan_files(&mut tx, self.id, files, &timestamp)
                 .await?
@@ -196,14 +196,19 @@ impl CameraManager {
         }
 
         let rows_deleted = sqlx::query!(
-        "DELETE FROM camera_files WHERE updated_at < ?1 and camera_id = ?2 and start_time >= ?3 and end_time <= ?4",
-        timestamp,
-        self.id,
-        start_time,
-        end_time
-    )
-    .execute(&mut tx)
-    .await.with_context(||format!("Failed to delete stale files with camera {}", self.id))?.rows_affected();
+            r#"
+            DELETE FROM camera_files 
+            WHERE updated_at < ?1 and camera_id = ?2 and start_time >= ?3 and end_time <= ?4
+            "#,
+            timestamp,
+            self.id,
+            start_time,
+            end_time
+        )
+        .execute(&mut tx)
+        .await
+        .with_context(|| format!("Failed to delete stale files with camera {}", self.id))?
+        .rows_affected();
 
         tx.commit().await.with_context(|| {
             format!(
@@ -244,74 +249,127 @@ async fn camera_scan_files(
     .with_context(|| format!("Failed to upsert files with camera {}", camera_id))
 }
 
-pub async fn camera_tasks_delete_running(pool: &mut SqliteConnection) -> Result<()> {
-    sqlx::query!("DELETE FROM camera_running_tasks")
+pub async fn delete_active_scans(pool: &mut SqliteConnection) -> Result<()> {
+    sqlx::query!("DELETE FROM active_scans")
         .execute(pool)
         .await
-        .context("Failed to delete running tasks")
+        .context("Failed to delete active scans")
         .ok();
+
     Ok(())
 }
 
-struct CameraRunningTask {
-    started_at: DateTime<Utc>,
-}
-
-impl CameraManager {
-    pub async fn tasks_start(&self, pool: &mut SqliteConnection) -> Result<Instant> {
-        let started_at = Utc::now();
+impl ScanTask {
+    pub async fn start(self, pool: &mut SqliteConnection) -> Result<ScanHandle> {
+        let runner = ScanHandle::new(self);
 
         sqlx::query!(
-            "INSERT INTO camera_running_tasks (camera_id, started_at) VALUES(?, ?)",
-            self.id,
-            started_at
+            r#"
+            INSERT INTO active_scans 
+            (camera_id, kind, range_start, range_end, started_at) 
+            VALUES
+            (?, ?, ?, ?, ?)
+            "#,
+            runner.camera_id,
+            runner.kind,
+            runner.range.start,
+            runner.range.end,
+            runner.started_at,
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to create task with camera {}", self.id))?;
+        .with_context(|| {
+            format!(
+                "Failed to create active scan with camera {}",
+                runner.camera_id
+            )
+        })?;
 
-        Ok(Instant::now())
+        Ok(runner)
     }
+}
 
-    pub async fn tasks_end(&self, pool: &mut SqliteConnection, instant: Instant) -> Result<()> {
+impl ScanHandle {
+    pub async fn end(self, pool: &mut SqliteConnection) -> Result<()> {
         let mut tx = pool.begin().await?;
+        let duration = self.instant.elapsed().as_millis() as i64;
 
-        let running_task = sqlx::query_as_unchecked!(
-            CameraRunningTask,
-            "SELECT started_at FROM camera_running_tasks WHERE camera_id = ?",
-            self.id
-        )
-        .fetch_one(&mut tx)
-        .await
-        .with_context(|| format!("Failed to find running tasks with camera {}", self.id))?;
-
-        let duration = instant.elapsed().as_millis() as i64;
+        if self.should_save() {
+            sqlx::query!(
+                r#"
+                INSERT INTO completed_scans 
+                (camera_id, kind, range_start, range_end, started_at, duration) 
+                VALUES 
+                (?, ?, ?, ?, ?, ?)
+                "#,
+                self.camera_id,
+                self.kind,
+                self.range.start,
+                self.range.end,
+                self.started_at,
+                duration
+            )
+            .execute(&mut tx)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to insert into completed scans with camera {}",
+                    self.camera_id
+                )
+            })?;
+        }
 
         sqlx::query!(
-            "INSERT INTO camera_past_tasks (camera_id, started_at, duration) VALUES (?, ?, ?)",
-            self.id,
-            running_task.started_at,
-            duration
+            "DELETE FROM active_scans WHERE camera_id = ?",
+            self.camera_id
         )
         .execute(&mut tx)
         .await
-        .with_context(|| format!("Failed to insert into past tasks with camera {}", self.id))?;
+        .with_context(|| {
+            format!(
+                "Failed to delete active scan with camera {}",
+                self.camera_id
+            )
+        })?;
 
-        sqlx::query!(
-            "DELETE FROM camera_running_tasks WHERE camera_id = ?",
-            self.id
-        )
-        .execute(&mut tx)
-        .await
-        .with_context(|| format!("Failed to delete running task with camera {}", self.id))?;
+        if self.should_update_scan_cursor() {
+            let scan_cursor = self.range.scan_cursor();
+
+            sqlx::query!(
+                "UPDATE cameras set scan_cursor = ?2 WHERE id = ?1",
+                self.camera_id,
+                scan_cursor,
+            )
+            .execute(&mut tx)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to update scan cursor with camera {}",
+                    self.camera_id,
+                )
+            })?;
+        }
 
         tx.commit().await.with_context(|| {
             format!(
-                "Failed to commit end task transaction with camera {}",
-                self.id
+                "Failed to commit end scan transaction with camera {}",
+                self.camera_id
             )
         })?;
 
         Ok(())
+    }
+}
+
+impl CameraScanCursor {
+    pub async fn find(pool: &mut SqliteConnection, camera_id: i64) -> Result<Self> {
+        sqlx::query_as_unchecked!(
+            CameraScanCursor,
+            "SELECT id, scan_cursor FROM cameras WHERE id = ?",
+            camera_id
+        )
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("Failed to find scan_cursor with camera {}", camera_id))
     }
 }

@@ -1,9 +1,15 @@
+use std::io;
+use std::io::Write;
+
 use anyhow::{bail, Result};
 use dotenvy::dotenv;
-use ipcmanview::db;
+
+use ipcmanview::core::{self, CameraManager, CameraManagerStore, CameraState};
 use ipcmanview::rpc::utils::new_client;
 use ipcmanview::rpc::{self, rpclogin};
-use ipcmanview::{client_print, require_env};
+use ipcmanview::{client_print, connect_database, procs, require_env};
+use ipcmanview::{db, models};
+use sqlx::SqliteConnection;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,9 +17,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match std::env::args().skip(1).next() {
         Some(command) => match command.as_str() {
-            "cli" => cli().await,
-            "db" => db().await,
             "http" => http().await,
+            "db" => db().await,
+            "cli" => cli().await,
             _ => Err("Invalid Command".into()),
         },
         None => Err("No Command".into()),
@@ -24,36 +30,30 @@ async fn http() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-use ipcmanview::core::{self, CameraManager, CameraManagerStore, CameraState};
-use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::{ConnectOptions, SqliteConnection};
-use std::str::FromStr;
-
 async fn db() -> Result<(), Box<dyn std::error::Error>> {
-    // Connect
-    let mut pool = SqliteConnectOptions::from_str(
+    let mut pool = connect_database(
         &std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()),
-    )?
-    .create_if_missing(true)
-    .connect()
+    )
     .await?;
 
-    // Migrate
-    sqlx::migrate!().run(&mut pool).await?;
-    db::camera_tasks_delete_running(&mut pool).await?;
-
+    let id = 1;
     let client = new_client();
 
-    let man = match db::camera_manager_get(&mut pool, 1, client.clone()).await {
-        Ok(cam) => cam,
+    let man = match db::camera_manager_find(&mut pool, id, client.clone()).await {
+        Ok(cam) => {
+            println!("Found manager: {}", id);
+            cam
+        }
         Err(err) => {
-            println!("Creating client due to err: {}", err);
+            println!("Creating manager: {}", err);
+
             let user = rpclogin::User::new()
                 .username(require_env("IPCMANVIEW_USERNAME")?)
                 .password(require_env("IPCMANVIEW_PASSWORD")?)
                 .unblock();
             let client = rpc::Client::new(require_env("IPCMANVIEW_IP")?, client.clone());
             let state = CameraState { user, client };
+
             state.create(&mut pool).await?
         }
     };
@@ -77,13 +77,14 @@ async fn db_run(
         .await?
         .save(&mut pool, man.id)
         .await?;
-    ipcmanview::scan::full(&mut pool, man).await?;
+    procs::scan_task_run(&mut pool, man, models::ScanTaskBuilder::new(man.id).full()).await?;
+    let cursor_scan_task = models::CameraScanCursor::find(&mut pool, man.id)
+        .await?
+        .to_scan_task();
+    procs::scan_task_run(&mut pool, man, cursor_scan_task).await?;
 
     Ok(())
 }
-
-use std::io;
-use std::io::Write;
 
 fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
     print!("{}", message);
