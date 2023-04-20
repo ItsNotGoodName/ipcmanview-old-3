@@ -4,10 +4,11 @@ use sqlx::SqlitePool;
 
 use anyhow::Result;
 
-use crate::core::{CameraDetail, CameraManager, CameraManagerStore, CameraSoftwareVersion};
-use crate::db::{self, CameraScanResult};
-use crate::models::{Camera, CameraCreate, CameraUpdate, ScanRange, ScanTask};
+use crate::db;
+use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftwareVersion};
+use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
 use crate::rpc;
+use crate::scan::{ScanRange, ScanTask};
 
 // -------------------- Setup
 
@@ -26,24 +27,21 @@ pub async fn setup_database(url: &str) -> Result<sqlx::SqlitePool> {
     Ok(pool)
 }
 
-pub async fn setup_camera(
-    pool: &SqlitePool,
-    store: &mut CameraManagerStore,
-    client: reqwest::Client,
-) -> Result<()> {
+pub async fn setup_store(pool: &SqlitePool, client: reqwest::Client) -> Result<IpcManagerStore> {
+    let store = IpcManagerStore::new();
     for cam in Camera::list(pool).await? {
         let man = cam.new_camera_manager(client.clone());
-        store.add(man)?;
+        store.add(man).await?;
     }
 
-    Ok(())
+    Ok(store)
 }
 
 // -------------------- Camera
 
 impl Camera {
-    pub fn new_camera_manager(self, client: reqwest::Client) -> CameraManager {
-        CameraManager::new(
+    pub fn new_camera_manager(self, client: reqwest::Client) -> IpcManager {
+        IpcManager::new(
             self.id,
             rpc::Client::new(client, self.ip, self.username, self.password),
         )
@@ -52,18 +50,18 @@ impl Camera {
 
 pub async fn camera_create(
     pool: &SqlitePool,
-    store: &mut CameraManagerStore,
-    cam: CameraCreate,
+    store: &mut IpcManagerStore,
     client: reqwest::Client,
+    cam: CreateCamera,
 ) -> Result<i64> {
     let man = cam.create(pool).await?.new_camera_manager(client);
     let id = man.id;
-    store.add(man)?;
+    store.add(man).await?;
 
     Ok(id)
 }
 
-pub async fn camera_delete(pool: &SqlitePool, store: CameraManagerStore, id: i64) -> Result<()> {
+pub async fn camera_delete(pool: &SqlitePool, store: IpcManagerStore, id: i64) -> Result<()> {
     // Delete camera in database
     Camera::delete(pool, id).await?;
     // Delete manager in store
@@ -74,12 +72,12 @@ pub async fn camera_delete(pool: &SqlitePool, store: CameraManagerStore, id: i64
 
 pub async fn camera_update(
     pool: &SqlitePool,
-    store: CameraManagerStore,
-    cam: CameraUpdate,
+    store: IpcManagerStore,
+    cam: UpdateCamera,
 ) -> Result<()> {
     let id = cam.id;
-    let man = store.get(id)?;
-    let mut client = man.client.lock().unwrap();
+    let man = store.get(id).await?;
+    let mut client = man.client.lock().await;
     let cam = cam.update_and_find(pool).await?;
 
     // Logout
@@ -94,18 +92,28 @@ pub async fn camera_update(
     Ok(())
 }
 
-pub async fn camera_refresh_all(
-    pool: &SqlitePool,
-    store: CameraManagerStore,
-    id: i64,
-) -> Result<()> {
-    let man = store.get(id)?;
-
-    CameraDetail::get(&man).await?.save(pool, id).await?;
-    CameraSoftwareVersion::get(&man)
+pub async fn camera_refresh(pool: &SqlitePool, man: &IpcManager) -> Result<()> {
+    IpcDetail::get(&man).await?.save(pool, man.id).await?;
+    IpcSoftwareVersion::get(&man)
         .await?
-        .save(pool, id)
+        .save(pool, man.id)
         .await?;
+
+    Ok(())
+}
+
+pub async fn camera_refresh_all(pool: &SqlitePool, store: &IpcManagerStore) -> Result<()> {
+    let mut handles = Vec::new();
+
+    for man in store.list().await {
+        let pool = pool.clone();
+        let handle = tokio::spawn(async move { camera_refresh(&pool, &man).await });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.await.unwrap().ok(); // TODO: join errors
+    }
 
     Ok(())
 }
@@ -114,7 +122,7 @@ pub async fn camera_refresh_all(
 
 async fn scan_range_run(
     pool: &SqlitePool,
-    man: &CameraManager,
+    man: &IpcManager,
     range: &ScanRange,
 ) -> Result<CameraScanResult> {
     let mut res = CameraScanResult::default();
@@ -130,7 +138,7 @@ async fn scan_range_run(
 
 pub async fn scan_task_run(
     pool: &SqlitePool,
-    man: &CameraManager,
+    man: &IpcManager,
     task: ScanTask,
 ) -> Result<CameraScanResult> {
     let task = task.start(pool).await?;

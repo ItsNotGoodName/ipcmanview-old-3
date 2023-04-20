@@ -3,14 +3,15 @@ use std::io::Write;
 
 use anyhow::{bail, Result};
 use dotenvy::dotenv;
+use ipcmanview::scan::ScanTaskBuilder;
 use sqlx::SqlitePool;
 
-use ipcmanview::core::{self, CameraManager, CameraManagerStore};
-use ipcmanview::models::{Camera, CameraCreate};
-use ipcmanview::procs::setup_database;
+use ipcmanview::ipc::{IpcManager, IpcManagerStore};
+use ipcmanview::models::CreateCamera;
+use ipcmanview::procs::{setup_database, setup_store};
+use ipcmanview::rpc;
 use ipcmanview::rpc::utils::new_client;
 use ipcmanview::{client_print, procs, require_env};
-use ipcmanview::{models, rpc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -32,56 +33,64 @@ async fn http() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn db() -> Result<(), Box<dyn std::error::Error>> {
+    let client = new_client();
     let pool =
         setup_database(&std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()))
             .await?;
+    let mut store = setup_store(&pool, client.clone()).await?;
 
-    let id = 1;
-    let client = new_client();
+    let password = require_env("IPCMANVIEW_PASSWORD")?;
+    let ips = require_env("IPCMANVIEW_IPS")?;
+    let ips = ips.trim();
+    if ips == "" {
+        panic!("IP_IPS is empty")
+    }
+    let ips = ips.split(" ");
+    let username = std::env::var("IPCMANVIEW_USERNAME").unwrap_or("admin".to_string());
+    for ip in ips {
+        let create = CreateCamera {
+            ip: ip.to_string(),
+            username: username.clone(),
+            password: password.clone(),
+        };
+        if let Err(err) = procs::camera_create(&pool, &mut store, client.clone(), create).await {
+            dbg!(err);
+        };
+    }
 
-    let man = match Camera::find(&pool, id).await {
-        Ok(cam) => {
-            println!("Found manager: {}", id);
-            cam.new_camera_manager(client)
-        }
-        Err(err) => {
-            println!("Creating manager: {}", err);
+    procs::camera_refresh_all(&pool, &store).await.ok();
+    db_run(&pool, &store).await.ok();
 
-            CameraCreate {
-                ip: require_env("IPCMANVIEW_IP")?,
-                username: require_env("IPCMANVIEW_USERNAME")?,
-                password: require_env("IPCMANVIEW_PASSWORD")?,
-            }
-            .create(&pool)
-            .await?
-            .new_camera_manager(client)
-        }
-    };
+    store.reset().await;
 
-    let res = db_run(&man, &pool).await;
-
-    man.close().await;
-
-    res
+    Ok(())
 }
 
 async fn db_run(
-    man: &core::CameraManager,
     pool: &SqlitePool,
+    store: &IpcManagerStore,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    core::CameraDetail::get(man)
-        .await?
-        .save(pool, man.id)
-        .await?;
-    core::CameraSoftwareVersion::get(man)
-        .await?
-        .save(pool, man.id)
-        .await?;
-    procs::scan_task_run(pool, man, models::ScanTaskBuilder::new(man.id).full()).await?;
-    let cursor_scan_task = models::CameraScanCursor::find(pool, man.id)
-        .await?
-        .to_scan_task();
-    procs::scan_task_run(pool, man, cursor_scan_task).await?;
+    // procs::scan_task_run(pool, man, models::ScanTaskBuilder::new(man.id).full()).await?;
+    // let cursor_scan_task = models::CameraScanCursor::find(pool, man.id)
+    //     .await?
+    //     .to_scan_task();
+    // procs::scan_task_run(pool, man, cursor_scan_task).await?;
+
+    let mut handles = Vec::new();
+
+    for man in store.list().await {
+        let pool = pool.clone();
+        let handle = tokio::spawn(async move {
+            procs::scan_task_run(&pool, &man, ScanTaskBuilder::new(man.id).full()).await
+        });
+        handles.push(handle);
+    }
+
+    for handle in handles {
+        handle.await.unwrap().ok(); // TODO: join errors
+    }
+
+    println!("All threads finished");
 
     Ok(())
 }
@@ -95,7 +104,7 @@ fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-async fn store_from_env() -> Result<CameraManagerStore> {
+async fn store_from_env() -> Result<IpcManagerStore> {
     let password = require_env("IPCMANVIEW_PASSWORD")?;
     let ips = require_env("IPCMANVIEW_IPS")?;
     let ips = ips.trim();
@@ -105,7 +114,7 @@ async fn store_from_env() -> Result<CameraManagerStore> {
     let ips = ips.split(" ");
     let username = std::env::var("IPCMANVIEW_USERNAME").unwrap_or("admin".to_string());
 
-    let store = CameraManagerStore::new();
+    let store = IpcManagerStore::new();
     let client = new_client();
     for (id, ip) in ips.enumerate() {
         let client = rpc::Client::new(
@@ -115,8 +124,8 @@ async fn store_from_env() -> Result<CameraManagerStore> {
             password.clone(),
         );
 
-        let cam = CameraManager::new(id as i64, client);
-        store.add(cam)?;
+        let cam = IpcManager::new(id as i64, client);
+        store.add(cam).await?;
     }
 
     Ok(store)
@@ -131,7 +140,7 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
 
         match input.as_str() {
             "print" | "p" => {
-                for s in store.list() {
+                for s in store.list().await {
                     client_print(s).await?;
                     break;
                 }

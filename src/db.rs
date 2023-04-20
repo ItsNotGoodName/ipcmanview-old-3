@@ -1,17 +1,14 @@
-use std::ops::AddAssign;
-
 use anyhow::{Context, Result};
 
 use chrono::{DateTime, Utc};
 
 use sqlx::sqlite::SqliteQueryResult;
-use sqlx::{QueryBuilder, Sqlite, SqlitePool, Transaction};
+use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
-use crate::core::{CameraDetail, CameraFileStream, CameraManager, CameraSoftwareVersion};
-use crate::models::{
-    Camera, CameraCreate, CameraScanCursor, CameraUpdate, Scan, ScanHandle, ScanTask,
-};
+use crate::ipc::{IpcDetail, IpcFileStream, IpcManager, IpcSoftwareVersion};
+use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
 use crate::rpc::mediafilefind;
+use crate::scan::{Scan, ScanCamera, ScanHandle, ScanTask};
 
 impl Camera {
     pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
@@ -56,7 +53,7 @@ impl Camera {
     }
 }
 
-impl CameraUpdate {
+impl UpdateCamera {
     pub async fn update(self, pool: &SqlitePool) -> Result<()> {
         sqlx::query!(
             r#"
@@ -84,7 +81,7 @@ impl CameraUpdate {
     }
 }
 
-impl CameraCreate {
+impl CreateCamera {
     pub async fn create(self, pool: &SqlitePool) -> Result<Camera> {
         let mut tx = pool.begin().await?;
 
@@ -140,7 +137,7 @@ impl CameraCreate {
     }
 }
 
-impl CameraDetail {
+impl IpcDetail {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
@@ -170,7 +167,7 @@ impl CameraDetail {
     }
 }
 
-impl CameraSoftwareVersion {
+impl IpcSoftwareVersion {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
@@ -202,38 +199,25 @@ impl CameraSoftwareVersion {
     }
 }
 
-#[derive(Default, Debug)]
-pub struct CameraScanResult {
-    pub upserted: u64,
-    pub deleted: u64,
-}
-
-impl AddAssign for CameraScanResult {
-    fn add_assign(&mut self, rhs: Self) {
-        self.upserted += rhs.upserted;
-        self.deleted += rhs.deleted;
-    }
-}
-
-impl CameraManager {
+impl IpcManager {
+    // Make sure this is never run concurrently.
     pub async fn scan_files(
         &self,
         pool: &SqlitePool,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
     ) -> Result<CameraScanResult> {
-        let mut stream = CameraFileStream::new(
+        let mut stream = IpcFileStream::new(
             self,
             mediafilefind::Condition::new(start_time, end_time).picture(),
         )
         .await
         .with_context(|| format!("Failed to create file info stream with camera {}", self.id))?;
-        let mut tx = pool.begin().await?;
         let timestamp = Utc::now();
-        let mut rows_upserted: u64 = 0;
+        let mut upserted: u64 = 0;
 
         while let Some(files) = stream.next().await {
-            rows_upserted += camera_scan_files(&mut tx, self.id, files, &timestamp)
+            upserted += camera_scan_files(pool, self.id, files, &timestamp)
                 .await?
                 .rows_affected();
         }
@@ -245,7 +229,7 @@ impl CameraManager {
             ));
         }
 
-        let rows_deleted = sqlx::query!(
+        let deleted = sqlx::query!(
             r#"
             DELETE FROM camera_files 
             WHERE updated_at < ?1 and camera_id = ?2 and start_time >= ?3 and end_time <= ?4
@@ -255,27 +239,17 @@ impl CameraManager {
             start_time,
             end_time
         )
-        .execute(&mut tx)
+        .execute(pool)
         .await
         .with_context(|| format!("Failed to delete stale files with camera {}", self.id))?
         .rows_affected();
 
-        tx.commit().await.with_context(|| {
-            format!(
-                "Failed to commit file info transaction with camera {}",
-                self.id
-            )
-        })?;
-
-        Ok(CameraScanResult {
-            deleted: rows_deleted,
-            upserted: rows_upserted,
-        })
+        Ok(CameraScanResult { deleted, upserted })
     }
 }
 
 async fn camera_scan_files(
-    tx: &mut Transaction<'_, Sqlite>,
+    pool: &SqlitePool,
     camera_id: i64,
     files: Vec<mediafilefind::FindNextFileInfo>,
     timestamp: &chrono::DateTime<Utc>,
@@ -294,7 +268,7 @@ async fn camera_scan_files(
     })
     .push("ON CONFLICT (camera_id, file_path) DO UPDATE SET updated_at=excluded.updated_at")
     .build()
-    .execute(tx)
+    .execute(pool)
     .await
     .with_context(|| format!("Failed to upsert files with camera {}", camera_id))
 }
@@ -411,10 +385,10 @@ impl ScanHandle {
     }
 }
 
-impl CameraScanCursor {
+impl ScanCamera {
     pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
         sqlx::query_as_unchecked!(
-            CameraScanCursor,
+            ScanCamera,
             "SELECT id, scan_cursor FROM cameras WHERE id = ?",
             camera_id
         )

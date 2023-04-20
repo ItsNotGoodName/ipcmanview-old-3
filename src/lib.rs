@@ -10,7 +10,7 @@ pub fn require_env(name: &str) -> Result<String> {
     std::env::var(name).with_context(|| format!("{} not set", name))
 }
 
-pub async fn client_print(client: core::CameraManager) -> Result<(), rpc::Error> {
+pub async fn client_print(client: ipc::IpcManager) -> Result<(), rpc::Error> {
     println!(
         "global.getCurrentTime: {:?}",
         global::get_current_time(client.rpc().await?).await,
@@ -67,17 +67,15 @@ pub async fn client_print(client: core::CameraManager) -> Result<(), rpc::Error>
     Ok(())
 }
 
-pub mod core;
 pub mod db;
+pub mod ipc;
 pub mod models;
 pub mod procs;
+pub mod scan;
 
-pub async fn camera_update(pool: &sqlx::SqlitePool, man: &core::CameraManager) -> Result<()> {
-    core::CameraDetail::get(&man)
-        .await?
-        .save(pool, man.id)
-        .await?;
-    core::CameraSoftwareVersion::get(man)
+pub async fn camera_update(pool: &sqlx::SqlitePool, man: &ipc::IpcManager) -> Result<()> {
+    ipc::IpcDetail::get(&man).await?.save(pool, man.id).await?;
+    ipc::IpcSoftwareVersion::get(man)
         .await?
         .save(pool, man.id)
         .await?;
