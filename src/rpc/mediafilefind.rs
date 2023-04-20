@@ -181,7 +181,7 @@ pub async fn get_count(rpc: RequestBuilder, object: i64) -> Result<i32, Error> {
         .object(object)
         .send::<GetCount>()
         .await?
-        .params_as(|p, _| p.count)
+        .params_map(|p, _| p.count)
 }
 
 pub async fn close(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {

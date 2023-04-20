@@ -7,14 +7,14 @@ const WATCH_NET: &str = "WatchNet";
 
 impl Client {
     pub async fn login(&mut self) -> Result<(), Error> {
-        // Fail safe to prevent locking the account when password is wrong
-        if self.blocked {
-            return Err(Error::Login(LoginError::Blocked));
-        }
-
         // Prevent login when client is closed
         if self.closed {
             return Err(Error::Login(LoginError::Closed));
+        }
+
+        // Fail safe to prevent locking the account when password is wrong
+        if self.blocked {
+            return Err(Error::Login(LoginError::Blocked));
         }
 
         // We have to have no session in order to login

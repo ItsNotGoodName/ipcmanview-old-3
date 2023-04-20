@@ -68,19 +68,19 @@ pub enum LoginError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    // This can only occurs on login requests.
-    #[error("Login: {0}")]
+    // This can only occur on login requests.
+    #[error("{0:?}")]
     Login(LoginError),
     // The request could not be made for any reason.
     #[error("Request: {0}")]
     Request(String),
-    //  The response could not be deserialized.
+    // The response could not be deserialized.
     #[error("Parse: {0}")]
     Parse(String),
     // The response contains an error field.
     #[error("{0:?}")]
     Response(ResponseError),
-    // No session or the server says your session is invalid.
+    // No session or the server says the session is invalid.
     #[error("Session: {0}")]
     Session(String),
 }
@@ -124,7 +124,7 @@ impl<T> Response<T> {
         self.params.ok_or(Error::no_params())
     }
 
-    pub fn params_as<F, O: FnOnce(T, Response<T>) -> F>(mut self, op: O) -> Result<F, Error> {
+    pub fn params_map<F, O: FnOnce(T, Response<T>) -> F>(mut self, op: O) -> Result<F, Error> {
         match self.params {
             Some(params) => {
                 self.params = None;

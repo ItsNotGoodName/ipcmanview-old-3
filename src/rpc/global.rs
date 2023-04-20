@@ -35,7 +35,7 @@ pub(crate) async fn first_login(
         }))
         .send_raw::<AuthParam>()
         .await?
-        .params_as(|params, res| (params, res))
+        .params_map(|params, res| (params, res))
 }
 
 pub(crate) async fn second_login(
@@ -71,5 +71,5 @@ pub(crate) async fn keep_alive(rpc: RequestBuilder) -> Result<i32, Error> {
         }))
         .send::<KeepAlive>()
         .await?
-        .params_as(|p, _| p.timeout)
+        .params_map(|p, _| p.timeout)
 }
