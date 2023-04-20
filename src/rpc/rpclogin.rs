@@ -1,104 +1,33 @@
 use std::time::Instant;
 
-use crate::rpc::{utils, Client, Error, LoginError};
+use super::{global, utils, Client, Config, Error, LoginError};
 
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
 
-async fn login(client: &mut Client, username: &str, password: &str) -> Result<(), Error> {
-    if !client.config.session.is_empty() {
-        client.global_logout().await.ok();
-    }
-
-    let (first_login, res) = client.global_first_login(username).await?;
-
-    match res.error {
-        Some(err) => match err.code {
-            268632079 | 401 => {}
-            _ => return Err(Error::Response(err)),
-        },
-        None => return Err(Error::Parse("Bad Error Code".to_string())),
-    }
-
-    let login_type = match first_login.encryption.as_str() {
-        WATCH_NET => WATCH_NET,
-        _ => "Direct",
-    };
-
-    let password = utils::get_auth(username, password, &first_login);
-    let res = client.global_second_login(username, &password, login_type, &first_login.encryption);
-
-    match res.await {
-        Ok(_) => Ok(()),
-        Err(err) => Err(Error::Login(match err {
-            Error::Response(err) if err.code == 268632085 => LoginError::UserOrPasswordNotValid,
-            Error::Response(err) if err.code == 268632081 => LoginError::HasBeenLocked,
-            Error::Response(err) if err.message == "UserNotValidt" => LoginError::UserNotValid,
-            Error::Response(err) if err.message == "PasswordNotValid" => {
-                LoginError::PasswordNotValid
-            }
-            Error::Response(err) if err.message == "InBlackList" => LoginError::InBlackList,
-            Error::Response(err) if err.message == "HasBeedUsed" => LoginError::HasBeedUsed,
-            Error::Response(err) if err.message == "HasBeenLocked" => LoginError::HasBeenLocked,
-            _ => return Err(err),
-        })),
-    }
-}
-
-async fn keep_alive(client: &mut Client) -> Result<(), Error> {
-    match client.config.last_login {
-        Some(last_login) => {
-            if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
-                return Ok(());
-            }
-
-            match client.global_keep_alive().await {
-                Ok(_) => Ok(()),
-                Err(err) => Err(err),
-            }
-        }
-        None => Err(Error::no_session()),
-    }
-}
-
-pub struct User {
-    pub username: String,
-    pub password: String,
-    blocked: bool,
-}
-
-impl User {
-    pub fn new() -> User {
-        User {
-            username: "".to_string(),
-            password: "".to_string(),
-            blocked: true,
-        }
-    }
-
-    pub fn username(mut self, username: String) -> User {
-        self.username = username;
-        self
-    }
-
-    pub fn password(mut self, password: String) -> User {
-        self.password = password;
-        self
-    }
-
-    pub fn unblock(mut self) -> User {
-        self.blocked = false;
-        self
-    }
-
-    pub async fn login(&mut self, client: &mut Client) -> Result<(), Error> {
+impl Client {
+    pub async fn login(&mut self) -> Result<(), Error> {
+        // Fail safe to prevent locking the account when password is wrong
         if self.blocked {
             return Err(Error::Login(LoginError::Blocked));
         }
 
-        match login(client, &self.username, &self.password).await {
-            Ok(res) => Ok(res),
+        // Prevent login when client is closed
+        if self.closed {
+            return Err(Error::Login(LoginError::Closed));
+        }
+
+        // We have to have no session in order to login
+        if !self.config.session.is_empty() {
+            global::logout(self.rpc()).await.ok();
+            self.config = Config::default();
+        }
+
+        match self.login_procedure().await {
+            Ok(o) => Ok(o),
             Err(err) => {
+                self.config = Config::default();
+                // Block client on a login error
                 if let Error::Login(_) = err {
                     self.blocked = true;
                 }
@@ -107,19 +36,89 @@ impl User {
         }
     }
 
-    pub async fn keep_alive_or_login(&mut self, client: &mut Client) -> Result<(), Error> {
-        match keep_alive(client).await {
-            Ok(o) => Ok(o),
-            Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
-            Err(_) => self.login(client).await, // Let's just assume that our session is invalid
+    async fn login_procedure(&mut self) -> Result<(), Error> {
+        // Do a first login and set our session
+        let (first_login, res) = global::first_login(self.rpc_login(), &self.username).await?;
+        self.config.session = res.session;
+        // Make sure the caemra supports this login procedure
+        match res.error {
+            Some(err) => match err.code {
+                268632079 | 401 => {}
+                _ => return Err(Error::Response(err)),
+            },
+            None => return Err(Error::Parse("Bad error code".to_string())),
+        }
+
+        // Magic
+        let login_type = match first_login.encryption.as_str() {
+            WATCH_NET => WATCH_NET,
+            _ => "Direct",
+        };
+
+        // Encrypt password based on the first login info and then do a second login
+        let password = utils::get_auth(&self.username, &self.password, &first_login);
+        let res = global::second_login(
+            self.rpc_login(),
+            &self.username,
+            &password,
+            login_type,
+            &first_login.encryption,
+        );
+
+        match res.await {
+            Ok(_) => {
+                self.config.last_login = Some(Instant::now());
+                Ok(())
+            }
+            Err(err) => Err(Error::Login(match err {
+                Error::Response(err) if err.code == 268632085 => LoginError::UserOrPasswordNotValid,
+                Error::Response(err) if err.code == 268632081 => LoginError::HasBeenLocked,
+                Error::Response(err) if err.message == "UserNotValidt" => LoginError::UserNotValid,
+                Error::Response(err) if err.message == "PasswordNotValid" => {
+                    LoginError::PasswordNotValid
+                }
+                Error::Response(err) if err.message == "InBlackList" => LoginError::InBlackList,
+                Error::Response(err) if err.message == "HasBeedUsed" => LoginError::HasBeedUsed,
+                Error::Response(err) if err.message == "HasBeenLocked" => LoginError::HasBeenLocked,
+                _ => return Err(err),
+            })),
         }
     }
 
-    pub async fn logout(client: &mut Client) -> Result<(), Error> {
-        if client.config.session.is_empty() {
+    async fn keep_alive(&mut self) -> Result<(), Error> {
+        match self.config.last_login {
+            Some(last_login) => {
+                if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
+                    return Ok(());
+                }
+
+                match global::keep_alive(self.rpc()).await {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(err),
+                }
+            }
+            None => Err(Error::no_session()),
+        }
+    }
+
+    pub async fn keep_alive_or_login(&mut self) -> Result<(), Error> {
+        match self.keep_alive().await {
+            Ok(o) => Ok(o),
+            Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
+            Err(_) => self.login().await, // Let's just assume that our session is invalid
+        }
+    }
+
+    pub async fn logout(&mut self) -> Result<(), Error> {
+        if self.config.session.is_empty() {
             Ok(())
         } else {
-            client.global_logout().await.map(|_| ())
+            let res = global::logout(self.rpc()).await;
+            self.config = Config::default();
+            match res {
+                Ok(_) => Ok(()),
+                Err(err) => Err(err),
+            }
         }
     }
 }

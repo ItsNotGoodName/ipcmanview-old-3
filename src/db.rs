@@ -5,42 +5,87 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 
 use sqlx::sqlite::SqliteQueryResult;
-use sqlx::{Acquire, QueryBuilder, Sqlite, SqliteConnection, Transaction};
+use sqlx::{QueryBuilder, Sqlite, SqlitePool, Transaction};
 
-use crate::core::{
-    CameraDetail, CameraFileStream, CameraManager, CameraSoftwareVersion, CameraState,
+use crate::core::{CameraDetail, CameraFileStream, CameraManager, CameraSoftwareVersion};
+use crate::models::{
+    Camera, CameraCreate, CameraScanCursor, CameraUpdate, Scan, ScanHandle, ScanTask,
 };
-use crate::models::{CameraScanCursor, Scan, ScanHandle, ScanTask};
-use crate::rpc::mediafilefind::{self, FindNextFileInfo};
-use crate::rpc::{self, rpclogin};
+use crate::rpc::mediafilefind;
 
-pub async fn camera_manager_find(
-    pool: &mut SqliteConnection,
-    camera_id: i64,
-    client: reqwest::Client,
-) -> Result<CameraManager> {
-    let camera = sqlx::query!(
-        r#"
-        SELECT ip, username, password FROM cameras WHERE id = ?
-        "#,
-        camera_id,
-    )
-    .fetch_one(pool)
-    .await
-    .with_context(|| format!("Failed to find camera {}", camera_id))?;
-    let state = CameraState {
-        user: rpclogin::User::new()
-            .username(camera.username)
-            .password(camera.password)
-            .unblock(),
-        client: rpc::Client::new(camera.ip, client),
-    };
+impl Camera {
+    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
+        sqlx::query_as!(
+            Camera,
+            r#"
+            SELECT id, ip, username, password FROM cameras WHERE id = ?
+            "#,
+            camera_id,
+        )
+        .fetch_one(pool)
+        .await
+        .with_context(|| format!("Failed to find camera {}", camera_id))
+    }
 
-    Ok(CameraManager::new(camera_id, state))
+    pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
+        sqlx::query_as!(
+            Camera,
+            r#"
+            SELECT id, ip, username, password FROM cameras
+            "#
+        )
+        .fetch_all(pool)
+        .await
+        .with_context(|| format!("Failed to list cameras"))
+    }
+
+    pub async fn delete(pool: &SqlitePool, id: i64) -> Result<()> {
+        sqlx::query!(
+            r#"
+            DELETE FROM cameras 
+            WHERE id = ?
+            "#,
+            id
+        )
+        .execute(pool)
+        .await
+        .with_context(|| format!("Failed to delete camera {}", id))?
+        .rows_affected();
+
+        Ok(())
+    }
 }
 
-impl CameraState {
-    pub async fn create(self, pool: &mut SqliteConnection) -> Result<CameraManager> {
+impl CameraUpdate {
+    pub async fn update(self, pool: &SqlitePool) -> Result<()> {
+        sqlx::query!(
+            r#"
+            UPDATE cameras SET 
+            ip = coalesce(?, ip),
+            username = coalesce(?, username),
+            password = coalesce(?, password)
+            WHERE id = ?
+            "#,
+            self.ip,
+            self.username,
+            self.password,
+            self.id,
+        )
+        .execute(pool)
+        .await
+        .with_context(|| format!("Failed to update detail with camera {}", self.id))?;
+        Ok(())
+    }
+
+    pub async fn update_and_find(self, pool: &SqlitePool) -> Result<Camera> {
+        let id = self.id;
+        self.update(pool).await?;
+        Camera::find(pool, id).await
+    }
+}
+
+impl CameraCreate {
+    pub async fn create(self, pool: &SqlitePool) -> Result<Camera> {
         let mut tx = pool.begin().await?;
 
         let cursor = Scan::current_cursor();
@@ -51,9 +96,9 @@ impl CameraState {
             VALUES
             (?, ?, ?, ?)
             "#,
-            self.client.ip,
-            self.user.username,
-            self.user.password,
+            self.ip,
+            self.username,
+            self.password,
             cursor
         )
         .execute(&mut *tx)
@@ -86,12 +131,17 @@ impl CameraState {
 
         tx.commit().await?;
 
-        Ok(CameraManager::new(camera_id, self))
+        Ok(Camera {
+            id: camera_id,
+            ip: self.ip,
+            username: self.username,
+            password: self.password,
+        })
     }
 }
 
 impl CameraDetail {
-    pub async fn save(&self, pool: &mut SqliteConnection, camera_id: i64) -> Result<()> {
+    pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE camera_details SET 
@@ -121,7 +171,7 @@ impl CameraDetail {
 }
 
 impl CameraSoftwareVersion {
-    pub async fn save(&self, pool: &mut SqliteConnection, camera_id: i64) -> Result<()> {
+    pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE camera_software_versions SET 
@@ -168,7 +218,7 @@ impl AddAssign for CameraScanResult {
 impl CameraManager {
     pub async fn scan_files(
         &self,
-        pool: &mut SqliteConnection,
+        pool: &SqlitePool,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
     ) -> Result<CameraScanResult> {
@@ -227,7 +277,7 @@ impl CameraManager {
 async fn camera_scan_files(
     tx: &mut Transaction<'_, Sqlite>,
     camera_id: i64,
-    files: Vec<FindNextFileInfo>,
+    files: Vec<mediafilefind::FindNextFileInfo>,
     timestamp: &chrono::DateTime<Utc>,
 ) -> Result<SqliteQueryResult> {
     let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
@@ -249,7 +299,7 @@ async fn camera_scan_files(
     .with_context(|| format!("Failed to upsert files with camera {}", camera_id))
 }
 
-pub async fn delete_active_scans(pool: &mut SqliteConnection) -> Result<()> {
+pub async fn delete_active_scans(pool: &SqlitePool) -> Result<()> {
     sqlx::query!("DELETE FROM active_scans")
         .execute(pool)
         .await
@@ -260,7 +310,7 @@ pub async fn delete_active_scans(pool: &mut SqliteConnection) -> Result<()> {
 }
 
 impl ScanTask {
-    pub async fn start(self, pool: &mut SqliteConnection) -> Result<ScanHandle> {
+    pub async fn start(self, pool: &SqlitePool) -> Result<ScanHandle> {
         let runner = ScanHandle::new(self);
 
         sqlx::query!(
@@ -290,7 +340,7 @@ impl ScanTask {
 }
 
 impl ScanHandle {
-    pub async fn end(self, pool: &mut SqliteConnection) -> Result<()> {
+    pub async fn end(self, pool: &SqlitePool) -> Result<()> {
         let mut tx = pool.begin().await?;
         let duration = self.instant.elapsed().as_millis() as i64;
 
@@ -362,7 +412,7 @@ impl ScanHandle {
 }
 
 impl CameraScanCursor {
-    pub async fn find(pool: &mut SqliteConnection, camera_id: i64) -> Result<Self> {
+    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
         sqlx::query_as_unchecked!(
             CameraScanCursor,
             "SELECT id, scan_cursor FROM cameras WHERE id = ?",

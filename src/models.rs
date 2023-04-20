@@ -2,6 +2,26 @@ use std::time::Instant;
 
 use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
+pub struct CameraCreate {
+    pub ip: String,
+    pub username: String,
+    pub password: String,
+}
+
+pub struct CameraUpdate {
+    pub id: i64,
+    pub ip: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
+
+pub struct Camera {
+    pub id: i64,
+    pub ip: String,
+    pub username: String,
+    pub password: String,
+}
+
 pub struct CameraScanCursor {
     pub id: i64,
     pub scan_cursor: DateTime<Utc>,

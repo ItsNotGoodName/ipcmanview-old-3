@@ -1,7 +1,5 @@
 pub mod rpc;
 
-use std::str::FromStr;
-
 use anyhow::{Context, Result};
 
 use rpc::global;
@@ -10,23 +8,6 @@ use rpc::magicbox;
 
 pub fn require_env(name: &str) -> Result<String> {
     std::env::var(name).with_context(|| format!("{} not set", name))
-}
-
-use sqlx::ConnectOptions;
-
-pub async fn connect_database(url: &str) -> Result<sqlx::SqliteConnection> {
-    // Connect
-    let mut pool = sqlx::sqlite::SqliteConnectOptions::from_str(url)?
-        .create_if_missing(true)
-        .connect()
-        .await?;
-
-    // Migrate
-    sqlx::migrate!().run(&mut pool).await?;
-
-    db::delete_active_scans(&mut pool).await?;
-
-    Ok(pool)
 }
 
 pub async fn client_print(client: core::CameraManager) -> Result<(), rpc::Error> {
@@ -91,10 +72,7 @@ pub mod db;
 pub mod models;
 pub mod procs;
 
-pub async fn camera_update(
-    pool: &mut sqlx::SqliteConnection,
-    man: &core::CameraManager,
-) -> Result<()> {
+pub async fn camera_update(pool: &sqlx::SqlitePool, man: &core::CameraManager) -> Result<()> {
     core::CameraDetail::get(&man)
         .await?
         .save(pool, man.id)

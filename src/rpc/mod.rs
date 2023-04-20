@@ -11,6 +11,8 @@ pub mod license;
 pub mod magicbox;
 pub mod mediafilefind;
 
+pub mod rpccookie;
+pub mod rpcfile;
 pub mod rpclogin;
 
 pub mod utils;
@@ -46,7 +48,9 @@ pub struct ResponseError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum LoginError {
-    #[error("Blocked to prevent account lockout")]
+    #[error("Client is closed")]
+    Closed,
+    #[error("Blocked to prevent account lock")]
     Blocked,
     #[error("User or password not valid")]
     UserOrPasswordNotValid,
@@ -83,11 +87,11 @@ pub enum Error {
 
 impl Error {
     pub fn no_params() -> Error {
-        Error::Parse("No 'params' Field".to_string())
+        Error::Parse("No 'params' field".to_string())
     }
 
     pub fn no_session() -> Error {
-        Error::Session("No Session".to_string())
+        Error::Session("No session".to_string())
     }
 
     pub fn from_response_error(mut error: ResponseError) -> Error {
@@ -150,20 +154,6 @@ pub struct Request {
     pub object: Option<i64>,
 }
 
-#[derive(Default, Debug)]
-pub struct Config {
-    last_id: i32,
-    pub session: String,
-    pub last_login: Option<Instant>,
-}
-
-impl Config {
-    pub fn next_id(&mut self) -> i32 {
-        self.last_id += 1;
-        self.last_id
-    }
-}
-
 pub struct RequestBuilder {
     req: Request,
     url: String,
@@ -172,24 +162,24 @@ pub struct RequestBuilder {
 }
 
 impl RequestBuilder {
-    pub fn new(
-        config: &mut Config,
-        url: String,
-        client: reqwest::Client,
-        require_session: bool,
-    ) -> RequestBuilder {
+    pub fn new(id: i32, url: String, client: reqwest::Client, session: String) -> RequestBuilder {
         RequestBuilder {
             req: Request {
-                id: config.next_id(),
-                session: config.session.clone(),
+                id,
+                session,
                 method: "",
                 params: serde_json::Value::Null,
                 object: None,
             },
             url,
             client,
-            require_session,
+            require_session: false,
         }
+    }
+
+    pub fn require_session(mut self) -> RequestBuilder {
+        self.require_session = true;
+        self
     }
 
     pub fn params(mut self, params: serde_json::Value) -> RequestBuilder {
@@ -231,53 +221,59 @@ impl RequestBuilder {
     }
 }
 
+#[derive(Default, Debug)]
+pub struct Config {
+    last_id: i32,
+    pub session: String,
+    pub last_login: Option<Instant>,
+}
+
+impl Config {
+    pub fn next_id(&mut self) -> i32 {
+        self.last_id += 1;
+        self.last_id
+    }
+}
+
 pub struct Client {
-    pub config: Config,
-    pub ip: String,
-    url: String,
-    url_rpc: String,
-    url_rpc_login: String,
     client: reqwest::Client,
+    pub ip: String,
+    pub username: String,
+    pub password: String,
+    pub blocked: bool,
+    pub closed: bool,
+    pub config: Config,
 }
 
 impl Client {
-    pub fn new(ip: String, client: reqwest::Client) -> Client {
-        let url = format!("http://{ip}");
-        let url_rpc = format!("{url}/RPC2");
-        let url_rpc_login = format!("{url}/RPC2_Login");
+    pub fn new(client: reqwest::Client, ip: String, username: String, password: String) -> Client {
         Client {
-            config: Config::default(),
-            ip,
-            url,
-            url_rpc,
-            url_rpc_login,
             client,
+            ip,
+            username,
+            password,
+            blocked: false,
+            closed: false,
+            config: Config::default(),
         }
     }
 
     pub fn rpc(&mut self) -> RequestBuilder {
         RequestBuilder::new(
-            &mut self.config,
-            self.url_rpc.clone(),
+            self.config.next_id(),
+            format!("http://{}/RPC2", self.ip),
             self.client.clone(),
-            true,
+            self.config.session.clone(),
         )
+        .require_session()
     }
 
     fn rpc_login(&mut self) -> RequestBuilder {
         RequestBuilder::new(
-            &mut self.config,
-            self.url_rpc_login.clone(),
+            self.config.next_id(),
+            format!("http://{}/RPC2_Login", self.ip),
             self.client.clone(),
-            false,
+            self.config.session.clone(),
         )
-    }
-
-    pub fn cookie(&self) -> String {
-        format!("WebClientSessionID={session}; DWebClientSessionID={session}; DhWebClientSessionID={session}", session=self.config.session)
-    }
-
-    pub fn url_rpc_load(&self, file_path: &str) -> String {
-        format!("{}/RPC2_Login{}", self.url, file_path)
     }
 }

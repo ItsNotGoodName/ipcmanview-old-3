@@ -3,13 +3,14 @@ use std::io::Write;
 
 use anyhow::{bail, Result};
 use dotenvy::dotenv;
+use sqlx::SqlitePool;
 
-use ipcmanview::core::{self, CameraManager, CameraManagerStore, CameraState};
+use ipcmanview::core::{self, CameraManager, CameraManagerStore};
+use ipcmanview::models::{Camera, CameraCreate};
+use ipcmanview::procs::setup_database;
 use ipcmanview::rpc::utils::new_client;
-use ipcmanview::rpc::{self, rpclogin};
-use ipcmanview::{client_print, connect_database, procs, require_env};
-use ipcmanview::{db, models};
-use sqlx::SqliteConnection;
+use ipcmanview::{client_print, procs, require_env};
+use ipcmanview::{models, rpc};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -31,57 +32,56 @@ async fn http() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn db() -> Result<(), Box<dyn std::error::Error>> {
-    let mut pool = connect_database(
-        &std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()),
-    )
-    .await?;
+    let pool =
+        setup_database(&std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()))
+            .await?;
 
     let id = 1;
     let client = new_client();
 
-    let man = match db::camera_manager_find(&mut pool, id, client.clone()).await {
+    let man = match Camera::find(&pool, id).await {
         Ok(cam) => {
             println!("Found manager: {}", id);
-            cam
+            cam.new_camera_manager(client)
         }
         Err(err) => {
             println!("Creating manager: {}", err);
 
-            let user = rpclogin::User::new()
-                .username(require_env("IPCMANVIEW_USERNAME")?)
-                .password(require_env("IPCMANVIEW_PASSWORD")?)
-                .unblock();
-            let client = rpc::Client::new(require_env("IPCMANVIEW_IP")?, client.clone());
-            let state = CameraState { user, client };
-
-            state.create(&mut pool).await?
+            CameraCreate {
+                ip: require_env("IPCMANVIEW_IP")?,
+                username: require_env("IPCMANVIEW_USERNAME")?,
+                password: require_env("IPCMANVIEW_PASSWORD")?,
+            }
+            .create(&pool)
+            .await?
+            .new_camera_manager(client)
         }
     };
 
-    let res = db_run(&man, pool).await;
+    let res = db_run(&man, &pool).await;
 
-    man.destroy().await;
+    man.close().await;
 
     res
 }
 
 async fn db_run(
     man: &core::CameraManager,
-    mut pool: SqliteConnection,
+    pool: &SqlitePool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     core::CameraDetail::get(man)
         .await?
-        .save(&mut pool, man.id)
+        .save(pool, man.id)
         .await?;
     core::CameraSoftwareVersion::get(man)
         .await?
-        .save(&mut pool, man.id)
+        .save(pool, man.id)
         .await?;
-    procs::scan_task_run(&mut pool, man, models::ScanTaskBuilder::new(man.id).full()).await?;
-    let cursor_scan_task = models::CameraScanCursor::find(&mut pool, man.id)
+    procs::scan_task_run(pool, man, models::ScanTaskBuilder::new(man.id).full()).await?;
+    let cursor_scan_task = models::CameraScanCursor::find(pool, man.id)
         .await?
         .to_scan_task();
-    procs::scan_task_run(&mut pool, man, cursor_scan_task).await?;
+    procs::scan_task_run(pool, man, cursor_scan_task).await?;
 
     Ok(())
 }
@@ -95,7 +95,7 @@ fn cli_get_input(input: &mut String, message: &str) -> Result<(), io::Error> {
     Ok(())
 }
 
-fn store_from_env() -> Result<CameraManagerStore> {
+async fn store_from_env() -> Result<CameraManagerStore> {
     let password = require_env("IPCMANVIEW_PASSWORD")?;
     let ips = require_env("IPCMANVIEW_IPS")?;
     let ips = ips.trim();
@@ -105,15 +105,17 @@ fn store_from_env() -> Result<CameraManagerStore> {
     let ips = ips.split(" ");
     let username = std::env::var("IPCMANVIEW_USERNAME").unwrap_or("admin".to_string());
 
-    let mut store = CameraManagerStore::new();
-    let cl = new_client();
+    let store = CameraManagerStore::new();
+    let client = new_client();
     for (id, ip) in ips.enumerate() {
-        let user = rpclogin::User::new()
-            .username(username.clone())
-            .password(password.clone())
-            .unblock();
-        let client = rpc::Client::new(ip.to_string(), cl.clone());
-        let cam = CameraManager::new(id as i64, CameraState { user, client });
+        let client = rpc::Client::new(
+            client.clone(),
+            ip.to_string(),
+            username.clone(),
+            password.clone(),
+        );
+
+        let cam = CameraManager::new(id as i64, client);
         store.add(cam)?;
     }
 
@@ -121,7 +123,7 @@ fn store_from_env() -> Result<CameraManagerStore> {
 }
 
 async fn cli() -> Result<(), Box<dyn std::error::Error>> {
-    let store = store_from_env()?;
+    let store = store_from_env().await?;
     let mut input = String::new();
 
     loop {
@@ -193,7 +195,7 @@ async fn cli() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    store.destroy().await;
+    store.reset().await;
 
     Ok(())
 }

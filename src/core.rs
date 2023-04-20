@@ -1,101 +1,34 @@
-use anyhow::{bail, Context, Result};
-use tokio::{
-    select,
-    sync::{mpsc, oneshot},
+use std::sync::{Arc, Mutex};
+
+use anyhow::{bail, Result};
+
+use crate::rpc::{
+    magicbox, mediafilefind, Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };
 
-use crate::rpc::{self, magicbox, mediafilefind, rpclogin, Client, ResponseError, ResponseKind};
-
-pub struct CameraState {
-    pub user: rpclogin::User,
-    pub client: Client,
-}
-
-impl CameraState {
-    pub async fn destroy(mut self) -> Result<(), rpc::Error> {
-        rpclogin::User::logout(&mut self.client).await
-    }
-}
-
-enum Command {
-    Close(oneshot::Sender<CameraState>),
-}
-
+#[derive(Clone)]
 pub struct CameraManager {
     pub id: i64,
-    rpc_tx: mpsc::Sender<oneshot::Sender<Result<rpc::RequestBuilder, rpc::Error>>>,
-    cmd_tx: mpsc::Sender<Command>,
-}
-
-impl Clone for CameraManager {
-    fn clone(&self) -> Self {
-        CameraManager {
-            id: self.id,
-            rpc_tx: self.rpc_tx.clone(),
-            cmd_tx: self.cmd_tx.clone(),
-        }
-    }
+    pub client: Arc<Mutex<Client>>,
 }
 
 impl CameraManager {
-    pub fn new(id: i64, mut state: CameraState) -> CameraManager {
-        let (cmd_tx, mut cmd_rx) = mpsc::channel::<Command>(1);
-        let (rpc_tx, mut rpc_rx) =
-            mpsc::channel::<oneshot::Sender<Result<rpc::RequestBuilder, rpc::Error>>>(1);
-
-        tokio::spawn(async move {
-            loop {
-                select! {
-                    biased;
-                    cmd = cmd_rx.recv() =>{
-                        if let Some(cmd) = cmd {
-                            match cmd {
-                                Command::Close(tx) => {
-                                    if let Err(s) = tx.send(state) {
-                                        state = s;
-                                    } else {
-                                        break
-                                    }
-                                }
-                            };
-                        } else {
-                            break;
-                        }
-                    }
-                    rpc_tx = rpc_rx.recv() => {
-                        if let Some(rpc_tx) = rpc_tx {
-                            rpc_tx.send(state.user.keep_alive_or_login(&mut state.client).await.map(|_| state.client.rpc())).ok();
-                        } else {
-                            break;
-                        }
-                    }
-                }
-            }
-        });
-
-        return CameraManager { id, rpc_tx, cmd_tx };
-    }
-
-    pub async fn rpc(&self) -> Result<rpc::RequestBuilder, rpc::Error> {
-        let (tx, rx) = oneshot::channel();
-        self.rpc_tx
-            .send(tx)
-            .await
-            .map_err(|_| rpc::Error::Request("Camera thread dead".to_string()))?;
-        rx.await
-            .map_err(|_| rpc::Error::Request("Camera thread dead".to_string()))?
-    }
-
-    pub async fn close(self) -> Result<CameraState> {
-        let (tx, rx) = oneshot::channel();
-        self.cmd_tx.send(Command::Close(tx)).await.ok();
-        rx.await.with_context(|| format!("Camera thread dead"))
-    }
-
-    pub async fn destroy(self) {
-        if let Ok(state) = self.close().await {
-            state.destroy().await.ok();
+    pub fn new(id: i64, client: Client) -> CameraManager {
+        CameraManager {
+            id,
+            client: Arc::new(Mutex::new(client)),
         }
+    }
+
+    pub async fn rpc(&self) -> Result<RequestBuilder, Error> {
+        let mut client = self.client.lock().unwrap();
+        client.keep_alive_or_login().await.map(|_| client.rpc())
+    }
+
+    pub async fn close(&self) {
+        let mut client = self.client.lock().unwrap();
+        client.logout().await.ok();
+        client.closed = true;
     }
 }
 
@@ -110,7 +43,7 @@ pub struct CameraDetail {
 }
 
 impl CameraDetail {
-    pub async fn get(man: &CameraManager) -> Result<CameraDetail, rpc::Error> {
+    pub async fn get(man: &CameraManager) -> Result<CameraDetail, Error> {
         Ok(CameraDetail {
             sn: magicbox::get_serial_no(man.rpc().await?).await.ok(),
             device_class: magicbox::get_device_class(man.rpc().await?).await.ok(),
@@ -126,54 +59,86 @@ impl CameraDetail {
 pub type CameraSoftwareVersion = magicbox::GetSoftwareVersion;
 
 impl CameraSoftwareVersion {
-    pub async fn get(man: &CameraManager) -> Result<magicbox::GetSoftwareVersion, rpc::Error> {
+    pub async fn get(man: &CameraManager) -> Result<magicbox::GetSoftwareVersion, Error> {
         magicbox::get_software_version(man.rpc().await?).await
     }
 }
 
 pub struct CameraManagerStore {
-    mans: Vec<CameraManager>,
+    mans: Mutex<Vec<CameraManager>>,
 }
 
 impl CameraManagerStore {
     pub fn new() -> CameraManagerStore {
-        CameraManagerStore { mans: vec![] }
+        CameraManagerStore {
+            mans: Mutex::new(vec![]),
+        }
     }
 
-    pub fn add(&mut self, man: CameraManager) -> Result<()> {
-        for i in self.mans.iter() {
-            if i.id == man.id {
-                bail!("Duplicate camera id {}", man.id)
+    pub fn add(&self, man: CameraManager) -> Result<()> {
+        let mut mans = self.mans.lock().unwrap();
+        for old in mans.iter() {
+            if old.id == man.id {
+                bail!(
+                    "Failed to add manager, already exists in store with camera {}",
+                    old.id
+                )
             }
         }
-        self.mans.push(man);
+
+        mans.push(man);
+
         Ok(())
     }
 
-    pub fn list(&self) -> Vec<CameraManager> {
-        self.mans.clone()
-    }
-
-    pub fn get(&self, id: i64) -> Option<CameraManager> {
-        for man in self.mans.iter() {
-            if man.id == id {
-                return Some(man.clone());
+    pub async fn delete(&self, id: i64) -> Result<()> {
+        let mut mans = self.mans.lock().unwrap();
+        match mans.iter().enumerate().find(|(_, old)| old.id == id) {
+            Some((idx, _)) => {
+                mans.swap_remove(idx).close().await;
+                Ok(())
+            }
+            None => {
+                bail!(
+                    "Failed to delete manager, not found in store with camera {}",
+                    id
+                )
             }
         }
-        None
     }
 
-    pub async fn destroy(self) {
-        for man in self.mans {
-            man.destroy().await
+    pub fn list(&self) -> Vec<CameraManager> {
+        self.mans.lock().unwrap().clone()
+    }
+
+    pub fn get(&self, id: i64) -> Result<CameraManager> {
+        let mans = self.mans.lock().unwrap();
+        for man in mans.iter() {
+            if man.id == id {
+                return Ok(man.clone());
+            }
         }
+
+        bail!(
+            "Failed to get manager, not found in store with camera {}",
+            id
+        )
+    }
+
+    pub async fn reset(self) {
+        let mut mans = self.mans.lock().unwrap();
+        for man in mans.iter() {
+            man.close().await;
+        }
+
+        *mans = vec![];
     }
 }
 
 pub struct CameraFileStream<'a> {
     man: &'a CameraManager,
     object: i64,
-    pub error: Option<rpc::Error>,
+    pub error: Option<Error>,
     count: i32,
     closed: bool,
 }
@@ -182,12 +147,12 @@ impl CameraFileStream<'_> {
     pub async fn new(
         man: &CameraManager,
         condition: mediafilefind::Condition,
-    ) -> Result<CameraFileStream, rpc::Error> {
+    ) -> Result<CameraFileStream, Error> {
         let object = mediafilefind::create(man.rpc().await?).await?;
 
         let closed = match mediafilefind::find_file(man.rpc().await?, object, condition).await {
             Ok(o) => !o,
-            Err(rpc::Error::Response(ResponseError {
+            Err(Error::Response(ResponseError {
                 kind: ResponseKind::NoData,
                 ..
             })) => true,
