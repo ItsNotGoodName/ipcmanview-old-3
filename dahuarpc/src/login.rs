@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use super::{global, utils, Client, Config, Error, LoginError};
+use super::{modules::global, utils, Client, Error, LoginError, State};
 
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
@@ -12,21 +12,21 @@ impl Client {
             return Err(Error::Login(LoginError::Closed));
         }
 
-        // Fail safe to prevent locking the account when password is wrong
+        // Fail safe to prevent account lock when password is wrong
         if self.blocked {
             return Err(Error::Login(LoginError::Blocked));
         }
 
-        // We have to have no session in order to login
-        if !self.config.session.is_empty() {
+        // Session has to be empty to login
+        if !self.state.session.is_empty() {
             global::logout(self.rpc()).await.ok();
-            self.config = Config::default();
+            self.state = State::default();
         }
 
         match self.login_procedure().await {
             Ok(o) => Ok(o),
             Err(err) => {
-                self.config = Config::default();
+                self.state = State::default();
                 // Block client on a login error
                 if let Error::Login(_) = err {
                     self.blocked = true;
@@ -39,14 +39,14 @@ impl Client {
     async fn login_procedure(&mut self) -> Result<(), Error> {
         // Do a first login and set our session
         let (first_login, res) = global::first_login(self.rpc_login(), &self.username).await?;
-        self.config.session = res.session;
+        self.state.session = res.session;
         // Make sure the caemra supports this login procedure
         match res.error {
             Some(err) => match err.code {
                 268632079 | 401 => {}
                 _ => return Err(Error::Response(err)),
             },
-            None => return Err(Error::Parse("Bad error code".to_string())),
+            None => return Err(Error::Parse("No error field in first login".to_string())),
         }
 
         // Magic
@@ -55,7 +55,7 @@ impl Client {
             _ => "Direct",
         };
 
-        // Encrypt password based on the first login info and then do a second login
+        // Encrypt password based on the first login and then do a second login
         let password = utils::get_auth(&self.username, &self.password, &first_login);
         let res = global::second_login(
             self.rpc_login(),
@@ -67,7 +67,7 @@ impl Client {
 
         match res.await {
             Ok(_) => {
-                self.config.last_login = Some(Instant::now());
+                self.state.last_login = Some(Instant::now());
                 Ok(())
             }
             Err(err) => Err(Error::Login(match err {
@@ -86,7 +86,7 @@ impl Client {
     }
 
     async fn keep_alive(&mut self) -> Result<(), Error> {
-        match self.config.last_login {
+        match self.state.last_login {
             Some(last_login) => {
                 if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
                     return Ok(());
@@ -110,11 +110,11 @@ impl Client {
     }
 
     pub async fn logout(&mut self) -> Result<(), Error> {
-        if self.config.session.is_empty() {
+        if self.state.session.is_empty() {
             Ok(())
         } else {
             let res = global::logout(self.rpc()).await;
-            self.config = Config::default();
+            self.state = State::default();
             match res {
                 Ok(_) => Ok(()),
                 Err(err) => Err(err),

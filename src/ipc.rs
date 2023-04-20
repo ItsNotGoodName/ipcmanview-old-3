@@ -3,9 +3,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use anyhow::{bail, Result};
-
-use crate::rpc::{
-    magicbox, mediafilefind, Client, Error, RequestBuilder, ResponseError, ResponseKind,
+use dahuarpc::{
+    modules::{magicbox, mediafilefind},
+    Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };
 
 #[derive(Clone)]
@@ -58,11 +58,15 @@ impl IpcDetail {
     }
 }
 
-pub type IpcSoftwareVersion = magicbox::GetSoftwareVersion;
+pub struct IpcSoftwareVersion {
+    pub software: magicbox::GetSoftwareVersion,
+}
 
 impl IpcSoftwareVersion {
-    pub async fn get(man: &IpcManager) -> Result<magicbox::GetSoftwareVersion, Error> {
-        magicbox::get_software_version(man.rpc().await?).await
+    pub async fn get(man: &IpcManager) -> Result<IpcSoftwareVersion, Error> {
+        Ok(IpcSoftwareVersion {
+            software: magicbox::get_software_version(man.rpc().await?).await?,
+        })
     }
 }
 

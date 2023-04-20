@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{Error, RequestBuilder};
+use super::super::{Error, RequestBuilder};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct InfoInfo {

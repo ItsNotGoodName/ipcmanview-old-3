@@ -1,13 +1,12 @@
 use std::str::FromStr;
 
-use sqlx::SqlitePool;
-
 use anyhow::Result;
+use dahuarpc;
+use sqlx::SqlitePool;
 
 use crate::db;
 use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftwareVersion};
 use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
-use crate::rpc;
 use crate::scan::{ScanRange, ScanTask};
 
 // -------------------- Setup
@@ -27,7 +26,10 @@ pub async fn setup_database(url: &str) -> Result<sqlx::SqlitePool> {
     Ok(pool)
 }
 
-pub async fn setup_store(pool: &SqlitePool, client: reqwest::Client) -> Result<IpcManagerStore> {
+pub async fn setup_store(
+    pool: &SqlitePool,
+    client: dahuarpc::HttpClient,
+) -> Result<IpcManagerStore> {
     let store = IpcManagerStore::new();
     for cam in Camera::list(pool).await? {
         let man = cam.new_camera_manager(client.clone());
@@ -40,10 +42,10 @@ pub async fn setup_store(pool: &SqlitePool, client: reqwest::Client) -> Result<I
 // -------------------- Camera
 
 impl Camera {
-    pub fn new_camera_manager(self, client: reqwest::Client) -> IpcManager {
+    pub fn new_camera_manager(self, client: dahuarpc::HttpClient) -> IpcManager {
         IpcManager::new(
             self.id,
-            rpc::Client::new(client, self.ip, self.username, self.password),
+            dahuarpc::Client::new(client, self.ip, self.username, self.password),
         )
     }
 }
@@ -51,7 +53,9 @@ impl Camera {
 pub async fn camera_create(
     pool: &SqlitePool,
     store: &mut IpcManagerStore,
-    client: reqwest::Client,
+
+    client: dahuarpc::HttpClient,
+
     cam: CreateCamera,
 ) -> Result<i64> {
     let man = cam.create(pool).await?.new_camera_manager(client);

@@ -1,21 +1,25 @@
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 
-use self::utils::{de_int_bool_to_i64, de_number_string_to_string};
+use utils::{de_int_bool_to_i64, de_number_string_to_string};
 
-// RPC Modules
-pub mod global;
-pub mod license;
-pub mod magicbox;
-pub mod mediafilefind;
+pub mod cookie;
+pub mod file;
+pub mod login;
+pub mod modules;
+mod utils;
 
-pub mod rpccookie;
-pub mod rpcfile;
-pub mod rpclogin;
+pub type HttpClient = reqwest::Client;
 
-pub mod utils;
+pub fn new_http_client() -> HttpClient {
+    reqwest::Client::builder()
+        .no_deflate()
+        .timeout(Duration::from_secs(10))
+        .build()
+        .unwrap()
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ResponseKind {
@@ -68,19 +72,19 @@ pub enum LoginError {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    // This can only occur on login requests.
+    // Only occurs on login requests
     #[error("{0:?}")]
     Login(LoginError),
-    // The request could not be made for any reason.
+    // Request could not be made for any reason
     #[error("Request: {0}")]
     Request(String),
-    // The response could not be deserialized.
+    // Response could not be deserialized
     #[error("Parse: {0}")]
     Parse(String),
-    // The response contains an error field.
+    // Response contains an error field
     #[error("{0:?}")]
     Response(ResponseError),
-    // No session or the server says the session is invalid.
+    // No session or the server says the session is invalid
     #[error("Session: {0}")]
     Session(String),
 }
@@ -157,12 +161,12 @@ pub struct Request {
 pub struct RequestBuilder {
     req: Request,
     url: String,
-    client: reqwest::Client,
+    client: HttpClient,
     require_session: bool,
 }
 
 impl RequestBuilder {
-    pub fn new(id: i32, url: String, client: reqwest::Client, session: String) -> RequestBuilder {
+    pub fn new(id: i32, url: String, client: HttpClient, session: String) -> RequestBuilder {
         RequestBuilder {
             req: Request {
                 id,
@@ -222,13 +226,13 @@ impl RequestBuilder {
 }
 
 #[derive(Default, Debug)]
-pub struct Config {
+pub struct State {
     last_id: i32,
     pub session: String,
     pub last_login: Option<Instant>,
 }
 
-impl Config {
+impl State {
     pub fn next_id(&mut self) -> i32 {
         self.last_id += 1;
         self.last_id
@@ -236,17 +240,17 @@ impl Config {
 }
 
 pub struct Client {
-    client: reqwest::Client,
+    client: HttpClient,
     pub ip: String,
     pub username: String,
     pub password: String,
     pub blocked: bool,
     pub closed: bool,
-    pub config: Config,
+    pub state: State,
 }
 
 impl Client {
-    pub fn new(client: reqwest::Client, ip: String, username: String, password: String) -> Client {
+    pub fn new(client: HttpClient, ip: String, username: String, password: String) -> Client {
         Client {
             client,
             ip,
@@ -254,26 +258,26 @@ impl Client {
             password,
             blocked: false,
             closed: false,
-            config: Config::default(),
+            state: State::default(),
         }
     }
 
     pub fn rpc(&mut self) -> RequestBuilder {
         RequestBuilder::new(
-            self.config.next_id(),
+            self.state.next_id(),
             format!("http://{}/RPC2", self.ip),
             self.client.clone(),
-            self.config.session.clone(),
+            self.state.session.clone(),
         )
         .require_session()
     }
 
     fn rpc_login(&mut self) -> RequestBuilder {
         RequestBuilder::new(
-            self.config.next_id(),
+            self.state.next_id(),
             format!("http://{}/RPC2_Login", self.ip),
             self.client.clone(),
-            self.config.session.clone(),
+            self.state.session.clone(),
         )
     }
 }

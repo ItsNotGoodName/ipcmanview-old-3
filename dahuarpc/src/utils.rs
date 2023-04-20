@@ -1,16 +1,6 @@
-use std::time::Duration;
-
 use base64::Engine as _;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serializer};
-
-pub fn new_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .no_deflate()
-        .timeout(Duration::from_secs(10))
-        .build()
-        .unwrap()
-}
 
 pub fn de_string_to_date_time<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where

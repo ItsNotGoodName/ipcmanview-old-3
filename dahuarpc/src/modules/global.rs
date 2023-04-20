@@ -1,8 +1,7 @@
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use super::utils::AuthParam;
-use super::{Error, RequestBuilder, Response};
+use super::super::{utils::AuthParam, Error, RequestBuilder, Response};
 
 #[derive(Deserialize, Debug)]
 pub struct GetCurrentTime {

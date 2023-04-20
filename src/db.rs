@@ -2,12 +2,12 @@ use anyhow::{Context, Result};
 
 use chrono::{DateTime, Utc};
 
+use dahuarpc::modules::mediafilefind;
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
 use crate::ipc::{IpcDetail, IpcFileStream, IpcManager, IpcSoftwareVersion};
 use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
-use crate::rpc::mediafilefind;
 use crate::scan::{Scan, ScanCamera, ScanHandle, ScanTask};
 
 impl Camera {
@@ -180,11 +180,11 @@ impl IpcSoftwareVersion {
             WHERE id = ?1
             "#,
             camera_id,
-            self.build,
-            self.build_date,
-            self.security_base_line_version,
-            self.version,
-            self.web_version
+            self.software.build,
+            self.software.build_date,
+            self.software.security_base_line_version,
+            self.software.version,
+            self.software.web_version
         )
         .execute(pool)
         .await

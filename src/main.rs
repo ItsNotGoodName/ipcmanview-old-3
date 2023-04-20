@@ -9,8 +9,6 @@ use sqlx::SqlitePool;
 use ipcmanview::ipc::{IpcManager, IpcManagerStore};
 use ipcmanview::models::CreateCamera;
 use ipcmanview::procs::{setup_database, setup_store};
-use ipcmanview::rpc;
-use ipcmanview::rpc::utils::new_client;
 use ipcmanview::{client_print, procs, require_env};
 
 #[tokio::main]
@@ -33,7 +31,7 @@ async fn http() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn db() -> Result<(), Box<dyn std::error::Error>> {
-    let client = new_client();
+    let client = dahuarpc::new_http_client();
     let pool =
         setup_database(&std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()))
             .await?;
@@ -115,9 +113,9 @@ async fn store_from_env() -> Result<IpcManagerStore> {
     let username = std::env::var("IPCMANVIEW_USERNAME").unwrap_or("admin".to_string());
 
     let store = IpcManagerStore::new();
-    let client = new_client();
+    let client = dahuarpc::new_http_client();
     for (id, ip) in ips.enumerate() {
-        let client = rpc::Client::new(
+        let client = dahuarpc::Client::new(
             client.clone(),
             ip.to_string(),
             username.clone(),
