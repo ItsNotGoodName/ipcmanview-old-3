@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use anyhow::Result;
-use dahuarpc;
+use dhrpc;
 use sqlx::SqlitePool;
 
 use crate::db;
@@ -28,7 +28,7 @@ pub async fn setup_database(url: &str) -> Result<sqlx::SqlitePool> {
 
 pub async fn setup_store(
     pool: &SqlitePool,
-    client: dahuarpc::HttpClient,
+    client: dhrpc::HttpClient,
 ) -> Result<IpcManagerStore> {
     let store = IpcManagerStore::new();
     for cam in Camera::list(pool).await? {
@@ -42,10 +42,10 @@ pub async fn setup_store(
 // -------------------- Camera
 
 impl Camera {
-    pub fn new_camera_manager(self, client: dahuarpc::HttpClient) -> IpcManager {
+    pub fn new_camera_manager(self, client: dhrpc::HttpClient) -> IpcManager {
         IpcManager::new(
             self.id,
-            dahuarpc::Client::new(client, self.ip, self.username, self.password),
+            dhrpc::Client::new(client, self.ip, self.username, self.password),
         )
     }
 }
@@ -54,7 +54,7 @@ pub async fn camera_create(
     pool: &SqlitePool,
     store: &mut IpcManagerStore,
 
-    client: dahuarpc::HttpClient,
+    client: dhrpc::HttpClient,
 
     cam: CreateCamera,
 ) -> Result<i64> {

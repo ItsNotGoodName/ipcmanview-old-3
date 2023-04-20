@@ -3,7 +3,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use anyhow::{bail, Result};
-use dahuarpc::{
+use dhrpc::{
     modules::{magicbox, mediafilefind},
     Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };

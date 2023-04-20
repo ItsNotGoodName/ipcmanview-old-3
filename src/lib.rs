@@ -1,14 +1,14 @@
 use anyhow::{Context, Result};
 
-use dahuarpc::modules::global;
-use dahuarpc::modules::license;
-use dahuarpc::modules::magicbox;
+use dhrpc::modules::global;
+use dhrpc::modules::license;
+use dhrpc::modules::magicbox;
 
 pub fn require_env(name: &str) -> Result<String> {
     std::env::var(name).with_context(|| format!("{} not set", name))
 }
 
-pub async fn client_print(client: ipc::IpcManager) -> Result<(), dahuarpc::Error> {
+pub async fn client_print(client: ipc::IpcManager) -> Result<(), dhrpc::Error> {
     println!(
         "global.getCurrentTime: {:?}",
         global::get_current_time(client.rpc().await?).await,
