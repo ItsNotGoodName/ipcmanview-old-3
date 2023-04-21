@@ -7,7 +7,7 @@ use ipcmanview::scan::ScanTaskBuilder;
 use sqlx::SqlitePool;
 
 use ipcmanview::ipc::{IpcManager, IpcManagerStore};
-use ipcmanview::models::CreateCamera;
+use ipcmanview::models::{self, CreateCamera};
 use ipcmanview::procs::{setup_database, setup_store};
 use ipcmanview::{client_print, procs, require_env};
 
@@ -56,7 +56,6 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
         };
     }
 
-    procs::camera_refresh_all(&pool, &store).await.ok();
     db_run(&pool, &store).await.ok();
 
     store.reset().await;
@@ -68,6 +67,11 @@ async fn db_run(
     pool: &SqlitePool,
     store: &IpcManagerStore,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    // let value = models::ScanCompleted::list(&pool).await?;
+    // let print = serde_json::to_string(&value).unwrap();
+    // println!("{print}");
+    // return Ok(());
+
     // procs::scan_task_run(pool, man, models::ScanTaskBuilder::new(man.id).full()).await?;
     // let cursor_scan_task = models::CameraScanCursor::find(pool, man.id)
     //     .await?
@@ -85,7 +89,7 @@ async fn db_run(
     }
 
     for handle in handles {
-        handle.await.unwrap().ok(); // TODO: join errors
+        dbg!(handle.await.unwrap().err());
     }
 
     println!("All threads finished");

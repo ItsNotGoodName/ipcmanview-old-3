@@ -84,7 +84,9 @@ impl Iterator for ScanRangeIterator {
     }
 }
 
-#[derive(sqlx::Type)]
+#[derive(sqlx::Type, serde::Serialize, Debug)]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
 pub enum ScanKind {
     Full,
     Cursor,
@@ -97,6 +99,7 @@ pub struct ScanHandle {
     pub kind: ScanKind,
     pub started_at: DateTime<Utc>,
     pub instant: Instant,
+    pub error: Option<String>,
 }
 
 impl ScanHandle {
@@ -107,7 +110,13 @@ impl ScanHandle {
             kind: task.kind,
             started_at: Utc::now(),
             instant: Instant::now(),
+            error: None,
         }
+    }
+
+    pub fn with_error(mut self, error: String) -> Self {
+        self.error = Some(error);
+        self
     }
 
     pub fn should_update_scan_cursor(&self) -> bool {

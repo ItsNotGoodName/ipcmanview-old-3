@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS camera_software_versions (
 CREATE TABLE IF NOT EXISTS camera_files (
     camera_id INTEGER NOT NULL,
     file_path TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    size INTEGER NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -41,7 +43,7 @@ CREATE TABLE IF NOT EXISTS camera_files (
 
 CREATE TABLE IF NOT EXISTS active_scans (
     camera_id INTEGER PRIMARY KEY,
-    kind STRING NOT NULL, -- Full, Cursor, Manual
+    kind STRING NOT NULL, -- full, cursor, manual
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -51,10 +53,11 @@ CREATE TABLE IF NOT EXISTS active_scans (
 CREATE TABLE IF NOT EXISTS completed_scans (
     id INTEGER PRIMARY KEY,
     camera_id INTEGER NOT NULL,
-    kind STRING NOT NULL, -- Full, Cursor, Manual
+    kind STRING NOT NULL, -- full, cursor, manual
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
     started_at DATETIME NOT NULL,
     duration INTEGER NOT NULL,
+    error STRING,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );

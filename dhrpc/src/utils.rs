@@ -2,6 +2,14 @@ use base64::Engine as _;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{de, Deserialize, Deserializer, Serializer};
 
+pub fn de_null_array_to_string_vec<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt_vec: Option<Vec<String>> = Option::deserialize(deserializer)?;
+    Ok(opt_vec.unwrap_or_else(|| vec![]))
+}
+
 pub fn de_string_to_date_time<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>,
