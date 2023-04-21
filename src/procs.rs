@@ -25,7 +25,7 @@ pub async fn setup_database(url: &str) -> Result<sqlx::SqlitePool> {
     Ok(pool)
 }
 
-pub async fn setup_store(pool: &SqlitePool, client: dhrpc::HttpClient) -> Result<IpcManagerStore> {
+pub async fn setup_store(pool: &SqlitePool, client: rpc::HttpClient) -> Result<IpcManagerStore> {
     let store = IpcManagerStore::new();
     for cam in Camera::list(pool).await? {
         let man = cam.new_camera_manager(client.clone());
@@ -38,10 +38,10 @@ pub async fn setup_store(pool: &SqlitePool, client: dhrpc::HttpClient) -> Result
 // -------------------- Camera
 
 impl Camera {
-    pub fn new_camera_manager(self, client: dhrpc::HttpClient) -> IpcManager {
+    pub fn new_camera_manager(self, client: rpc::HttpClient) -> IpcManager {
         IpcManager::new(
             self.id,
-            dhrpc::Client::new(client, self.ip, self.username, self.password),
+            rpc::Client::new(client, self.ip, self.username, self.password),
         )
     }
 }
@@ -49,7 +49,7 @@ impl Camera {
 pub async fn camera_create(
     pool: &SqlitePool,
     store: &mut IpcManagerStore,
-    client: dhrpc::HttpClient,
+    client: rpc::HttpClient,
     cam: CreateCamera,
 ) -> Result<i64> {
     let man = cam.create(pool).await?.new_camera_manager(client);

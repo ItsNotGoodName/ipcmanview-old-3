@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 
 use chrono::{DateTime, Utc};
 
-use dhrpc::modules::mediafilefind;
+use rpc::modules::mediafilefind;
 use sqlx::sqlite::SqliteQueryResult;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
