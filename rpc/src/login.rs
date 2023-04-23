@@ -93,7 +93,10 @@ impl Client {
                 }
 
                 match global::keep_alive(self.rpc()).await {
-                    Ok(_) => Ok(()),
+                    Ok(_) => {
+                        self.state.last_login = Some(Instant::now());
+                        Ok(())
+                    }
                     Err(err) => Err(err),
                 }
             }
