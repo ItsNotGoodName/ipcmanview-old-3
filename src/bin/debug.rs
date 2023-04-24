@@ -1,12 +1,9 @@
 use anyhow::Result;
 use dotenvy::dotenv;
-use ipcmanview::scan::ScanTaskBuilder;
-use sqlx::SqlitePool;
-
 use ipcmanview::ipc::IpcManagerStore;
 use ipcmanview::models::CreateCamera;
-use ipcmanview::procs::setup_database;
-use ipcmanview::require_env;
+use ipcmanview::{db, require_env};
+use sqlx::SqlitePool;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,8 +13,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let pool =
-        setup_database(&std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string()))
-            .await?;
+        db::new(&std::env::var("DATABASE_URL").unwrap_or("sqlite://sqlite.db".to_string())).await?;
     let store = IpcManagerStore::new(&pool).await?;
 
     let password = require_env("IPCMANVIEW_PASSWORD")?;
@@ -66,7 +62,9 @@ async fn db_run(
     for man in store.list().await {
         let pool = pool.clone();
         let handle =
-            tokio::spawn(async move { ScanTaskBuilder::new(man.id).full().run(&pool, &man).await });
+            tokio::spawn(
+                async move { ScanHandleBuilder::new(man.id).full().run(&pool, &man).await },
+            );
         handles.push(handle);
     }
 

@@ -21,8 +21,13 @@
             </form>
           </td>
           <td>
-            <form method="post" action="/cameras/{{cam.id}}/all">
+            <form method="post" action="/cameras/{{cam.id}}/data">
               <button type="submit">refresh</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" action="/cameras/{{cam.id}}/scan/full">
+              <button type="submit">full scan</button>
             </form>
           </td>
         </tr>

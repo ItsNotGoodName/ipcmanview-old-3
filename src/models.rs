@@ -35,6 +35,7 @@ pub struct ShowCamera {
     pub username: String,
     pub detail: CameraDetail,
     pub software: CameraSoftware,
+    pub file_count: i32,
 }
 
 #[derive(Serialize, Debug)]

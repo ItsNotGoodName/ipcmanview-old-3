@@ -209,12 +209,20 @@ impl ShowCamera {
             None => return Ok(None),
         };
 
+        let file_count = sqlx::query!(
+            "SELECT count(*) AS count FROM camera_files WHERE camera_id = ?",
+            id
+        )
+        .fetch_one(pool)
+        .await?;
+
         Ok(Some(ShowCamera {
             id: camera.id,
             ip: camera.ip,
             username: camera.username,
             detail,
             software,
+            file_count: file_count.count,
         }))
     }
 }

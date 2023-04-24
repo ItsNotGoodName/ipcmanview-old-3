@@ -35,9 +35,25 @@ CREATE TABLE IF NOT EXISTS camera_files (
     size INTEGER NOT NULL,
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at DATETIME NOT NULL,
     UNIQUE (camera_id, file_path),
     UNIQUE (camera_id, start_time),
+    FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pending_scans (
+    id INTEGER PRIMARY KEY,
+    camera_id INTEGER NOT NULL,
+    kind STRING NOT NULL, -- full, cursor
+    UNIQUE (camera_id, kind),
+    FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pending_manual_scans (
+    id INTEGER PRIMARY KEY,
+    camera_id INTEGER NOT NULL,
+    range_start DATETIME NOT NULL,
+    range_end DATETIME NOT NULL,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
@@ -46,7 +62,7 @@ CREATE TABLE IF NOT EXISTS active_scans (
     kind STRING NOT NULL, -- full, cursor, manual
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
-    started_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    started_at DATETIME NOT NULL,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 

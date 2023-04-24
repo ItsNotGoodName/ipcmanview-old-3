@@ -1,28 +1,9 @@
-use std::str::FromStr;
-
 use anyhow::Result;
 use sqlx::SqlitePool;
 
 use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftwareVersion};
-use crate::models::{Camera, CameraScanResult, CreateCamera, ScanActive, UpdateCamera};
-use crate::scan::{ScanRange, ScanTask};
-
-// -------------------- Setup
-
-pub async fn setup_database(url: &str) -> Result<sqlx::SqlitePool> {
-    // Connect
-    let options = sqlx::sqlite::SqliteConnectOptions::from_str(url)?.create_if_missing(true);
-    let pool = sqlx::sqlite::SqlitePoolOptions::new()
-        .connect_with(options)
-        .await?;
-
-    // Migrate
-    sqlx::migrate!().run(&pool).await?;
-
-    ScanActive::clear(&pool).await?;
-
-    Ok(pool)
-}
+use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
+use crate::scan::{Scan, ScanHandle, ScanKindPending, ScanRange};
 
 // -------------------- Camera
 
@@ -31,6 +12,7 @@ impl CreateCamera<'_> {
         let id = self.create_db(pool).await?;
         store.refresh(pool, id).await?;
         store.get(id).await?.data_refresh(pool).await.ok();
+        Scan::queue(pool, store, id, ScanKindPending::Full).await?;
         Ok(id)
     }
 }
@@ -64,8 +46,45 @@ impl IpcManager {
 
 // -------------------- Scan
 
-impl ScanTask {
-    async fn range_run(
+impl Scan {
+    pub async fn queue(
+        pool: &SqlitePool,
+        store: &IpcManagerStore,
+        camera_id: i64,
+        kind: ScanKindPending,
+    ) -> Result<()> {
+        Scan::queue_db(pool, camera_id, kind).await?;
+        Scan::run_pending(pool, store).await;
+        Ok(())
+    }
+
+    pub async fn run_pending(pool: &SqlitePool, store: &IpcManagerStore) {
+        let pool = pool.clone();
+        let store = store.clone();
+        tokio::spawn(async move {
+            loop {
+                match Scan::next(&pool).await {
+                    Ok(Some(handle)) => match handle.run(&pool, &store).await {
+                        Ok(res) => {
+                            dbg!(res);
+                        }
+                        Err(err) => {
+                            dbg!(err);
+                        }
+                    },
+                    Ok(None) => return,
+                    Err(err) => {
+                        dbg!(err);
+                        return;
+                    }
+                }
+            }
+        });
+    }
+}
+
+impl ScanHandle {
+    async fn scan_range(
         pool: &SqlitePool,
         man: &IpcManager,
         range: &ScanRange,
@@ -78,20 +97,20 @@ impl ScanTask {
         Ok(res)
     }
 
-    pub async fn run(self, pool: &SqlitePool, man: &IpcManager) -> Result<CameraScanResult> {
-        // Start
-        let scan_task_handle = self.start(pool).await?;
+    async fn run(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<CameraScanResult> {
+        let man = store.get(self.camera_id).await?;
 
         // Run
-        let res = Self::range_run(pool, man, &scan_task_handle.range).await;
-        let scan_task_handle = match res {
-            Ok(_) => scan_task_handle,
-            Err(ref err) => scan_task_handle.with_error(err.to_string()),
+        let res = Self::scan_range(pool, &man, &self.range).await;
+        let handle = match res {
+            Ok(_) => self,
+            Err(ref err) => self.with_error(err.to_string()),
         };
 
         // End
-        if let Err(err) = scan_task_handle.end(pool).await {
-            dbg!(err);
+        let camera_id = handle.camera_id;
+        if let Err(err) = handle.end(pool).await {
+            panic!("Failed to end active task with camera {camera_id} and error {err}",);
         };
 
         res

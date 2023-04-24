@@ -2,11 +2,6 @@ use std::time::Instant;
 
 use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
-pub struct ScanCamera {
-    pub id: i64,
-    pub scan_cursor: DateTime<Utc>,
-}
-
 pub struct Scan {}
 
 impl Scan {
@@ -33,6 +28,8 @@ pub struct ScanRange {
 
 impl ScanRange {
     pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> ScanRange {
+        // TODO: verify end is greater than start but less than Utc::now and start is greater than
+        // 2010
         ScanRange { start, end }
     }
 
@@ -93,6 +90,13 @@ pub enum ScanKind {
     Manual,
 }
 
+#[derive(sqlx::Type, Debug)]
+#[sqlx(rename_all = "snake_case")]
+pub enum ScanKindPending {
+    Full,
+    Cursor,
+}
+
 pub struct ScanHandle {
     pub camera_id: i64,
     pub range: ScanRange,
@@ -102,16 +106,57 @@ pub struct ScanHandle {
     pub error: Option<String>,
 }
 
+struct ScanTask {
+    camera_id: i64,
+    range: ScanRange,
+    kind: ScanKind,
+}
+
+pub struct ScanCamera {
+    pub id: i64,
+    pub scan_cursor: DateTime<Utc>,
+}
+
 impl ScanHandle {
-    pub fn new(task: ScanTask) -> ScanHandle {
+    fn new(builder: ScanTask) -> ScanHandle {
         ScanHandle {
-            camera_id: task.camera_id,
-            range: task.range,
-            kind: task.kind,
+            camera_id: builder.camera_id,
+            range: builder.range,
+            kind: builder.kind,
             started_at: Utc::now(),
             instant: Instant::now(),
             error: None,
         }
+    }
+
+    pub fn manual(camera_id: i64, range: ScanRange) -> ScanHandle {
+        Self::new(ScanTask {
+            camera_id,
+            range,
+            kind: ScanKind::Manual,
+        })
+    }
+
+    pub fn full(camera_id: i64) -> ScanHandle {
+        Self::new(ScanTask {
+            camera_id,
+            range: ScanRange {
+                start: Scan::epoch(),
+                end: Utc::now(),
+            },
+            kind: ScanKind::Full,
+        })
+    }
+
+    pub fn cursor(scan_camera: ScanCamera) -> ScanHandle {
+        Self::new(ScanTask {
+            camera_id: scan_camera.id,
+            range: ScanRange {
+                start: scan_camera.scan_cursor,
+                end: Utc::now(),
+            },
+            kind: ScanKind::Cursor,
+        })
     }
 
     pub fn with_error(mut self, error: String) -> Self {
@@ -130,54 +175,6 @@ impl ScanHandle {
         match self.kind {
             ScanKind::Full | ScanKind::Manual => true,
             ScanKind::Cursor => false,
-        }
-    }
-}
-
-pub struct ScanTask {
-    pub camera_id: i64,
-    pub range: ScanRange,
-    pub kind: ScanKind,
-}
-
-pub struct ScanTaskBuilder {
-    camera_id: i64,
-}
-
-impl ScanTaskBuilder {
-    pub fn new(camera_id: i64) -> ScanTaskBuilder {
-        ScanTaskBuilder { camera_id }
-    }
-
-    pub fn full(self) -> ScanTask {
-        ScanTask {
-            camera_id: self.camera_id,
-            range: ScanRange {
-                start: Scan::epoch(),
-                end: Utc::now(),
-            },
-            kind: ScanKind::Full,
-        }
-    }
-
-    pub fn manual(self, range: ScanRange) -> ScanTask {
-        ScanTask {
-            camera_id: self.camera_id,
-            range,
-            kind: ScanKind::Manual,
-        }
-    }
-}
-
-impl ScanCamera {
-    pub fn new_scan_task(self) -> ScanTask {
-        ScanTask {
-            camera_id: self.id,
-            range: ScanRange {
-                start: self.scan_cursor,
-                end: Utc::now(),
-            },
-            kind: ScanKind::Cursor,
         }
     }
 }

@@ -1,14 +1,14 @@
 use dotenvy::dotenv;
+use ipcmanview::db;
+use ipcmanview::ipc::{IpcManager, IpcManagerStore};
+use ipcmanview::models::{Camera, CreateCamera, ShowCamera, UpdateCamera};
+use ipcmanview::scan::{Scan, ScanKindPending};
 use rocket::form::Form;
 use rocket::http::Status;
 use rocket::response::Redirect;
 use rocket::State;
 use rocket_dyn_templates::{context, Template};
 use sqlx::SqlitePool;
-
-use ipcmanview::ipc::{IpcManager, IpcManagerStore};
-use ipcmanview::models::{Camera, CreateCamera, ShowCamera, UpdateCamera};
-use ipcmanview::procs;
 
 #[macro_use]
 extern crate rocket;
@@ -20,9 +20,10 @@ type Pool = State<SqlitePool>;
 async fn main() -> Result<(), rocket::Error> {
     dotenv().ok();
 
-    let database_url = std::env::var("DATABASE_URL").unwrap();
+    let database_url =
+        std::env::var("DATABASE_URL").unwrap_or("sqlite://ipcmanview.db".to_string());
 
-    let pool = procs::setup_database(&database_url).await.unwrap();
+    let pool = db::new(&database_url).await.unwrap();
     let store = IpcManagerStore::new(&pool).await.unwrap();
 
     let res = rocket::build()
@@ -37,7 +38,8 @@ async fn main() -> Result<(), rocket::Error> {
                 camera_delete,
                 camera_show,
                 camera_refresh,
-                camera_update
+                camera_update,
+                camera_scan_full,
             ],
         )
         .launch()
@@ -96,7 +98,7 @@ async fn camera_delete(id: i64, pool: &Pool, store: &Store) -> Result<Redirect, 
     Ok(Redirect::to(uri!(index)))
 }
 
-#[post("/cameras/<id>/all")]
+#[post("/cameras/<id>/data")]
 async fn camera_refresh(id: i64, pool: &Pool, store: &Store) -> Result<Redirect, Status> {
     get_manager(store, id)
         .await?
@@ -107,11 +109,30 @@ async fn camera_refresh(id: i64, pool: &Pool, store: &Store) -> Result<Redirect,
     Ok(Redirect::to(uri!(camera_show(id))))
 }
 
-#[get("/cameras/<id>")]
-async fn camera_show(id: i64, pool: &Pool) -> Result<Template, Status> {
-    let show_cam = ShowCamera::find(pool, id)
+#[post("/cameras/<id>/scan/full")]
+async fn camera_scan_full(id: i64, pool: &Pool, store: &Store) -> Result<Redirect, Status> {
+    Scan::queue(pool, store, id, ScanKindPending::Full)
         .await
         .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Redirect::to(uri!(camera_show(id))))
+}
+
+#[get("/cameras/<id>")]
+async fn camera_show(id: i64, pool: &Pool, store: &Store) -> Result<Template, Status> {
+    let show_cam = ShowCamera::find(pool, id)
+        .await
+        .map_err(|_| Status::InternalServerError)?
+        .ok_or(Status::NotFound)?;
+
+    Scan::queue(
+        pool,
+        store,
+        show_cam.id,
+        ipcmanview::scan::ScanKindPending::Cursor,
+    )
+    .await
+    .map_err(|_| Status::InternalServerError)?;
 
     Ok(Template::render("camera/show", context!(show_cam)))
 }
