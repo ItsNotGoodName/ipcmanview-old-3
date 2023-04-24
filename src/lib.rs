@@ -70,12 +70,3 @@ pub mod ipc;
 pub mod models;
 pub mod procs;
 pub mod scan;
-
-pub async fn camera_update(pool: &sqlx::SqlitePool, man: &ipc::IpcManager) -> Result<()> {
-    ipc::IpcDetail::get(&man).await?.save(pool, man.id).await?;
-    ipc::IpcSoftwareVersion::get(man)
-        .await?
-        .save(pool, man.id)
-        .await?;
-    Ok(())
-}

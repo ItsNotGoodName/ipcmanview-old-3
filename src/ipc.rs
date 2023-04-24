@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
-use tokio::sync::Mutex;
-
 use anyhow::{bail, Result};
 use rpc::{
     modules::{magicbox, mediafilefind},
-    Client, Error, RequestBuilder, ResponseError, ResponseKind,
+    Client, Error, HttpClient, RequestBuilder, ResponseError, ResponseKind,
 };
+use tokio::sync::Mutex;
 
 #[derive(Clone)]
 pub struct IpcManager {
@@ -67,74 +66,6 @@ impl IpcSoftwareVersion {
         Ok(IpcSoftwareVersion {
             software: magicbox::get_software_version(man.rpc().await?).await?,
         })
-    }
-}
-
-#[derive(Clone)]
-pub struct IpcManagerStore(Arc<Mutex<Vec<IpcManager>>>);
-
-impl IpcManagerStore {
-    pub fn new() -> IpcManagerStore {
-        IpcManagerStore(Arc::new(Mutex::new(vec![])))
-    }
-
-    pub async fn add(&self, man: IpcManager) -> Result<()> {
-        let mut mans = self.0.lock().await;
-        for old in mans.iter() {
-            if old.id == man.id {
-                bail!(
-                    "Failed to add manager, already exists in store with camera {}",
-                    old.id
-                )
-            }
-        }
-
-        mans.push(man);
-
-        Ok(())
-    }
-
-    pub async fn delete(&self, id: i64) -> Result<()> {
-        let mut mans = self.0.lock().await;
-        match mans.iter().enumerate().find(|(_, old)| old.id == id) {
-            Some((idx, _)) => {
-                mans.swap_remove(idx).close().await;
-                Ok(())
-            }
-            None => {
-                bail!(
-                    "Failed to delete manager, not found in store with camera {}",
-                    id
-                )
-            }
-        }
-    }
-
-    pub async fn list(&self) -> Vec<IpcManager> {
-        self.0.lock().await.clone()
-    }
-
-    pub async fn get(&self, id: i64) -> Result<IpcManager> {
-        let mans = self.0.lock().await;
-        for man in mans.iter() {
-            if man.id == id {
-                return Ok(man.clone());
-            }
-        }
-
-        bail!(
-            "Failed to get manager, not found in store with camera {}",
-            id
-        )
-    }
-
-    pub async fn reset(self) {
-        let mut mans = self.0.lock().await;
-        for man in mans.iter() {
-            man.close().await;
-        }
-
-        *mans = vec![];
     }
 }
 
@@ -220,5 +151,85 @@ impl IpcFileStream<'_> {
         };
         mediafilefind::destroy(rpc, self.object).await.ok();
         self.closed = true;
+    }
+}
+
+#[derive(Clone)]
+pub struct IpcManagerStore {
+    mans: Arc<Mutex<Vec<IpcManager>>>,
+    client: HttpClient,
+}
+
+use crate::models::ICamera;
+
+impl ICamera {
+    pub fn to_camera_manager(self, client: rpc::HttpClient) -> IpcManager {
+        IpcManager::new(
+            self.id,
+            rpc::Client::new(client, self.ip, self.username, self.password),
+        )
+    }
+}
+
+impl IpcManagerStore {
+    pub async fn new(pool: &sqlx::SqlitePool) -> Result<IpcManagerStore> {
+        let client = rpc::new_http_client();
+        let mans = ICamera::list(pool)
+            .await?
+            .into_iter()
+            .map(|c| c.to_camera_manager(client.clone()))
+            .collect();
+
+        Ok(IpcManagerStore {
+            mans: Arc::new(Mutex::new(mans)),
+            client,
+        })
+    }
+
+    pub async fn refresh(&self, pool: &sqlx::SqlitePool, id: i64) -> Result<()> {
+        let mut mans = self.mans.lock().await;
+        let icam = ICamera::find(pool, id).await?;
+        let old = mans.iter().enumerate().find(|(_, old)| old.id == id);
+        match (icam, old) {
+            // Update
+            (Some(icam), Some((idx, old))) => {
+                old.close().await;
+                mans[idx] = icam.to_camera_manager(self.client.clone());
+            }
+            // Add
+            (Some(icam), None) => mans.push(icam.to_camera_manager(self.client.clone())),
+            // Delete
+            (None, Some((idx, _))) => {
+                mans.remove(idx);
+            }
+            (None, None) => {}
+        }
+
+        Ok(())
+    }
+
+    pub async fn list(&self) -> Vec<IpcManager> {
+        self.mans.lock().await.clone()
+    }
+
+    pub async fn get(&self, id: i64) -> Result<IpcManager> {
+        let mans = self.mans.lock().await;
+        for man in mans.iter() {
+            if man.id == id {
+                return Ok(man.clone());
+            }
+        }
+
+        bail!("Failed to get ipc manager with id {}", id)
+    }
+
+    pub async fn reset(&self) {
+        let mut mans = self.mans.lock().await;
+
+        for man in mans.iter() {
+            man.close().await;
+        }
+
+        *mans = vec![];
     }
 }

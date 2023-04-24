@@ -51,7 +51,7 @@ async fn db() -> Result<(), Box<dyn std::error::Error>> {
             username: username.clone(),
             password: password.clone(),
         };
-        if let Err(err) = procs::camera_create(&pool, &mut store, client.clone(), create).await {
+        if let Err(err) = procs::camera_create(&pool, &mut store, create).await {
             dbg!(err);
         };
     }
@@ -116,7 +116,7 @@ async fn store_from_env() -> Result<IpcManagerStore> {
     let ips = ips.split(" ");
     let username = std::env::var("IPCMANVIEW_USERNAME").unwrap_or("admin".to_string());
 
-    let store = IpcManagerStore::new();
+    let store = IpcManagerStore::new().await;
     let client = rpc::new_http_client();
     for (id, ip) in ips.enumerate() {
         let client = rpc::Client::new(

@@ -1,0 +1,19 @@
+{% extends "base" %}
+{% block content %}
+  <h1>Show Camera</h1>
+  <pre>{{ show_cam | json_encode(pretty=true) | safe }}</pre>
+  <h1>Update Camera</h1>
+  <form method="post" action="/cameras/{{show_cam.id}}">
+    <input type="hidden" name="_method" value="patch" />
+    <label for="ip">IP Address</label><br>
+    <input type="text" id="ip" name="ip"><br>
+
+    <label for="username">Username</label><br>
+    <input type="text" id="username" name="username"><br>
+
+    <label for="password">Password</label><br>
+    <input type="password" id="password" name="password"><br><br>
+
+    <input type="submit" value="Update Camera">
+  </form>
+{% endblock content %}

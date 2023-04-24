@@ -1,0 +1,47 @@
+{% extends "base" %}
+{% block content %}
+  <div>
+    <h1>Cameras</h1>
+    <table>
+      <tr>
+        <th>ID</th>
+        <th>IP Address</th>
+        <th>Username</th>
+        <th></th>
+      </tr>
+      {% for cam in cams %}
+        <tr>
+          <td><a href="/cameras/{{cam.id}}">{{cam.id}}</a></td>
+          <td><a href="http://{{cam.ip}}" target="_blank">{{cam.ip}}</a></td>
+          <td>{{cam.username}}</td>
+          <td>
+            <form method="post" action="/cameras/{{cam.id}}">
+              <input type="hidden" name="_method" value="delete" />
+              <button type="submit">delete</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" action="/cameras/{{cam.id}}/all">
+              <button type="submit">refresh</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div>
+    <h1>Add Camera</h1>
+    <form method="post" action="/cameras">
+      <label for="ip">IP Address</label><br>
+      <input type="text" id="ip" name="ip"><br>
+
+      <label for="username">Username</label><br>
+      <input type="text" id="username" name="username"><br>
+
+      <label for="password">Password</label><br>
+      <input type="password" id="password" name="password"><br><br>
+
+      <input type="submit" value="Add Camera">
+    </form>
+  </div>
+{% endblock content %}

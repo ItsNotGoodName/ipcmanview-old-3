@@ -2,24 +2,62 @@ use std::ops::AddAssign;
 
 use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::scan::ScanKind;
 
-pub struct CreateCamera {
+#[derive(Deserialize, Debug)]
+pub struct CreateCamera<'a> {
+    pub ip: &'a str,
+    pub username: &'a str,
+    pub password: &'a str,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct UpdateCamera<'a> {
+    pub id: i64,
+    pub ip: Option<&'a str>,
+    pub username: Option<&'a str>,
+    pub password: Option<&'a str>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct Camera {
+    pub id: i64,
     pub ip: String,
     pub username: String,
-    pub password: String,
 }
 
-pub struct UpdateCamera {
+#[derive(Serialize, Debug)]
+pub struct ShowCamera {
     pub id: i64,
-    pub ip: Option<String>,
-    pub username: Option<String>,
-    pub password: Option<String>,
+    pub ip: String,
+    pub username: String,
+    pub detail: CameraDetail,
+    pub software: CameraSoftware,
 }
 
-pub struct Camera {
+#[derive(Serialize, Debug)]
+pub struct CameraDetail {
+    pub sn: Option<String>,
+    pub device_class: Option<String>,
+    pub device_type: Option<String>,
+    pub hardware_version: Option<String>,
+    pub market_area: Option<String>,
+    pub process_info: Option<String>,
+    pub vendor: Option<String>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct CameraSoftware {
+    pub build: Option<String>,
+    pub build_date: Option<String>,
+    pub security_base_line_version: Option<String>,
+    pub version: Option<String>,
+    pub web_version: Option<String>,
+}
+
+pub struct ICamera {
     pub id: i64,
     pub ip: String,
     pub username: String,
