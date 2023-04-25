@@ -7,6 +7,12 @@ use rpc::{
 };
 use tokio::sync::Mutex;
 
+#[derive(Debug)]
+pub struct IpcFile {
+    pub cookie: String,
+    pub file_url: String,
+}
+
 #[derive(Clone)]
 pub struct IpcManager {
     pub id: i64,
@@ -24,6 +30,16 @@ impl IpcManager {
     pub async fn rpc(&self) -> Result<RequestBuilder, Error> {
         let mut client = self.client.lock().await;
         client.keep_alive_or_login().await.map(|_| client.rpc())
+    }
+
+    pub async fn file(&self, file_path: &str) -> Result<IpcFile, Error> {
+        let mut client = self.client.lock().await;
+        client.keep_alive_or_login().await?;
+
+        Ok(IpcFile {
+            cookie: client.cookie(),
+            file_url: client.file_url(file_path),
+        })
     }
 
     pub async fn close(&self) {
@@ -157,7 +173,7 @@ impl IpcFileStream<'_> {
 #[derive(Clone)]
 pub struct IpcManagerStore {
     mans: Arc<Mutex<Vec<IpcManager>>>,
-    client: HttpClient,
+    pub client: HttpClient,
 }
 
 use crate::models::ICamera;

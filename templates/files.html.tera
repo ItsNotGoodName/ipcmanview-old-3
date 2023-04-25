@@ -1,0 +1,7 @@
+{% extends "base" %}
+{% block content %}
+  <h1>Show Files</h1>
+  <a href="/files?before={{files.before}}">before</a>
+  <a href="/files?after={{files.after}}">next</a>
+  <pre>{{ files | json_encode(pretty=true) | safe }}</pre>
+{% endblock content %}

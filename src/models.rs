@@ -58,6 +58,17 @@ pub struct CameraSoftware {
     pub web_version: Option<String>,
 }
 
+#[derive(Serialize, Debug)]
+pub struct CameraFile {
+    pub camera_id: i64,
+    pub file_path: String,
+    pub kind: String,
+    pub size: i64,
+    pub start_time: DateTime<Utc>,
+    pub end_time: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 pub struct ICamera {
     pub id: i64,
     pub ip: String,
@@ -69,13 +80,6 @@ pub struct ICamera {
 pub struct CameraScanResult {
     pub upserted: u64,
     pub deleted: u64,
-}
-
-impl AddAssign for CameraScanResult {
-    fn add_assign(&mut self, rhs: Self) {
-        self.upserted += rhs.upserted;
-        self.deleted += rhs.deleted;
-    }
 }
 
 #[derive(Serialize, Debug)]
@@ -103,4 +107,11 @@ pub struct ScanActive {
     pub range_end: DateTime<Utc>,
     #[serde(with = "ts_milliseconds")]
     pub started_at: DateTime<Utc>,
+}
+
+impl AddAssign for CameraScanResult {
+    fn add_assign(&mut self, rhs: Self) {
+        self.upserted += rhs.upserted;
+        self.deleted += rhs.deleted;
+    }
 }

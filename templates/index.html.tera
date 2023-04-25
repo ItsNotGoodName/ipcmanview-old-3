@@ -49,4 +49,7 @@
       <input type="submit" value="Add Camera">
     </form>
   </div>
+  <div>
+    <a href="/files">files</a>
+  </div>
 {% endblock content %}

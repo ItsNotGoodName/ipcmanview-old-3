@@ -89,8 +89,10 @@ impl Scan {
             .await
             .with_context(|| format!("Failed to commit transaction with camera {}", camera_id))
     }
+}
 
-    pub async fn next(pool: &SqlitePool) -> Result<Option<ScanHandle>> {
+impl ScanHandle {
+    pub async fn next(pool: &SqlitePool) -> Result<Option<Self>> {
         let mut pool = pool
             .begin()
             .await
@@ -99,7 +101,7 @@ impl Scan {
         // Create a handle from either pending_scans or pending_manual_scans, return if there none
         let handle = if let Some(pending) = sqlx::query_as_unchecked!(ScanPending,
             r#"
-            SELECT * FROM pending_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1;
+            SELECT * FROM pending_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
             "#,
         ).fetch_optional(&mut pool).await? {
             // Delete pending scan
@@ -130,7 +132,9 @@ impl Scan {
                 }
             }
         } else if let Some(pending) = sqlx::query_as_unchecked!(ScanManualPending,
-                "SELECT * FROM pending_manual_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1",
+            r#"
+            SELECT * FROM pending_manual_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
+            "#,
         ).fetch_optional(&mut pool).await? {
             // Delete pending manual scan
             sqlx::query!("DELETE FROM pending_manual_scans WHERE id = ?", pending.id)
@@ -178,9 +182,7 @@ impl Scan {
 
         Ok(Some(handle))
     }
-}
 
-impl ScanHandle {
     pub async fn end(self, pool: &SqlitePool) -> Result<()> {
         let mut pool = pool.begin().await.with_context(|| {
             format!("Failed to start transaction with camera {}", self.camera_id)

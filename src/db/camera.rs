@@ -3,8 +3,10 @@ use sqlx::SqlitePool;
 
 use crate::{
     models::{
-        Camera, CameraDetail, CameraSoftware, CreateCamera, ICamera, ShowCamera, UpdateCamera,
+        Camera, CameraDetail, CameraFile, CameraSoftware, CreateCamera, ICamera, ShowCamera,
+        UpdateCamera,
     },
+    query::{Cursor, QueryCameraFile, QueryCameraFileResult},
     scan::Scan,
 };
 
@@ -224,5 +226,79 @@ impl ShowCamera {
             software,
             file_count: file_count.count,
         }))
+    }
+}
+
+impl CameraFile {
+    pub async fn query(
+        pool: &SqlitePool,
+        query: QueryCameraFile<'_>,
+    ) -> Result<QueryCameraFileResult> {
+        let res = match query.cursor {
+            Cursor::After(cursor) => {
+                let (id, time) = Cursor::from(&cursor)?;
+                sqlx::query_as_unchecked!(
+                    CameraFile,
+                    r#"
+                    SELECT * FROM camera_files
+                    WHERE (start_time < ?2 OR (start_time = ?2 AND camera_id < ?1))
+                    ORDER BY start_time DESC, camera_id DESC LIMIT ?3
+                    "#,
+                    id,
+                    time,
+                    query.limit
+                )
+                .fetch_all(pool)
+                .await?
+            }
+            Cursor::Before(cursor) => {
+                let (id, time) = Cursor::from(&cursor)?;
+                sqlx::query_as_unchecked!(
+                    CameraFile,
+                    r#"
+                    SELECT * FROM (
+                        SELECT * FROM camera_files 
+                        WHERE (start_time > ?2 OR (start_time = ?2 AND camera_id > ?1)) 
+                        ORDER BY start_time ASC, camera_id ASC LIMIT ?3
+                    ) ORDER BY start_time DESC, camera_id DESC;
+                    "#,
+                    id,
+                    time,
+                    query.limit
+                )
+                .fetch_all(pool)
+                .await?
+            }
+            Cursor::None => {
+                sqlx::query_as_unchecked!(
+                    CameraFile,
+                    r#"
+                    SELECT * FROM camera_files
+                    ORDER BY start_time DESC, camera_id DESC LIMIT ?
+                    "#,
+                    query.limit
+                )
+                .fetch_all(pool)
+                .await?
+            }
+        };
+
+        let before = if let Some(first) = res.first() {
+            Cursor::to(first.camera_id, first.start_time)
+        } else {
+            "".to_string()
+        };
+
+        let after = if let Some(last) = res.last() {
+            Cursor::to(last.camera_id, last.start_time)
+        } else {
+            "".to_string()
+        };
+
+        Ok(QueryCameraFileResult {
+            files: res,
+            before,
+            after,
+        })
     }
 }

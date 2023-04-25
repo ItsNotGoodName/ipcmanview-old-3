@@ -1,7 +1,10 @@
+use std::path::PathBuf;
+
 use dotenvy::dotenv;
 use ipcmanview::db;
 use ipcmanview::ipc::{IpcManager, IpcManagerStore};
-use ipcmanview::models::{Camera, CreateCamera, ShowCamera, UpdateCamera};
+use ipcmanview::models::{Camera, CameraFile, CreateCamera, ShowCamera, UpdateCamera};
+use ipcmanview::query::QueryCameraFileBuilder;
 use ipcmanview::scan::{Scan, ScanKindPending};
 use rocket::form::Form;
 use rocket::http::Status;
@@ -40,6 +43,8 @@ async fn main() -> Result<(), rocket::Error> {
                 camera_refresh,
                 camera_update,
                 camera_scan_full,
+                file_list,
+                camera_raw,
             ],
         )
         .launch()
@@ -107,6 +112,45 @@ async fn camera_refresh(id: i64, pool: &Pool, store: &Store) -> Result<Redirect,
         .map_err(|_| Status::InternalServerError)?;
 
     Ok(Redirect::to(uri!(camera_show(id))))
+}
+
+#[get("/files?<before>&<after>&<limit>")]
+async fn file_list(
+    before: Option<&str>,
+    after: Option<&str>,
+    limit: Option<i32>,
+    pool: &Pool,
+) -> Result<Template, Status> {
+    let query = QueryCameraFileBuilder::new()
+        .before(before)
+        .after(after)
+        .limit(limit)
+        .build();
+
+    let files = CameraFile::query(pool, query)
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Template::render("files", context! {files}))
+}
+
+#[get("/cameras/<id>/raw/<file_path..>")]
+async fn camera_raw(id: i64, file_path: PathBuf, store: &Store) -> Result<String, Status> {
+    let man = get_manager(store, id).await?;
+    let file = man
+        .file(file_path.to_str().ok_or(Status::BadRequest)?)
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+    let client = &store.client;
+
+    let client = client
+        .get(file.file_url)
+        .header("Cookie", file.cookie)
+        .send()
+        .await
+        .map_err(|_| Status::ServiceUnavailable)?;
+
+    Ok(format!("{:?}", client.headers()))
 }
 
 #[post("/cameras/<id>/scan/full")]

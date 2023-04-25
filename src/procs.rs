@@ -63,7 +63,7 @@ impl Scan {
         let store = store.clone();
         tokio::spawn(async move {
             loop {
-                match Scan::next(&pool).await {
+                match ScanHandle::next(&pool).await {
                     Ok(Some(handle)) => match handle.run(&pool, &store).await {
                         Ok(res) => {
                             dbg!(res);
