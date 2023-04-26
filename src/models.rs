@@ -60,6 +60,7 @@ pub struct CameraSoftware {
 
 #[derive(Serialize, Debug)]
 pub struct CameraFile {
+    pub id: i64,
     pub camera_id: i64,
     pub file_path: String,
     pub kind: String,

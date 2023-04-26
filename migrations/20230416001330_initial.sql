@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS camera_software_versions (
 );
 
 CREATE TABLE IF NOT EXISTS camera_files (
+    id INTEGER PRIMARY KEY,
     camera_id INTEGER NOT NULL,
     file_path TEXT NOT NULL,
     kind TEXT NOT NULL,
