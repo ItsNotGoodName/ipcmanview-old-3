@@ -1,6 +1,5 @@
 use std::ops::AddAssign;
 
-use chrono::serde::ts_milliseconds;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -115,11 +114,8 @@ pub struct ScanCompleted {
     pub id: i64,
     pub camera_id: i64,
     pub kind: ScanKind,
-    #[serde(with = "ts_milliseconds")]
     pub range_start: DateTime<Utc>,
-    #[serde(with = "ts_milliseconds")]
     pub range_end: DateTime<Utc>,
-    #[serde(with = "ts_milliseconds")]
     pub started_at: DateTime<Utc>,
     pub duration: i64,
     pub error: Option<String>,
@@ -129,10 +125,7 @@ pub struct ScanCompleted {
 pub struct ScanActive {
     pub camera_id: i64,
     pub kind: ScanKind,
-    #[serde(with = "ts_milliseconds")]
     pub range_start: DateTime<Utc>,
-    #[serde(with = "ts_milliseconds")]
     pub range_end: DateTime<Utc>,
-    #[serde(with = "ts_milliseconds")]
     pub started_at: DateTime<Utc>,
 }
