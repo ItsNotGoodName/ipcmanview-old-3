@@ -9,6 +9,8 @@ impl Client {
     pub async fn logout(&mut self) {
         if let State::Login(_) = self.state {
             global::logout(self.rpc()).await.ok();
+
+            // TRANSITION - Login -> Logout
             self.connection = Connection::default();
             self.state = State::Logout;
         }
@@ -20,6 +22,8 @@ impl Client {
             State::Logout => {}
             State::Login(_) => {
                 global::logout(self.rpc()).await.ok();
+
+                // TRANSITION - Login -> Logout
                 self.connection = Connection::default();
                 self.state = State::Logout;
             }
@@ -32,13 +36,12 @@ impl Client {
                 Ok(o)
             }
             Err(err) => {
-                // Reset invalid connection
-                self.connection = Connection::default();
-
                 // Block client on a login error
                 if let Error::Login(err) = err {
+                    // TRANSTION - Logout -> Error
                     self.state = State::Error(err);
                 }
+                self.connection = Connection::default();
 
                 Err(err)
             }
@@ -91,30 +94,34 @@ impl Client {
         }
     }
 
-    async fn keep_alive(&mut self) -> Result<(), Error> {
-        match self.state {
-            State::Login(last_login) => {
-                if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
-                    return Ok(());
-                }
+    pub async fn keep_alive_or_login(&mut self) -> Result<(), Error> {
+        // Make sure we are login
+        if let State::Login(last_login) = self.state {
+            // Check if we need to run keep alive
+            if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
+                return Ok(());
+            }
 
-                match global::keep_alive(self.rpc()).await {
-                    Ok(_) => {
-                        self.state = State::Login(Instant::now());
-                        Ok(())
-                    }
-                    Err(err) => Err(err),
+            // Run keep alive
+            match global::keep_alive(self.rpc()).await {
+                Ok(_) => {
+                    self.state = State::Login(Instant::now());
+
+                    Ok(())
+                }
+                Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
+                Err(_) => {
+                    // Let's just assume that our session is invalid
+
+                    // TRANSITION - Login -> Logout
+                    self.state = State::Logout;
+                    self.connection = Connection::default();
+
+                    self.login().await
                 }
             }
-            _ => Err(Error::no_session()),
-        }
-    }
-
-    pub async fn keep_alive_or_login(&mut self) -> Result<(), Error> {
-        match self.keep_alive().await {
-            Ok(o) => Ok(o),
-            Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
-            Err(_) => self.login().await, // Let's just assume that our session is invalid
+        } else {
+            self.login().await
         }
     }
 }
