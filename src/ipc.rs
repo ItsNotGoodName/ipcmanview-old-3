@@ -1,16 +1,16 @@
 use std::sync::Arc;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use rpc::{
     modules::{magicbox, mediafilefind},
-    Client, Error, HttpClient, RequestBuilder, ResponseError, ResponseKind,
+    reqwest, Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };
 use tokio::sync::Mutex;
 
 #[derive(Debug)]
 pub struct IpcFile {
     pub cookie: String,
-    pub file_url: String,
+    pub url: String,
 }
 
 #[derive(Clone)]
@@ -38,14 +38,14 @@ impl IpcManager {
 
         Ok(IpcFile {
             cookie: client.cookie(),
-            file_url: client.file_url(file_path),
+            url: client.file_url(file_path),
         })
     }
 
     pub async fn close(&self) {
         let mut client = self.client.lock().await;
-        client.logout().await.ok();
-        client.closed = true;
+        client.logout().await;
+        client.state = rpc::State::Error(rpc::LoginError::Closed)
     }
 }
 
@@ -173,13 +173,13 @@ impl IpcFileStream<'_> {
 #[derive(Clone)]
 pub struct IpcManagerStore {
     mans: Arc<Mutex<Vec<IpcManager>>>,
-    pub client: HttpClient,
+    pub client: reqwest::Client,
 }
 
 use crate::models::ICamera;
 
 impl ICamera {
-    pub fn to_camera_manager(self, client: rpc::HttpClient) -> IpcManager {
+    pub fn to_camera_manager(self, client: reqwest::Client) -> IpcManager {
         IpcManager::new(
             self.id,
             rpc::Client::new(client, self.ip, self.username, self.password),
@@ -189,7 +189,9 @@ impl ICamera {
 
 impl IpcManagerStore {
     pub async fn new(pool: &sqlx::SqlitePool) -> Result<IpcManagerStore> {
-        let client = rpc::new_http_client();
+        let client = rpc::recommended_reqwest_client_builder()
+            .build()
+            .context("Failed to build reqest client")?;
         let mans = ICamera::list(pool)
             .await?
             .into_iter()

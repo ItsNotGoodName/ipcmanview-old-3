@@ -7,6 +7,11 @@
     <!-- <script src="//unpkg.com/alpinejs" defer></script> -->
   </head>
   <body>
+    <ul>
+      <li><a href="/cameras">cameras</a></li>
+      <li><a href="/files">files</a></li>
+      <li><a href="/scans">scans</a></li>
+    </ul>
     <main>
       {% block content %}{% endblock content %}
     </main>

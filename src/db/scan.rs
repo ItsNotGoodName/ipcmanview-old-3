@@ -288,7 +288,11 @@ impl ScanCompleted {
         sqlx::query_as_unchecked!(
             Self,
             r#"
-            SELECT id, camera_id, kind, range_start, range_end, started_at, duration, error FROM completed_scans
+            SELECT 
+            id, camera_id, kind, range_start, range_end, started_at, duration, error 
+            FROM completed_scans 
+            ORDER BY started_at DESC 
+            LIMIT 5
             "#
         )
         .fetch_all(pool)

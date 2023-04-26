@@ -1,36 +1,45 @@
 use std::time::Instant;
 
-use super::{modules::global, utils, Client, Error, LoginError, State};
+use super::{modules::global, utils, Client, Connection, Error, LoginError, State};
 
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
 
 impl Client {
-    pub async fn login(&mut self) -> Result<(), Error> {
-        // Prevent login when client is closed
-        if self.closed {
-            return Err(Error::Login(LoginError::Closed));
-        }
-
-        // Fail safe to prevent account lock when password is wrong
-        if self.blocked {
-            return Err(Error::Login(LoginError::Blocked));
-        }
-
-        // Session has to be empty to login
-        if !self.state.session.is_empty() {
+    pub async fn logout(&mut self) {
+        if let State::Login(_) = self.state {
             global::logout(self.rpc()).await.ok();
-            self.state = State::default();
+            self.connection = Connection::default();
+            self.state = State::Logout;
+        }
+    }
+
+    pub async fn login(&mut self) -> Result<(), Error> {
+        // Make sure we are in State::Logout
+        match self.state {
+            State::Logout => {}
+            State::Login(_) => {
+                global::logout(self.rpc()).await.ok();
+                self.connection = Connection::default();
+                self.state = State::Logout;
+            }
+            State::Error(err) => return Err(Error::Login(err)),
         }
 
         match self.login_procedure().await {
-            Ok(o) => Ok(o),
+            Ok(o) => {
+                self.state = State::Login(Instant::now());
+                Ok(o)
+            }
             Err(err) => {
-                self.state = State::default();
+                // Reset invalid connection
+                self.connection = Connection::default();
+
                 // Block client on a login error
-                if let Error::Login(_) = err {
-                    self.blocked = true;
+                if let Error::Login(err) = err {
+                    self.state = State::Error(err);
                 }
+
                 Err(err)
             }
         }
@@ -39,7 +48,7 @@ impl Client {
     async fn login_procedure(&mut self) -> Result<(), Error> {
         // Do a first login and set our session
         let (first_login, res) = global::first_login(self.rpc_login(), &self.username).await?;
-        self.state.session = res.session;
+        self.connection.session = res.session;
         // Make sure the caemra supports this login procedure
         match res.error {
             Some(err) => match err.code {
@@ -66,10 +75,7 @@ impl Client {
         );
 
         match res.await {
-            Ok(_) => {
-                self.state.last_login = Some(Instant::now());
-                Ok(())
-            }
+            Ok(_) => Ok(()),
             Err(err) => Err(Error::Login(match err {
                 Error::Response(err) if err.code == 268632085 => LoginError::UserOrPasswordNotValid,
                 Error::Response(err) if err.code == 268632081 => LoginError::HasBeenLocked,
@@ -86,21 +92,21 @@ impl Client {
     }
 
     async fn keep_alive(&mut self) -> Result<(), Error> {
-        match self.state.last_login {
-            Some(last_login) => {
+        match self.state {
+            State::Login(last_login) => {
                 if Instant::now().duration_since(last_login).as_secs() < TIMEOUT {
                     return Ok(());
                 }
 
                 match global::keep_alive(self.rpc()).await {
                     Ok(_) => {
-                        self.state.last_login = Some(Instant::now());
+                        self.state = State::Login(Instant::now());
                         Ok(())
                     }
                     Err(err) => Err(err),
                 }
             }
-            None => Err(Error::no_session()),
+            _ => Err(Error::no_session()),
         }
     }
 
@@ -109,19 +115,6 @@ impl Client {
             Ok(o) => Ok(o),
             Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
             Err(_) => self.login().await, // Let's just assume that our session is invalid
-        }
-    }
-
-    pub async fn logout(&mut self) -> Result<(), Error> {
-        if self.state.session.is_empty() {
-            Ok(())
-        } else {
-            let res = global::logout(self.rpc()).await;
-            self.state = State::default();
-            match res {
-                Ok(_) => Ok(()),
-                Err(err) => Err(err),
-            }
         }
     }
 }

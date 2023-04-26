@@ -1,0 +1,11 @@
+{% extends "base" %}
+{% block content %}
+  <div>
+    <h1>Show Active Scans</h1>
+    <pre>{{ active_scans | json_encode(pretty=true) | safe }}</pre>
+  </div>
+  <div>
+    <h1>Show Completed Scans</h1>
+    <pre>{{ completed_scans | json_encode(pretty=true) | safe }}</pre>
+  </div>
+{% endblock content %}

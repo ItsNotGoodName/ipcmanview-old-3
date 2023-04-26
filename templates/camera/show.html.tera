@@ -1,6 +1,6 @@
 {% extends "base" %}
 {% block content %}
-  <h1>Show Camera</h1>
+  <h1>Camera Show</h1>
   <pre>{{ show_cam | json_encode(pretty=true) | safe }}</pre>
   <h1>Update Camera</h1>
   <form method="post" action="/cameras/{{show_cam.id}}">

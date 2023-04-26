@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 
 use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftwareVersion};
 use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
-use crate::scan::{Scan, ScanHandle, ScanKindPending, ScanRange};
+use crate::scan::{Scan, ScanHandle, ScanKindPending};
 
 // -------------------- Camera
 
@@ -84,13 +84,9 @@ impl Scan {
 }
 
 impl ScanHandle {
-    async fn scan_range(
-        pool: &SqlitePool,
-        man: &IpcManager,
-        range: &ScanRange,
-    ) -> Result<CameraScanResult> {
+    async fn run_(&self, pool: &SqlitePool, man: &IpcManager) -> Result<CameraScanResult> {
         let mut res = CameraScanResult::default();
-        for range in range.iter() {
+        for range in self.range.iter() {
             res += man.scan_files(pool, range.start, range.end).await?;
         }
 
@@ -101,16 +97,16 @@ impl ScanHandle {
         let man = store.get(self.camera_id).await?;
 
         // Run
-        let res = Self::scan_range(pool, &man, &self.range).await;
+        let res = self.run_(pool, &man).await;
+
         let handle = match res {
             Ok(_) => self,
             Err(ref err) => self.with_error(err.to_string()),
         };
 
         // End
-        let camera_id = handle.camera_id;
         if let Err(err) = handle.end(pool).await {
-            panic!("Failed to end active task with camera {camera_id} and error {err}",);
+            dbg!(err);
         };
 
         res

@@ -1,5 +1,7 @@
 use std::time::{Duration, Instant};
 
+pub use chrono;
+pub use reqwest;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 
@@ -11,17 +13,13 @@ pub mod login;
 pub mod modules;
 mod utils;
 
-pub type HttpClient = reqwest::Client;
-
-pub fn new_http_client() -> HttpClient {
+pub fn recommended_reqwest_client_builder() -> reqwest::ClientBuilder {
     reqwest::Client::builder()
         .no_deflate()
         .timeout(Duration::from_secs(10))
-        .build()
-        .unwrap()
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Default, Debug)]
 pub enum ResponseKind {
     #[error("InvalidRequest")]
     InvalidRequest,
@@ -32,13 +30,8 @@ pub enum ResponseKind {
     #[error("NoData")]
     NoData,
     #[error("Unknown")]
+    #[default]
     Unknown,
-}
-
-impl Default for ResponseKind {
-    fn default() -> Self {
-        ResponseKind::Unknown
-    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -50,12 +43,11 @@ pub struct ResponseError {
     pub kind: ResponseKind,
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum LoginError {
+    // Client is closed and cannot be used anymore
     #[error("Client is closed")]
     Closed,
-    #[error("Blocked to prevent account lock")]
-    Blocked,
     #[error("User or password not valid")]
     UserOrPasswordNotValid,
     #[error("User not valid")]
@@ -161,12 +153,12 @@ pub struct Request {
 pub struct RequestBuilder {
     req: Request,
     url: String,
-    client: HttpClient,
+    client: reqwest::Client,
     require_session: bool,
 }
 
 impl RequestBuilder {
-    pub fn new(id: i32, url: String, client: HttpClient, session: String) -> RequestBuilder {
+    pub fn new(id: i32, url: String, client: reqwest::Client, session: String) -> RequestBuilder {
         RequestBuilder {
             req: Request {
                 id,
@@ -226,13 +218,20 @@ impl RequestBuilder {
 }
 
 #[derive(Default, Debug)]
-pub struct State {
-    last_id: i32,
-    pub session: String,
-    pub last_login: Option<Instant>,
+pub enum State {
+    #[default]
+    Logout,
+    Login(Instant),
+    Error(LoginError),
 }
 
-impl State {
+#[derive(Default, Debug)]
+pub struct Connection {
+    last_id: i32,
+    pub session: String,
+}
+
+impl Connection {
     pub fn next_id(&mut self) -> i32 {
         self.last_id += 1;
         self.last_id
@@ -240,44 +239,42 @@ impl State {
 }
 
 pub struct Client {
-    client: HttpClient,
+    client: reqwest::Client,
     pub ip: String,
     pub username: String,
     pub password: String,
-    pub blocked: bool,
-    pub closed: bool,
+    pub connection: Connection,
     pub state: State,
 }
 
 impl Client {
-    pub fn new(client: HttpClient, ip: String, username: String, password: String) -> Client {
+    pub fn new(client: reqwest::Client, ip: String, username: String, password: String) -> Client {
         Client {
             client,
             ip,
             username,
             password,
-            blocked: false,
-            closed: false,
             state: State::default(),
+            connection: Connection::default(),
         }
     }
 
     pub fn rpc(&mut self) -> RequestBuilder {
         RequestBuilder::new(
-            self.state.next_id(),
+            self.connection.next_id(),
             format!("http://{}/RPC2", self.ip),
             self.client.clone(),
-            self.state.session.clone(),
+            self.connection.session.clone(),
         )
         .require_session()
     }
 
     fn rpc_login(&mut self) -> RequestBuilder {
         RequestBuilder::new(
-            self.state.next_id(),
+            self.connection.next_id(),
             format!("http://{}/RPC2_Login", self.ip),
             self.client.clone(),
-            self.state.session.clone(),
+            self.connection.session.clone(),
         )
     }
 }
