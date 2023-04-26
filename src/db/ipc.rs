@@ -51,11 +51,11 @@ impl IpcSoftwareVersion {
             WHERE id = ?1
             "#,
             camera_id,
-            self.software.build,
-            self.software.build_date,
-            self.software.security_base_line_version,
-            self.software.version,
-            self.software.web_version
+            self.0.build,
+            self.0.build_date,
+            self.0.security_base_line_version,
+            self.0.version,
+            self.0.web_version
         )
         .execute(pool)
         .await

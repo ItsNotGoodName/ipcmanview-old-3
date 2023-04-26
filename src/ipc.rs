@@ -82,15 +82,13 @@ impl IpcDetail {
     }
 }
 
-pub struct IpcSoftwareVersion {
-    pub software: magicbox::GetSoftwareVersion,
-}
+pub struct IpcSoftwareVersion(pub magicbox::GetSoftwareVersion);
 
 impl IpcSoftwareVersion {
     pub async fn get(man: &IpcManager) -> Result<IpcSoftwareVersion, Error> {
-        Ok(IpcSoftwareVersion {
-            software: magicbox::get_software_version(man.rpc().await?).await?,
-        })
+        Ok(IpcSoftwareVersion(
+            magicbox::get_software_version(man.rpc().await?).await?,
+        ))
     }
 }
 
