@@ -40,6 +40,30 @@ impl IpcDetail {
 
 impl IpcSoftwareVersion {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
+        let software = if let Some(ref s) = self.0 {
+            s
+        } else {
+            sqlx::query!(
+                r#"
+                REPLACE INTO camera_software_versions
+                (id)
+                VALUES
+                (?)
+                "#,
+                camera_id
+            )
+            .execute(pool)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to update software version with camera {}",
+                    camera_id
+                )
+            })?;
+
+            return Ok(());
+        };
+
         sqlx::query!(
             r#"
             UPDATE camera_software_versions SET 
@@ -51,11 +75,11 @@ impl IpcSoftwareVersion {
             WHERE id = ?1
             "#,
             camera_id,
-            self.0.build,
-            self.0.build_date,
-            self.0.security_base_line_version,
-            self.0.version,
-            self.0.web_version
+            software.build,
+            software.build_date,
+            software.security_base_line_version,
+            software.version,
+            software.web_version
         )
         .execute(pool)
         .await
@@ -66,6 +90,7 @@ impl IpcSoftwareVersion {
             )
         })
         .ok();
+
         Ok(())
     }
 }
