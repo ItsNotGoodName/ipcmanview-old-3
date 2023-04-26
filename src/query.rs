@@ -1,16 +1,23 @@
-use anyhow::{Context, Result};
-use chrono::{DateTime, Utc};
+use anyhow::{anyhow, Context, Result};
+use chrono::{DateTime, NaiveDateTime, Utc};
 
 use crate::models::{Cursor, QueryCameraFile};
 
-use base64::Engine as _;
-
 impl Cursor<'_> {
     fn from_(cursor: &str) -> Result<(i64, DateTime<Utc>)> {
-        let cursor = String::from_utf8(base64::engine::general_purpose::STANDARD.decode(cursor)?)?;
         let (first, second) = cursor.split_once("_").context("no seperator")?;
         let id: i64 = first.parse()?;
-        let time: DateTime<Utc> = DateTime::parse_from_rfc3339(&second)?.with_timezone(&Utc);
+        let tsms: i64 = second.parse()?;
+        let time = match NaiveDateTime::from_timestamp_millis(tsms)
+            .context("invalid time")?
+            .and_local_timezone(Utc)
+        {
+            chrono::LocalResult::Ambiguous(tz, _) | chrono::LocalResult::Single(tz) => {
+                Ok(tz.with_timezone(&Utc))
+            }
+            chrono::LocalResult::None => Err(anyhow!("parse time")),
+        }?;
+
         Ok((id, time))
     }
 
@@ -19,8 +26,7 @@ impl Cursor<'_> {
     }
 
     pub fn to(id: i64, time: DateTime<Utc>) -> String {
-        base64::engine::general_purpose::STANDARD
-            .encode(format!("{id}_{time}", time = time.to_rfc3339()))
+        format!("{id}_{time}", time = time.timestamp_millis())
     }
 }
 
@@ -80,11 +86,13 @@ impl<'a> QueryCameraFileBuilder<'a> {
 
 #[cfg(test)]
 mod tests {
+    use chrono::Timelike;
+
     use super::*;
 
     #[test]
     fn it_file_query_cursor() {
-        let (id, time) = (4, Utc::now());
+        let (id, time) = (4, Utc::now().with_nanosecond(0).unwrap());
 
         assert_eq!(Cursor::from(&Cursor::to(id, time)).unwrap(), (id, time));
     }

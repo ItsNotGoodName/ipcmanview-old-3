@@ -14,7 +14,6 @@ default-run = "server"
 
 [dependencies]
 anyhow = "1.0"
-base64 = "0.21.0"
 chrono = { version = "0.4.24", features = ["serde"] }
 dotenvy = "0.15.0"
 futures-util = "0.3.28"
