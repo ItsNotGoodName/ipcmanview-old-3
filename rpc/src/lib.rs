@@ -45,7 +45,6 @@ pub struct ResponseError {
 
 #[derive(thiserror::Error, Clone, Copy, Debug)]
 pub enum LoginError {
-    // Client is closed and cannot be used anymore
     #[error("Client is closed")]
     Closed,
     #[error("User or password not valid")]
@@ -82,15 +81,15 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn no_params() -> Error {
+    fn no_params() -> Error {
         Error::Parse("No 'params' field".to_string())
     }
 
-    pub fn no_session() -> Error {
+    fn no_session() -> Error {
         Error::Session("No session".to_string())
     }
 
-    pub fn from_response_error(mut error: ResponseError) -> Error {
+    fn from_response_error(mut error: ResponseError) -> Error {
         error.kind = match error.code {
             287637505 | 287637504 => return Error::Session(error.message),
             268894209 => ResponseKind::InvalidRequest,
