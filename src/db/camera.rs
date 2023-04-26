@@ -3,10 +3,9 @@ use sqlx::SqlitePool;
 
 use crate::{
     models::{
-        Camera, CameraDetail, CameraFile, CameraSoftware, CreateCamera, ICamera, ShowCamera,
-        UpdateCamera,
+        Camera, CameraDetail, CameraFile, CameraSoftware, CreateCamera, Cursor, ICamera,
+        QueryCameraFile, QueryCameraFileResult, ShowCamera, UpdateCamera,
     },
-    query::{Cursor, QueryCameraFile, QueryCameraFileResult},
     scan::Scan,
 };
 

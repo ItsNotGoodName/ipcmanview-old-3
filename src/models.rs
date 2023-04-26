@@ -70,6 +70,26 @@ pub struct CameraFile {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug)]
+pub enum Cursor<'a> {
+    Before(&'a str),
+    After(&'a str),
+    None,
+}
+
+#[derive(Debug)]
+pub struct QueryCameraFile<'a> {
+    pub cursor: Cursor<'a>,
+    pub limit: i32,
+}
+
+#[derive(Serialize, Debug)]
+pub struct QueryCameraFileResult {
+    pub files: Vec<CameraFile>,
+    pub before: String,
+    pub after: String,
+}
+
 pub struct ICamera {
     pub id: i64,
     pub ip: String,
@@ -81,6 +101,13 @@ pub struct ICamera {
 pub struct CameraScanResult {
     pub upserted: u64,
     pub deleted: u64,
+}
+
+impl AddAssign for CameraScanResult {
+    fn add_assign(&mut self, rhs: Self) {
+        self.upserted += rhs.upserted;
+        self.deleted += rhs.deleted;
+    }
 }
 
 #[derive(Serialize, Debug)]
@@ -108,11 +135,4 @@ pub struct ScanActive {
     pub range_end: DateTime<Utc>,
     #[serde(with = "ts_milliseconds")]
     pub started_at: DateTime<Utc>,
-}
-
-impl AddAssign for CameraScanResult {
-    fn add_assign(&mut self, rhs: Self) {
-        self.upserted += rhs.upserted;
-        self.deleted += rhs.deleted;
-    }
 }

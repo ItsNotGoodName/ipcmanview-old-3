@@ -1,21 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use serde::Serialize;
 
-use crate::models::CameraFile;
-
-#[derive(Debug)]
-pub enum Cursor<'a> {
-    Before(&'a str),
-    After(&'a str),
-    None,
-}
-
-#[derive(Debug)]
-pub struct QueryCameraFile<'a> {
-    pub cursor: Cursor<'a>,
-    pub limit: i32,
-}
+use crate::models::{Cursor, QueryCameraFile};
 
 use base64::Engine as _;
 
@@ -90,13 +76,6 @@ impl<'a> QueryCameraFileBuilder<'a> {
             limit: self.limit,
         }
     }
-}
-
-#[derive(Serialize, Debug)]
-pub struct QueryCameraFileResult {
-    pub files: Vec<CameraFile>,
-    pub before: String,
-    pub after: String,
 }
 
 #[cfg(test)]
