@@ -7,6 +7,15 @@ use rpc::{
 };
 use tokio::sync::Mutex;
 
+/// Turns rpc::ResponseError to Ok(None), Ok(o) to Ok(Some(o)) and, any other error to Err(rpc::Error)
+fn maybe<T>(check: Result<T, Error>) -> Result<Option<T>, Error> {
+    match check {
+        Err(Error::Response(_)) => Ok(check.ok()),
+        Ok(o) => Ok(Some(o)),
+        Err(e) => Err(e),
+    }
+}
+
 #[derive(Debug)]
 pub struct IpcFile {
     pub cookie: String,
@@ -62,13 +71,13 @@ pub struct IpcDetail {
 impl IpcDetail {
     pub async fn get(man: &IpcManager) -> Result<IpcDetail, Error> {
         Ok(IpcDetail {
-            sn: magicbox::get_serial_no(man.rpc().await?).await.ok(),
-            device_class: magicbox::get_device_class(man.rpc().await?).await.ok(),
-            device_type: magicbox::get_device_type(man.rpc().await?).await.ok(),
-            hardware_version: magicbox::get_hardware_version(man.rpc().await?).await.ok(),
-            market_area: magicbox::get_market_area(man.rpc().await?).await.ok(),
-            process_info: magicbox::get_process_info(man.rpc().await?).await.ok(),
-            vendor: magicbox::get_vendor(man.rpc().await?).await.ok(),
+            sn: maybe(magicbox::get_serial_no(man.rpc().await?).await)?,
+            device_class: maybe(magicbox::get_device_class(man.rpc().await?).await)?,
+            device_type: maybe(magicbox::get_device_type(man.rpc().await?).await)?,
+            hardware_version: maybe(magicbox::get_hardware_version(man.rpc().await?).await)?,
+            market_area: maybe(magicbox::get_market_area(man.rpc().await?).await)?,
+            process_info: maybe(magicbox::get_process_info(man.rpc().await?).await)?,
+            vendor: maybe(magicbox::get_vendor(man.rpc().await?).await)?,
         })
     }
 }

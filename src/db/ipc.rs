@@ -13,13 +13,13 @@ impl IpcDetail {
         sqlx::query!(
             r#"
             UPDATE camera_details SET 
-            sn = coalesce(?2, sn),
-            device_class = coalesce(?3, device_class),
-            device_type = coalesce(?4, device_type),
-            hardware_version = coalesce(?5, hardware_version),
-            market_area = coalesce(?6, market_area),
-            process_info = coalesce(?7, process_info),
-            vendor = coalesce(?8, vendor)
+            sn = ?2,
+            device_class = ?3,
+            device_type = ?4,
+            hardware_version = ?5,
+            market_area = ?6,
+            process_info = ?7,
+            vendor = ?8
             WHERE id = ?1
             "#,
             camera_id,
