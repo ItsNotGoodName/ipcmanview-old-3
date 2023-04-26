@@ -1,5 +1,6 @@
 use std::time::Instant;
 
+use anyhow::{bail, Result};
 use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
 pub struct Scan {}
@@ -10,6 +11,7 @@ impl Scan {
     }
 
     pub fn epoch() -> DateTime<Utc> {
+        // TODO: make this at compile time
         Local
             .with_ymd_and_hms(2010, 1, 1, 0, 0, 0)
             .unwrap()
@@ -17,6 +19,7 @@ impl Scan {
     }
 
     pub fn period() -> Duration {
+        // TODO: make this at compile time
         Duration::days(30)
     }
 }
@@ -27,10 +30,17 @@ pub struct ScanRange {
 }
 
 impl ScanRange {
-    pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> ScanRange {
-        // TODO: verify end is greater than start but less than Utc::now and start is greater than
-        // 2010
-        ScanRange { start, end }
+    pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<ScanRange> {
+        if start < end {
+            bail!("start date less than end date: {start} < {end}")
+        }
+        if end > Utc::now() {
+            bail!("end date is in future: {end}")
+        }
+        if start < Scan::epoch() {
+            bail!("start date is before epoch: {start}")
+        }
+        Ok(ScanRange { start, end })
     }
 
     pub fn iter(&self) -> ScanRangeIterator {
