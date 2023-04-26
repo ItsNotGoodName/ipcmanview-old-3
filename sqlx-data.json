@@ -10,6 +10,66 @@
     },
     "query": "\n            INSERT INTO camera_software_versions\n            (id)\n            VALUES\n            (?)\n            "
   },
+  "02c479be77a545f59b0a37700c7415a6b5c6d3b1947dce446a4ea50dfd395ef4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "file_path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "kind",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "size",
+          "ordinal": 4,
+          "type_info": "Int64"
+        },
+        {
+          "name": "start_time",
+          "ordinal": 5,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "end_time",
+          "ordinal": 6,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Datetime"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n                    SELECT * FROM camera_files\n                    ORDER BY start_time DESC, camera_id DESC LIMIT ?\n                    "
+  },
   "0590d3fd8b5fdf568b2095d518c01bd8b33b7e4d698e599629501f43acf7b29a": {
     "describe": {
       "columns": [
@@ -96,6 +156,16 @@
     },
     "query": "\n            SELECT id, ip, username, password FROM cameras WHERE id = ?\n            "
   },
+  "17db1c431882a7e199e8b2463169bc83ba9adf770e63c9868f7b34660240c8f5": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 8
+      }
+    },
+    "query": "\n            UPDATE camera_details SET \n            sn = ?2,\n            device_class = ?3,\n            device_type = ?4,\n            hardware_version = ?5,\n            market_area = ?6,\n            process_info = ?7,\n            vendor = ?8\n            WHERE id = ?1\n            "
+  },
   "20be5fa4ae7034801a4db447c76c33a81fbc742eb3efe416e28c87083f5ee09f": {
     "describe": {
       "columns": [],
@@ -115,16 +185,6 @@
       }
     },
     "query": "\n                INSERT INTO completed_scans \n                (camera_id, kind, range_start, range_end, started_at, duration, error)\n                VALUES \n                (?, ?, ?, ?, ?, ?, ?)\n                "
-  },
-  "3463aa36623ad07553c55c70b5ce4b6c1a9cb677d43b814c2be952b9082a6883": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 2
-      }
-    },
-    "query": "UPDATE cameras set scan_cursor = ?2 WHERE id = ?1"
   },
   "36fa955638d9a252d14c12ed5d50131bb430bc8f1096f44ec959c3638a32a6fa": {
     "describe": {
@@ -162,15 +222,15 @@
     },
     "query": "\n            SELECT id, ip, username, password FROM cameras\n            "
   },
-  "38ca368a236abd119e72bb878e223071aca6aa7b94af7c23c9ce7299dd6bcc21": {
+  "3ae783550af74570c3dede295e6c0c27f7d26726470417790577cbc4dc25a301": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 5
+        "Right": 3
       }
     },
-    "query": "\n            INSERT INTO active_scans \n            (camera_id, kind, range_start, range_end, started_at) \n            VALUES\n            (?, ?, ?, ?, ?)\n            "
+    "query": "\n            INSERT INTO pending_manual_scans\n            (camera_id, range_start, range_end)\n            VALUES\n            (?, ?, ?)\n            "
   },
   "44d22f7c77a8436ff9c627099cfd8885bf8eb291702326ef688c601650e36bd8": {
     "describe": {
@@ -181,6 +241,44 @@
       }
     },
     "query": "\n            DELETE FROM camera_files \n            WHERE updated_at < ?1 and camera_id = ?2 and start_time >= ?3 and end_time <= ?4\n            "
+  },
+  "50882671bcbeb7506925daa53f49d994007d78e3fa04ccaabf37c544a3fbc82b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 5
+      }
+    },
+    "query": "\n            INSERT INTO active_scans\n            (camera_id, kind, range_start, range_end, started_at)\n            VALUES\n            (?, ?, ?, ?, ?)\n            "
+  },
+  "6de8b734cd761485ffeee3d484f051a427147332b9b17a20b2dbec418123c258": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "UPDATE cameras SET scan_cursor = ?2 WHERE id = ?1"
+  },
+  "70584507bd7c434dd48bfdc1deaf253a12ec4bf3c86705b66f1b58c348cf13fc": {
+    "describe": {
+      "columns": [
+        {
+          "name": "count",
+          "ordinal": 0,
+          "type_info": "Int"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT count(*) AS count FROM camera_files WHERE camera_id = ?"
   },
   "75685e2f03c9b0649d78302ac36923dc650849d1868d733f05a21b46004ed301": {
     "describe": {
@@ -253,6 +351,86 @@
       }
     },
     "query": "\n            SELECT camera_id, kind, range_start, range_end, started_at FROM active_scans\n            "
+  },
+  "7edf576091ca592e2e8d2f51fa30c2f255dc64ba95ea55eb8cfa3517c0448e09": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "DELETE FROM pending_scans WHERE id = ?"
+  },
+  "817ead4a61f8815517aea5a0b4669f03bb3d08071f4d24636e7817d6dd99e673": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "file_path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "kind",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "size",
+          "ordinal": 4,
+          "type_info": "Int64"
+        },
+        {
+          "name": "start_time",
+          "ordinal": 5,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "end_time",
+          "ordinal": 6,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Datetime"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 3
+      }
+    },
+    "query": "\n                    SELECT * FROM (\n                        SELECT * FROM camera_files \n                        WHERE (start_time > ?2 OR (start_time = ?2 AND camera_id > ?1)) \n                        ORDER BY start_time ASC, camera_id ASC LIMIT ?3\n                    ) ORDER BY start_time DESC, camera_id DESC;\n                    "
+  },
+  "82efaf6c243cf3f3ae1ea2ecb81038c3178d49ebeee89b094a1b027e30cf647d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "DELETE FROM pending_manual_scans WHERE id = ?"
   },
   "8d977a33fbc635ac8210ccbc8f308c30e4ebcb391c10cfc0e98543eb9b1cf375": {
     "describe": {
@@ -342,15 +520,65 @@
     },
     "query": "\n            INSERT INTO cameras\n            (ip, username, password, scan_cursor)\n            VALUES\n            (?, ?, ?, ?)\n            "
   },
-  "9f88ae1769e95f8d104974c5c3b3511fa1a2fc078b7591bc3b1a3fe8e37d75b5": {
+  "ab9ec2665bcd6f9bbfd69e8291b30193b1a513f69e623cbf5813df2b174d6f86": {
     "describe": {
-      "columns": [],
-      "nullable": [],
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "kind",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "range_start",
+          "ordinal": 3,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "range_end",
+          "ordinal": 4,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "started_at",
+          "ordinal": 5,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "duration",
+          "ordinal": 6,
+          "type_info": "Int64"
+        },
+        {
+          "name": "error",
+          "ordinal": 7,
+          "type_info": "Null"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
       "parameters": {
-        "Right": 8
+        "Right": 0
       }
     },
-    "query": "\n            UPDATE camera_details SET \n            sn = coalesce(?2, sn),\n            device_class = coalesce(?3, device_class),\n            device_type = coalesce(?4, device_type),\n            hardware_version = coalesce(?5, hardware_version),\n            market_area = coalesce(?6, market_area),\n            process_info = coalesce(?7, process_info),\n            vendor = coalesce(?8, vendor)\n            WHERE id = ?1\n            "
+    "query": "\n            SELECT \n            id, camera_id, kind, range_start, range_end, started_at, duration, error \n            FROM completed_scans \n            ORDER BY started_at DESC \n            LIMIT 5\n            "
   },
   "ac7b8ee1c92ce25b802c4b66904d88466e8a9a2472886b3b359bd7bda7394493": {
     "describe": {
@@ -371,6 +599,64 @@
       }
     },
     "query": "\n            INSERT INTO camera_details\n            (id)\n            VALUES\n            (?)\n            "
+  },
+  "ba314399c3d0f3582b5517fe009fb23b5bef6b8ccc9662f52937bfc45ab633bb": {
+    "describe": {
+      "columns": [
+        {
+          "name": "count",
+          "ordinal": 0,
+          "type_info": "Int"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT count(*) AS count FROM pending_manual_scans WHERE camera_id = ?"
+  },
+  "cdb1fb13406f72f6644cf2085adee570acf2507e3226839aa2af39ba0b7a0f66": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "kind",
+          "ordinal": 2,
+          "type_info": "Null"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "\n            SELECT * FROM pending_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1\n            "
+  },
+  "e0215b95dbd6bd2c4c60772c44f17dc9c952c7774b1f795e29c0f60924971d1b": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "\n            INSERT INTO pending_scans \n            (camera_id, kind)\n            VALUES\n            (?, ?)\n            ON CONFLICT DO NOTHING\n            "
   },
   "e1c47a0cbafaea97eea5d29486701cb73e14423e0936336099c24a5604e38a04": {
     "describe": {
@@ -424,7 +710,7 @@
     },
     "query": "\n            UPDATE camera_software_versions SET \n            build = ?2,\n            build_date = ?3,\n            security_base_line_version = ?4,\n            version = ?5,\n            web_version = ?6\n            WHERE id = ?1\n            "
   },
-  "fee09d6032ca390358fbdb1ef8061b512becb8c255ea745849599238b784ff36": {
+  "eb0c1dc4006a14e5f66a5f0608c2e49e758c2a6983c12fd2cc6017028aeb43ec": {
     "describe": {
       "columns": [
         {
@@ -438,50 +724,86 @@
           "type_info": "Int64"
         },
         {
-          "name": "kind",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
           "name": "range_start",
-          "ordinal": 3,
+          "ordinal": 2,
           "type_info": "Datetime"
         },
         {
           "name": "range_end",
-          "ordinal": 4,
+          "ordinal": 3,
           "type_info": "Datetime"
-        },
-        {
-          "name": "started_at",
-          "ordinal": 5,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "duration",
-          "ordinal": 6,
-          "type_info": "Int64"
-        },
-        {
-          "name": "error",
-          "ordinal": 7,
-          "type_info": "Null"
         }
       ],
       "nullable": [
+        true,
         false,
         false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true
+        false
       ],
       "parameters": {
         "Right": 0
       }
     },
-    "query": "\n            SELECT id, camera_id, kind, range_start, range_end, started_at, duration, error FROM completed_scans\n            "
+    "query": "\n            SELECT * FROM pending_manual_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1\n            "
+  },
+  "fd751b2a4cb4b0b48a1508949f12be347f0089a260ba8112712412805577dfc4": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "file_path",
+          "ordinal": 2,
+          "type_info": "Text"
+        },
+        {
+          "name": "kind",
+          "ordinal": 3,
+          "type_info": "Text"
+        },
+        {
+          "name": "size",
+          "ordinal": 4,
+          "type_info": "Int64"
+        },
+        {
+          "name": "start_time",
+          "ordinal": 5,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "end_time",
+          "ordinal": 6,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "updated_at",
+          "ordinal": 7,
+          "type_info": "Datetime"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Right": 3
+      }
+    },
+    "query": "\n                    SELECT * FROM camera_files\n                    WHERE (start_time < ?2 OR (start_time = ?2 AND camera_id < ?1))\n                    ORDER BY start_time DESC, camera_id DESC LIMIT ?3\n                    "
   }
 }
