@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS camera_details (
     FOREIGN KEY (id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS camera_software_versions (
+CREATE TABLE IF NOT EXISTS camera_softwares (
     id INTEGER PRIMARY KEY,
     build TEXT,
     build_date TEXT,

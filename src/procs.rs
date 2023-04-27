@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
 
-use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftwareVersion};
+use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftware};
 use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
 use crate::scan::{Scan, ScanHandle, ScanKindPending};
 
@@ -35,10 +35,7 @@ impl Camera {
 impl IpcManager {
     pub async fn data_refresh(&self, pool: &SqlitePool) -> Result<()> {
         IpcDetail::get(&self).await?.save(pool, self.id).await?;
-        IpcSoftwareVersion::get(&self)
-            .await?
-            .save(pool, self.id)
-            .await?;
+        IpcSoftware::get(&self).await?.save(pool, self.id).await?;
 
         Ok(())
     }

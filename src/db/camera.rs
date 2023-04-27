@@ -44,7 +44,7 @@ impl CreateCamera<'_> {
 
         sqlx::query!(
             r#"
-            INSERT INTO camera_software_versions
+            INSERT INTO camera_softwares
             (id)
             VALUES
             (?)
@@ -181,7 +181,7 @@ impl CameraSoftware {
             security_base_line_version,
             version,
             web_version
-            FROM camera_software_versions 
+            FROM camera_softwares 
             WHERE id = ?
             "#,
             camera_id,

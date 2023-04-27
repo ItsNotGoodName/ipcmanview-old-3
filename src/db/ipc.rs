@@ -4,7 +4,7 @@ use rpc::modules::mediafilefind;
 use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite, SqlitePool};
 
 use crate::{
-    ipc::{IpcDetail, IpcFileStream, IpcManager, IpcSoftwareVersion},
+    ipc::{IpcDetail, IpcFileStream, IpcManager, IpcSoftware},
     models::CameraScanResult,
 };
 
@@ -38,12 +38,12 @@ impl IpcDetail {
     }
 }
 
-impl IpcSoftwareVersion {
+impl IpcSoftware {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
         if let Some(ref software) = self.0 {
             sqlx::query!(
                 r#"
-                UPDATE camera_software_versions SET 
+                UPDATE camera_softwares SET 
                 build = ?2,
                 build_date = ?3,
                 security_base_line_version = ?4,
@@ -70,7 +70,7 @@ impl IpcSoftwareVersion {
         } else {
             sqlx::query!(
                 r#"
-                REPLACE INTO camera_software_versions
+                REPLACE INTO camera_softwares
                 (id)
                 VALUES
                 (?)
