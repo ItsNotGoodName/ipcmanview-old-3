@@ -86,8 +86,9 @@ impl Scan {
 impl ScanHandle {
     async fn run_(&self, pool: &SqlitePool, man: &IpcManager) -> Result<CameraScanResult> {
         let mut res = CameraScanResult::default();
-        for range in self.range.iter() {
+        for (range, percent) in self.range.iter() {
             res += man.scan_files(pool, range.start, range.end).await?;
+            self.percent(pool, percent).await?
         }
 
         Ok(res)

@@ -40,8 +40,33 @@ impl IpcDetail {
 
 impl IpcSoftwareVersion {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
-        let software = if let Some(ref s) = self.0 {
-            s
+        if let Some(ref software) = self.0 {
+            sqlx::query!(
+                r#"
+                UPDATE camera_software_versions SET 
+                build = ?2,
+                build_date = ?3,
+                security_base_line_version = ?4,
+                version = ?5,
+                web_version = ?6
+                WHERE id = ?1
+                "#,
+                camera_id,
+                software.build,
+                software.build_date,
+                software.security_base_line_version,
+                software.version,
+                software.web_version
+            )
+            .execute(pool)
+            .await
+            .with_context(|| {
+                format!(
+                    "Failed to update software version with camera {}",
+                    camera_id
+                )
+            })
+            .ok();
         } else {
             sqlx::query!(
                 r#"
@@ -60,36 +85,7 @@ impl IpcSoftwareVersion {
                     camera_id
                 )
             })?;
-
-            return Ok(());
-        };
-
-        sqlx::query!(
-            r#"
-            UPDATE camera_software_versions SET 
-            build = ?2,
-            build_date = ?3,
-            security_base_line_version = ?4,
-            version = ?5,
-            web_version = ?6
-            WHERE id = ?1
-            "#,
-            camera_id,
-            software.build,
-            software.build_date,
-            software.security_base_line_version,
-            software.version,
-            software.web_version
-        )
-        .execute(pool)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to update software version with camera {}",
-                camera_id
-            )
-        })
-        .ok();
+        }
 
         Ok(())
     }
@@ -154,7 +150,7 @@ impl IpcManager {
         }
     }
 
-    // Make sure this is never ran concurrently
+    /// Make sure this is never ran concurrently.
     pub async fn scan_files(
         &self,
         pool: &SqlitePool,

@@ -198,7 +198,7 @@ impl IpcManagerStore {
     pub async fn new(pool: &sqlx::SqlitePool) -> Result<IpcManagerStore> {
         let client = rpc::recommended_reqwest_client_builder()
             .build()
-            .context("Failed to build reqest client")?;
+            .context("Failed to build reqwest client")?;
         let mans = ICamera::list(pool)
             .await?
             .into_iter()

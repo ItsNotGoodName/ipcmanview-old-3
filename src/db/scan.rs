@@ -157,15 +157,16 @@ impl ScanHandle {
         sqlx::query!(
             r#"
             INSERT INTO active_scans
-            (camera_id, kind, range_start, range_end, started_at)
+            (camera_id, kind, range_start, range_end, started_at, percent)
             VALUES
-            (?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?)
             "#,
             handle.camera_id,
             handle.kind,
             handle.range.start,
             handle.range.end,
             handle.started_at,
+            0.0,
         )
         .execute(&mut pool)
         .await
@@ -181,6 +182,26 @@ impl ScanHandle {
             .context(format!("Failed to commit transaction"))?;
 
         Ok(Some(handle))
+    }
+
+    pub async fn percent(&self, pool: &SqlitePool, percent: f64) -> Result<()> {
+        let percent = (percent * 100.0).round() / 100.0;
+
+        sqlx::query!(
+            "UPDATE active_scans SET percent = ? WHERE camera_id = ?",
+            percent,
+            self.camera_id,
+        )
+        .execute(pool)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to update percent on active scan with camera {}",
+                self.camera_id
+            )
+        })?;
+
+        Ok(())
     }
 
     pub async fn end(self, pool: &SqlitePool) -> Result<()> {
@@ -273,7 +294,7 @@ impl ScanActive {
         sqlx::query_as_unchecked!(
             Self,
             r#"
-            SELECT camera_id, kind, range_start, range_end, started_at FROM active_scans
+            SELECT * FROM active_scans
             "#
         )
         .fetch_all(pool)
@@ -289,7 +310,7 @@ impl ScanCompleted {
             Self,
             r#"
             SELECT 
-            id, camera_id, kind, range_start, range_end, started_at, duration, error 
+            *
             FROM completed_scans 
             ORDER BY started_at DESC 
             LIMIT 5

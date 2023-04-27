@@ -128,4 +128,5 @@ pub struct ScanActive {
     pub range_start: DateTime<Utc>,
     pub range_end: DateTime<Utc>,
     pub started_at: DateTime<Utc>,
+    pub percent: f64,
 }

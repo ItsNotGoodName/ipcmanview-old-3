@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS active_scans (
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
     started_at DATETIME NOT NULL,
+    percent REAL NOT NULL,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 

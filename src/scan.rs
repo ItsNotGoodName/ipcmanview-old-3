@@ -47,6 +47,7 @@ impl ScanRange {
         ScanRangeIterator {
             start: self.start,
             cursor: self.end,
+            end: self.end,
         }
     }
 
@@ -64,10 +65,11 @@ impl ScanRange {
 pub struct ScanRangeIterator {
     start: DateTime<Utc>,
     cursor: DateTime<Utc>,
+    end: DateTime<Utc>,
 }
 
 impl Iterator for ScanRangeIterator {
-    type Item = ScanRange;
+    type Item = (ScanRange, f64);
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.cursor == self.start {
@@ -87,7 +89,11 @@ impl Iterator for ScanRangeIterator {
             }
         };
 
-        Some(ScanRange { start, end })
+        let percent = (((self.end - self.cursor).num_days()) as f64
+            / ((self.end - self.start).num_days() as f64))
+            * 100.0;
+
+        Some((ScanRange { start, end }, percent))
     }
 }
 
