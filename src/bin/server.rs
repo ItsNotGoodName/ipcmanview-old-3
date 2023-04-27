@@ -9,7 +9,7 @@ use ipcmanview::models::{
 use ipcmanview::query::QueryCameraFileBuilder;
 use ipcmanview::scan::{Scan, ScanKindPending};
 use rocket::form::Form;
-use rocket::http::Status;
+use rocket::http::{ContentType, Status};
 use rocket::response::stream::ByteStream;
 use rocket::response::Redirect;
 use rocket::State;
@@ -211,12 +211,15 @@ async fn camera_scan_full(id: i64, pool: &Pool, store: &Store) -> Result<Redirec
 
 use futures_util::StreamExt;
 
+#[derive(Responder)]
+struct WithContentType<T>(T, ContentType);
+
 #[get("/cameras/<id>/file/<file_path..>")]
 async fn camera_file(
     id: i64,
     file_path: PathBuf,
     store: &Store,
-) -> Result<ByteStream![Vec<u8>], Status> {
+) -> Result<WithContentType<ByteStream![Vec<u8>]>, Status> {
     let file = Utils::manager(store, id)
         .await?
         .file(file_path.to_str().ok_or(Status::BadRequest)?)
@@ -230,10 +233,14 @@ async fn camera_file(
         .await
         .map_err(|_| Status::NotFound)?
         .bytes_stream()
-        .map(|f| if let Ok(f) = f { f.to_vec() } else { vec![] });
+        .map(|f| if let Ok(f) = f { f.to_vec() } else { vec![] }); // TODO: is this right?
+    let content_type = file_path
+        .extension()
+        .and_then(std::ffi::OsStr::to_str)
+        .and_then(ContentType::from_extension)
+        .unwrap_or(ContentType::Binary);
 
-    // TODO: set the Content-Type depeinding on the file extension
-    Ok(ByteStream::from(stream))
+    Ok(WithContentType(ByteStream::from(stream), content_type))
 }
 
 // List Files
