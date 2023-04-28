@@ -180,7 +180,7 @@ impl IpcFileStream<'_> {
 #[derive(Clone)]
 pub struct IpcManagerStore {
     mans: Arc<Mutex<Vec<IpcManager>>>,
-    pub client: reqwest::Client,
+    client: reqwest::Client,
 }
 
 use crate::models::ICamera;

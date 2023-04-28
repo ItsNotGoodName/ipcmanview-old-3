@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use dotenvy::dotenv;
@@ -13,7 +14,9 @@ use rocket::http::{ContentType, Status};
 use rocket::response::stream::ByteStream;
 use rocket::response::Redirect;
 use rocket::State;
+use rocket_dyn_templates::tera::{self, Tera};
 use rocket_dyn_templates::{context, Template};
+use serde_json::Value;
 use sqlx::SqlitePool;
 
 #[macro_use]
@@ -21,6 +24,7 @@ extern crate rocket;
 
 type Store = State<IpcManagerStore>;
 type Pool = State<SqlitePool>;
+type Client = State<reqwest::Client>;
 
 #[main]
 async fn main() -> Result<(), rocket::Error> {
@@ -31,11 +35,17 @@ async fn main() -> Result<(), rocket::Error> {
 
     let pool = db::new(&database_url).await.unwrap();
     let store = IpcManagerStore::new(&pool).await.unwrap();
+    let client = rpc::recommended_reqwest_client_builder()
+        // HACK: Prevent connection reset when requesting too fast
+        .pool_max_idle_per_host(0)
+        .build()
+        .unwrap();
 
     let res = rocket::build()
-        .attach(Template::fairing())
+        .attach(Template::custom(|engines| customize(&mut engines.tera)))
         .manage(pool)
         .manage(store.clone())
+        .manage(client)
         .mount(
             "/",
             routes![
@@ -61,6 +71,17 @@ async fn main() -> Result<(), rocket::Error> {
     res
 }
 
+pub fn customize(tera: &mut Tera) {
+    tera.register_function(
+        "camera_file_url",
+        |args: &HashMap<String, Value>| -> Result<Value, tera::Error> {
+            let id = args.get("camera_id").unwrap().as_i64().unwrap();
+            let file_path = args.get("file_path").unwrap().as_str().unwrap();
+            Ok(serde_json::to_value(uri!(camera_file(id, file_path))).unwrap())
+        },
+    );
+}
+
 // Homepage
 
 #[get("/")]
@@ -82,34 +103,11 @@ async fn camera_show(id: i64, pool: &Pool) -> Result<Template, Status> {
 
 // Update Camera
 
-// TODO: treat empty string a Option
 #[derive(FromForm)]
 pub struct FormUpdateCamera<'a> {
     pub ip: &'a str,
     pub username: &'a str,
     pub password: &'a str,
-}
-
-impl<'a> FormUpdateCamera<'a> {
-    fn to(s: &'a str) -> Option<&'a str> {
-        if s.is_empty() {
-            None
-        } else {
-            Some(s)
-        }
-    }
-
-    fn ip(&self) -> Option<&'a str> {
-        Self::to(self.ip)
-    }
-
-    fn username(&self) -> Option<&'a str> {
-        Self::to(self.username)
-    }
-
-    fn password(&self) -> Option<&'a str> {
-        Self::to(self.password)
-    }
 }
 
 #[patch("/cameras/<id>", data = "<form>")]
@@ -121,9 +119,9 @@ async fn camera_update(
 ) -> Result<Redirect, Status> {
     UpdateCamera {
         id,
-        ip: form.ip(),
-        username: form.username(),
-        password: form.password(),
+        ip: Utils::optional(form.ip),
+        username: Utils::optional(form.username),
+        password: Utils::optional(form.password),
     }
     .update(pool, store)
     .await
@@ -209,8 +207,6 @@ async fn camera_scan_full(id: i64, pool: &Pool, store: &Store) -> Result<Redirec
 
 // Get Camera File
 
-use futures_util::StreamExt;
-
 #[derive(Responder)]
 struct WithContentType<T>(T, ContentType);
 
@@ -219,28 +215,41 @@ async fn camera_file(
     id: i64,
     file_path: PathBuf,
     store: &Store,
-) -> Result<WithContentType<ByteStream![Vec<u8>]>, Status> {
+    client: &Client,
+) -> Result<WithContentType<ByteStream![bytes::Bytes]>, Status> {
+    // Get file url and cookie from manager
     let file = Utils::manager(store, id)
         .await?
         .file(file_path.to_str().ok_or(Status::BadRequest)?)
         .await
         .map_err(|_| Status::InternalServerError)?;
-    let stream = store
-        .client
+    // Make request to camera and get the byte stream
+    let mut stream = client
         .get(file.url)
         .header("Cookie", file.cookie)
         .send()
         .await
-        .map_err(|_| Status::NotFound)?
-        .bytes_stream()
-        .map(|f| if let Ok(f) = f { f.to_vec() } else { vec![] }); // TODO: is this right?
+        .map_err(|e| {
+            e.status()
+                .and_then(|s| Status::from_code(s.as_u16()))
+                .unwrap_or(Status::InternalServerError)
+        })?
+        .bytes_stream();
+    // Get Content-Type via file path extension
     let content_type = file_path
         .extension()
         .and_then(std::ffi::OsStr::to_str)
         .and_then(ContentType::from_extension)
         .unwrap_or(ContentType::Binary);
+    // Convert from Result<Bytes> to Bytes
+    use futures_util::StreamExt;
+    let byte_stream = ByteStream! {
+        while let Some(Ok(item)) = stream.next().await {
+            yield item;
+        }
+    };
 
-    Ok(WithContentType(ByteStream::from(stream), content_type))
+    Ok(WithContentType(byte_stream, content_type))
 }
 
 // List Files
@@ -287,6 +296,14 @@ struct Utils {}
 impl Utils {
     async fn manager(store: &Store, id: i64) -> Result<IpcManager, Status> {
         store.get(id).await.map_err(|_| Status::NotFound)
+    }
+
+    fn optional<'a>(s: &'a str) -> Option<&'a str> {
+        if s.is_empty() {
+            None
+        } else {
+            Some(s)
+        }
     }
 }
 

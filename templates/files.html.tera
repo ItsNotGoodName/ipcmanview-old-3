@@ -3,5 +3,8 @@
   <h1>Show Files</h1>
   <a href="/files?before={{files.before}}">before</a>
   <a href="/files?after={{files.after}}">next</a>
+  {% for file in files.files %}
+    <img width="200px" src="{{ camera_file_url(camera_id=file.camera_id, file_path=file.file_path) }}"  alt="">
+  {% endfor %}
   <pre>{{ files | json_encode(pretty=true) | safe }}</pre>
 {% endblock content %}
