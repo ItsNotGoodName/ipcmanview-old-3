@@ -1,8 +1,12 @@
 {% extends "base" %}
 {% block content %}
   <h1>Show Files</h1>
-  <a href="/files?before={{files.before}}">before</a>
-  <a href="/files?after={{files.after}}">next</a>
+  {% if files.has_before %}
+    <a href="/files?before={{files.before}}">before</a>
+  {% endif %}
+  {% if files.has_after %}
+    <a href="/files?after={{files.after}}">next</a>
+  {% endif %}
   {% for file in files.files %}
     <img width="200px" src="{{ camera_file_url(camera_id=file.camera_id, file_path=file.file_path) }}"  alt="">
   {% endfor %}

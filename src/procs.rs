@@ -2,7 +2,10 @@ use anyhow::Result;
 use sqlx::SqlitePool;
 
 use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftware};
-use crate::models::{Camera, CameraScanResult, CreateCamera, UpdateCamera};
+use crate::models::{
+    Camera, CameraFile, CameraScanResult, CreateCamera, CursorCameraFile, QueryCameraFile,
+    QueryCameraFileResult, UpdateCamera,
+};
 use crate::scan::{Scan, ScanHandle, ScanKindPending};
 
 // -------------------- Camera
@@ -41,6 +44,20 @@ impl IpcManager {
     }
 }
 
+impl CameraFile {
+    pub async fn query(
+        pool: &SqlitePool,
+        store: &IpcManagerStore,
+        query: QueryCameraFile<'_>,
+    ) -> Result<QueryCameraFileResult> {
+        if let CursorCameraFile::None = query.cursor {
+            Scan::queue_all(pool, store, ScanKindPending::Cursor).await?;
+        }
+
+        Self::query_db(pool, query).await
+    }
+}
+
 // -------------------- Scan
 
 impl Scan {
@@ -55,28 +72,67 @@ impl Scan {
         Ok(())
     }
 
+    pub async fn queue_all(
+        pool: &SqlitePool,
+        store: &IpcManagerStore,
+        kind: ScanKindPending,
+    ) -> Result<()> {
+        Self::queue_all_db(pool, kind).await?;
+        Scan::run_pending(pool, store).await;
+        Ok(())
+    }
+
     pub async fn run_pending(pool: &SqlitePool, store: &IpcManagerStore) {
-        let pool = pool.clone();
-        let store = store.clone();
-        tokio::spawn(async move {
-            loop {
-                match ScanHandle::next(&pool).await {
-                    Ok(Some(handle)) => match handle.run(&pool, &store).await {
-                        Ok(res) => {
-                            dbg!(res);
-                        }
-                        Err(err) => {
-                            dbg!(err);
-                        }
-                    },
-                    Ok(None) => return,
+        // Get a pending scan
+        let first_handle = if let Ok(Some(s)) = ScanHandle::next(pool).await {
+            s
+        } else {
+            return;
+        };
+
+        // Get rest of the pending scans
+        let mut handles = vec![first_handle];
+        loop {
+            match ScanHandle::next(&pool).await {
+                Ok(Some(handle)) => handles.push(handle),
+                Ok(None) | Err(_) => break,
+            }
+        }
+
+        // Start worker for each scan
+        for handle in handles {
+            let pool = pool.clone();
+            let store = store.clone();
+            tokio::spawn(async move {
+                // Run pending scan
+                match handle.run(&pool, &store).await {
+                    Ok(res) => {
+                        dbg!(res);
+                    }
                     Err(err) => {
                         dbg!(err);
-                        return;
                     }
                 }
-            }
-        });
+                // Check for more scans and run them or exit
+                loop {
+                    match ScanHandle::next(&pool).await {
+                        Ok(Some(handle)) => match handle.run(&pool, &store).await {
+                            Ok(res) => {
+                                dbg!(res);
+                            }
+                            Err(err) => {
+                                dbg!(err);
+                            }
+                        },
+                        Ok(None) => return,
+                        Err(err) => {
+                            dbg!(err);
+                            return;
+                        }
+                    }
+                }
+            });
+        }
     }
 }
 

@@ -57,7 +57,7 @@ pub struct CameraSoftware {
     pub web_version: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, sqlx::FromRow, Debug)]
 pub struct CameraFile {
     pub id: i64,
     pub camera_id: i64,
@@ -70,22 +70,28 @@ pub struct CameraFile {
 }
 
 #[derive(Debug)]
-pub enum Cursor<'a> {
-    Before(&'a str),
-    After(&'a str),
+pub enum CursorCameraFile {
+    Before((i64, DateTime<Utc>)),
+    After((i64, DateTime<Utc>)),
     None,
 }
 
 #[derive(Debug)]
 pub struct QueryCameraFile<'a> {
-    pub cursor: Cursor<'a>,
+    pub cursor: CursorCameraFile,
     pub limit: i32,
+    pub range_start: Option<DateTime<Utc>>,
+    pub range_end: Option<DateTime<Utc>>,
+    pub camera_ids: Vec<i32>,
+    pub kinds: Vec<&'a str>,
 }
 
 #[derive(Serialize, Debug)]
 pub struct QueryCameraFileResult {
     pub files: Vec<CameraFile>,
+    pub has_before: bool,
     pub before: String,
+    pub has_after: bool,
     pub after: String,
 }
 

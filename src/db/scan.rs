@@ -22,7 +22,24 @@ struct ScanManualPending {
 }
 
 impl Scan {
-    pub async fn queue_db(pool: &SqlitePool, camera_id: i64, kind: ScanKindPending) -> Result<()> {
+    pub(crate) async fn queue_all_db(pool: &SqlitePool, kind: ScanKindPending) -> Result<()> {
+        sqlx::query!(
+            r#"
+            INSERT OR IGNORE INTO pending_scans (camera_id, kind) SELECT id, ? from cameras
+            "#,
+            kind,
+        )
+        .execute(pool)
+        .await
+        .with_context(|| format!("Failed to insert into pending_scans",))
+        .map(|_| ())
+    }
+
+    pub(crate) async fn queue_db(
+        pool: &SqlitePool,
+        camera_id: i64,
+        kind: ScanKindPending,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
             INSERT INTO pending_scans 
@@ -45,7 +62,7 @@ impl Scan {
         .map(|_| ())
     }
 
-    pub async fn queue_manual_db(
+    pub(crate) async fn manual_queue_db(
         pool: &SqlitePool,
         camera_id: i64,
         range: ScanRange,
@@ -92,7 +109,7 @@ impl Scan {
 }
 
 impl ScanHandle {
-    pub async fn next(pool: &SqlitePool) -> Result<Option<Self>> {
+    pub(crate) async fn next(pool: &SqlitePool) -> Result<Option<Self>> {
         let mut pool = pool
             .begin()
             .await
@@ -184,7 +201,7 @@ impl ScanHandle {
         Ok(Some(handle))
     }
 
-    pub async fn percent(&self, pool: &SqlitePool, percent: f64) -> Result<()> {
+    pub(crate) async fn percent(&self, pool: &SqlitePool, percent: f64) -> Result<()> {
         let percent = (percent * 100.0).round() / 100.0;
 
         sqlx::query!(
@@ -204,7 +221,7 @@ impl ScanHandle {
         Ok(())
     }
 
-    pub async fn end(self, pool: &SqlitePool) -> Result<()> {
+    pub(crate) async fn end(self, pool: &SqlitePool) -> Result<()> {
         let mut pool = pool.begin().await.with_context(|| {
             format!("Failed to start transaction with camera {}", self.camera_id)
         })?;
@@ -280,7 +297,7 @@ impl ScanHandle {
 }
 
 impl ScanActive {
-    pub async fn clear(pool: &SqlitePool) -> Result<()> {
+    pub(crate) async fn clear(pool: &SqlitePool) -> Result<()> {
         sqlx::query!("DELETE FROM active_scans")
             .execute(pool)
             .await

@@ -260,14 +260,16 @@ async fn file_list(
     after: Option<&str>,
     limit: Option<i32>,
     pool: &Pool,
+    store: &Store,
 ) -> Result<Template, Status> {
     let query = QueryCameraFileBuilder::new()
         .before(before)
+        .map_err(|_| Status::BadRequest)?
         .after(after)
+        .map_err(|_| Status::BadRequest)?
         .limit(limit)
         .build();
-
-    let files = CameraFile::query(pool, query)
+    let files = CameraFile::query(pool, store, query)
         .await
         .map_err(|_| Status::InternalServerError)?;
 

@@ -92,6 +92,7 @@ impl Iterator for ScanRangeIterator {
         let percent = (((self.end - self.cursor).num_days()) as f64
             / ((self.end - self.start).num_days() as f64))
             * 100.0;
+        let percent = if percent.is_nan() { 0.0 } else { percent };
 
         Some((ScanRange { start, end }, percent))
     }

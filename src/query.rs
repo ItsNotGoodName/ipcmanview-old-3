@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
 
-use crate::models::{Cursor, QueryCameraFile};
+use crate::models::{CursorCameraFile, QueryCameraFile};
 
-impl Cursor<'_> {
+impl CursorCameraFile {
     fn from_(cursor: &str) -> Result<(i64, DateTime<Utc>)> {
         let (first, second) = cursor.split_once("_").context("no seperator")?;
         let id: i64 = first.parse()?;
@@ -32,21 +32,26 @@ impl Cursor<'_> {
 
 #[derive(Debug)]
 pub struct QueryCameraFileBuilder<'a> {
-    cursor: Cursor<'a>,
-    limit: i32,
+    item: QueryCameraFile<'a>,
 }
 
 impl<'a> QueryCameraFileBuilder<'a> {
     pub fn new() -> QueryCameraFileBuilder<'a> {
         QueryCameraFileBuilder {
-            cursor: Cursor::None,
-            limit: 25,
+            item: QueryCameraFile {
+                cursor: CursorCameraFile::None,
+                limit: 25,
+                range_start: None,
+                range_end: None,
+                camera_ids: vec![],
+                kinds: vec![],
+            },
         }
     }
 
     pub fn limit(mut self, limit: Option<i32>) -> Self {
         if let Some(limit) = limit {
-            self.limit = if limit > 100 {
+            self.item.limit = if limit > 100 {
                 100
             } else if limit < 10 {
                 10
@@ -58,29 +63,26 @@ impl<'a> QueryCameraFileBuilder<'a> {
         self
     }
 
-    pub fn after(mut self, cursor: Option<&'a str>) -> Self {
+    pub fn after(mut self, cursor: Option<&'a str>) -> Result<Self> {
         if let Some(cursor) = cursor {
             if !cursor.is_empty() {
-                self.cursor = Cursor::After(cursor);
+                self.item.cursor = CursorCameraFile::After(CursorCameraFile::from(cursor)?);
             }
         }
-        self
+        Ok(self)
     }
 
-    pub fn before(mut self, cursor: Option<&'a str>) -> Self {
+    pub fn before(mut self, cursor: Option<&'a str>) -> Result<Self> {
         if let Some(cursor) = cursor {
             if !cursor.is_empty() {
-                self.cursor = Cursor::Before(cursor);
+                self.item.cursor = CursorCameraFile::Before(CursorCameraFile::from(cursor)?);
             }
         }
-        self
+        Ok(self)
     }
 
     pub fn build(self) -> QueryCameraFile<'a> {
-        QueryCameraFile {
-            cursor: self.cursor,
-            limit: self.limit,
-        }
+        self.item
     }
 }
 
@@ -94,6 +96,9 @@ mod tests {
     fn it_file_query_cursor() {
         let (id, time) = (4, Utc::now().with_nanosecond(0).unwrap());
 
-        assert_eq!(Cursor::from(&Cursor::to(id, time)).unwrap(), (id, time));
+        assert_eq!(
+            CursorCameraFile::from(&CursorCameraFile::to(id, time)).unwrap(),
+            (id, time)
+        );
     }
 }
