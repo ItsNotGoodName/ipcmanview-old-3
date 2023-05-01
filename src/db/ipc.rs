@@ -113,7 +113,7 @@ impl IpcManager {
                 .push_bind(end_time);
         })
         .push("ON CONFLICT (camera_id, file_path) DO UPDATE SET updated_at=excluded.updated_at ")
-        // If for some reason the unique_time function generates a duplicate time then we should ignore the file being upserted and by a lottery ticket
+        // If for some reason the unique_time function generates a duplicate time then we should ignore the file being upserted and buy a lottery ticket
         .push("ON CONFLICT (camera_id, start_time) DO NOTHING")
         .build()
         .execute(pool)

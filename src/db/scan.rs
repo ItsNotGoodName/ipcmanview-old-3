@@ -115,7 +115,7 @@ impl ScanHandle {
             .await
             .context(format!("Failed to start transaction"))?;
 
-        // Create a handle from either pending_scans or pending_manual_scans, return if there none
+        // Create a handle from either pending_scans or pending_manual_scans, return if there is none
         let handle = if let Some(pending) = sqlx::query_as_unchecked!(ScanPending,
             r#"
             SELECT * FROM pending_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
@@ -201,7 +201,7 @@ impl ScanHandle {
         Ok(Some(handle))
     }
 
-    pub(crate) async fn percent(&self, pool: &SqlitePool, percent: f64) -> Result<()> {
+    pub(crate) async fn update_percent(&self, pool: &SqlitePool, percent: f64) -> Result<()> {
         let percent = (percent * 100.0).round() / 100.0;
 
         sqlx::query!(
@@ -225,10 +225,10 @@ impl ScanHandle {
         let mut pool = pool.begin().await.with_context(|| {
             format!("Failed to start transaction with camera {}", self.camera_id)
         })?;
-        let duration = self.instant.elapsed().as_millis() as i64;
 
         // Save scan handle to completed_scans
         if self.should_save() {
+            let duration = self.instant.elapsed().as_millis() as i64;
             sqlx::query!(
                 r#"
                 INSERT INTO completed_scans 

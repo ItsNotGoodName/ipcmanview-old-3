@@ -3,7 +3,7 @@ use sqlx::SqlitePool;
 
 use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftware};
 use crate::models::{
-    Camera, CameraFile, CameraScanResult, CreateCamera, CursorCameraFile, QueryCameraFile,
+    Camera, CameraFile, CameraScanResult, CreateCamera, QueryCameraFile, QueryCameraFileCursor,
     QueryCameraFileResult, UpdateCamera,
 };
 use crate::scan::{Scan, ScanHandle, ScanKindPending};
@@ -50,7 +50,7 @@ impl CameraFile {
         store: &IpcManagerStore,
         query: QueryCameraFile<'_>,
     ) -> Result<QueryCameraFileResult> {
-        if let CursorCameraFile::None = query.cursor {
+        if let QueryCameraFileCursor::None = query.cursor {
             Scan::queue_all(pool, store, ScanKindPending::Cursor).await?;
         }
 
@@ -67,8 +67,8 @@ impl Scan {
         camera_id: i64,
         kind: ScanKindPending,
     ) -> Result<()> {
-        Scan::queue_db(pool, camera_id, kind).await?;
-        Scan::run_pending(pool, store).await;
+        Self::queue_db(pool, camera_id, kind).await?;
+        Self::run_pending(pool, store).await;
         Ok(())
     }
 
@@ -78,7 +78,7 @@ impl Scan {
         kind: ScanKindPending,
     ) -> Result<()> {
         Self::queue_all_db(pool, kind).await?;
-        Scan::run_pending(pool, store).await;
+        Self::run_pending(pool, store).await;
         Ok(())
     }
 
@@ -141,7 +141,7 @@ impl ScanHandle {
         let mut res = CameraScanResult::default();
         for (range, percent) in self.range.iter() {
             res += man.scan_files(pool, range.start, range.end).await?;
-            self.percent(pool, percent).await?
+            self.update_percent(pool, percent).await?
         }
 
         Ok(res)

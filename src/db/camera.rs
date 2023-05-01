@@ -3,15 +3,16 @@ use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
 use crate::{
     models::{
-        Camera, CameraDetail, CameraFile, CameraSoftware, CreateCamera, CursorCameraFile, ICamera,
-        QueryCameraFile, QueryCameraFileResult, ShowCamera, UpdateCamera,
+        Camera, CameraDetail, CameraFile, CameraSoftware, CreateCamera, ICamera, QueryCameraFile,
+        QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult, ShowCamera,
+        UpdateCamera,
     },
     scan::Scan,
 };
 
 impl CreateCamera<'_> {
     pub(crate) async fn create_db(self, pool: &SqlitePool) -> Result<i64> {
-        let mut tx = pool.begin().await?;
+        let mut pool = pool.begin().await?;
 
         let cursor = Scan::current_cursor();
         let camera_id = sqlx::query!(
@@ -26,7 +27,7 @@ impl CreateCamera<'_> {
             self.password,
             cursor
         )
-        .execute(&mut *tx)
+        .execute(&mut *pool)
         .await?
         .last_insert_rowid();
 
@@ -39,7 +40,7 @@ impl CreateCamera<'_> {
             "#,
             camera_id
         )
-        .execute(&mut *tx)
+        .execute(&mut *pool)
         .await?;
 
         sqlx::query!(
@@ -51,10 +52,10 @@ impl CreateCamera<'_> {
             "#,
             camera_id
         )
-        .execute(&mut *tx)
+        .execute(&mut *pool)
         .await?;
 
-        tx.commit().await?;
+        pool.commit().await?;
 
         Ok(camera_id)
     }
@@ -78,6 +79,7 @@ impl UpdateCamera<'_> {
         .execute(pool)
         .await
         .with_context(|| format!("Failed to update detail with camera {}", self.id))?;
+
         Ok(())
     }
 }
@@ -215,7 +217,8 @@ impl ShowCamera {
             id
         )
         .fetch_one(pool)
-        .await?;
+        .await
+        .with_context(|| format!("Failed to count camera_files with camera {id}"))?;
 
         Ok(Some(ShowCamera {
             id: camera.id,
@@ -228,7 +231,67 @@ impl ShowCamera {
     }
 }
 
+trait CameraFileFilter<'a> {
+    fn push_camera_file_filter(self, query: &'a QueryCameraFileFilter) -> QueryBuilder<'a, Sqlite>;
+}
+
+impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
+    fn push_camera_file_filter(
+        mut self,
+        filter: &'a QueryCameraFileFilter,
+    ) -> QueryBuilder<'a, Sqlite> {
+        self.push(" WHERE 1=1");
+
+        if filter.camera_ids.len() > 0 {
+            self.push(" AND camera_id in (");
+            let mut sep = self.separated(",");
+            for id in filter.camera_ids.iter() {
+                sep.push_bind(id.clone());
+            }
+            sep.push_unseparated(")");
+        }
+
+        if filter.kinds.len() > 0 {
+            self.push(" AND kind in (");
+            let mut sep = self.separated(",");
+            for kind in filter.kinds.iter() {
+                sep.push_bind(kind.clone());
+            }
+            sep.push_unseparated(")");
+        }
+
+        if let Some(begin) = filter.begin {
+            self.push(" AND start_time > ");
+            self.push_bind(begin);
+        }
+
+        if let Some(end) = filter.end {
+            self.push(" AND start_time < ");
+            self.push_bind(end);
+        }
+
+        self
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct CameraFileCount {
+    count: i64,
+}
+
 impl CameraFile {
+    pub async fn count(pool: &SqlitePool, filter: QueryCameraFileFilter<'_>) -> Result<i64> {
+        let count = QueryBuilder::new("SELECT COUNT(id) AS count FROM camera_files")
+            .push_camera_file_filter(&filter)
+            .build_query_as::<CameraFileCount>()
+            .fetch_one(pool)
+            .await
+            .context("Failed to count camera_files")?
+            .count;
+
+        Ok(count)
+    }
+
     pub(crate) async fn query_db(
         pool: &SqlitePool,
         query: QueryCameraFile<'_>,
@@ -237,109 +300,109 @@ impl CameraFile {
         let mut has_before = false;
 
         let limit = query.limit + 1;
+        let mut qb =
+            QueryBuilder::new("SELECT * FROM camera_files").push_camera_file_filter(query.filter);
         let files = match query.cursor {
-            CursorCameraFile::After((id, time)) => {
-                let mut res = sqlx::query_as_unchecked!(
-                    CameraFile,
-                    r#"
-                    SELECT * FROM camera_files
-                    WHERE (start_time < ?2 OR (start_time = ?2 AND camera_id < ?1))
-                    ORDER BY start_time DESC, camera_id DESC LIMIT ?3
-                    "#,
-                    id,
-                    time,
-                    limit
-                )
-                .fetch_all(pool)
-                .await?;
+            QueryCameraFileCursor::After((id, time)) => {
+                let mut files = qb
+                    .push(" AND (start_time < ")
+                    .push_bind(time)
+                    .push(" OR (start_time = ")
+                    .push_bind(time)
+                    .push(" AND camera_id < ")
+                    .push_bind(id)
+                    .push(")) ORDER BY start_time DESC, camera_id DESC LIMIT ")
+                    .push_bind(limit)
+                    .build_query_as::<CameraFile>()
+                    .fetch_all(pool)
+                    .await?;
 
-                has_before = sqlx::query!(
-                    r#"
-                    SELECT id FROM camera_files
-                    WHERE (start_time > ?2 OR (start_time = ?2 AND camera_id > ?1))
-                    LIMIT 1
-                    "#,
-                    id,
-                    time,
-                )
-                .fetch_optional(pool)
-                .await?
-                .is_some();
-
-                if res.len() == limit as usize {
+                if files.len() == limit as usize {
                     has_after = true;
-                    res.pop();
+                    files.pop();
                 }
 
-                res
+                has_before = QueryBuilder::new("SELECT id FROM camera_files")
+                    .push_camera_file_filter(query.filter)
+                    .push(" AND (start_time > ")
+                    .push_bind(time)
+                    .push(" OR (start_time = ")
+                    .push_bind(time)
+                    .push(" AND camera_id > ")
+                    .push_bind(id)
+                    .push(")) LIMIT 1")
+                    .build()
+                    .fetch_optional(pool)
+                    .await?
+                    .is_some();
+
+                files
             }
-            CursorCameraFile::Before((id, time)) => {
-                let mut res = sqlx::query_as_unchecked!(
-                    CameraFile,
-                    r#"
-                    SELECT * FROM camera_files 
-                    WHERE (start_time > ?2 OR (start_time = ?2 AND camera_id > ?1)) 
-                    ORDER BY start_time ASC, camera_id ASC LIMIT ?3
-                    "#,
-                    id,
-                    time,
-                    limit
-                )
-                .fetch_all(pool)
-                .await?;
+            QueryCameraFileCursor::Before((id, time)) => {
+                let mut files = qb
+                    .push(" AND (start_time > ")
+                    .push_bind(time)
+                    .push(" OR (start_time = ")
+                    .push_bind(time)
+                    .push(" AND camera_id > ")
+                    .push_bind(id)
+                    .push(")) ORDER BY start_time ASC, camera_id ASC LIMIT ")
+                    .push_bind(limit)
+                    .build_query_as::<CameraFile>()
+                    .fetch_all(pool)
+                    .await?;
 
-                has_after = sqlx::query!(
-                    r#"
-                    SELECT id FROM camera_files
-                    WHERE (start_time < ?2 OR (start_time = ?2 AND camera_id < ?1)) 
-                    LIMIT 1
-                    "#,
-                    id,
-                    time,
-                )
-                .fetch_optional(pool)
-                .await?
-                .is_some();
-
-                if res.len() == limit as usize {
+                if files.len() == limit as usize {
                     has_before = true;
-                    res.pop();
+                    files.pop();
                 }
 
-                res.reverse();
+                has_after = QueryBuilder::new("SELECT id FROM camera_files")
+                    .push_camera_file_filter(query.filter)
+                    .push(" AND (start_time < ")
+                    .push_bind(time)
+                    .push(" OR (start_time = ")
+                    .push_bind(time)
+                    .push(" AND camera_id < ")
+                    .push_bind(id)
+                    .push(")) LIMIT 1")
+                    .build()
+                    .fetch_optional(pool)
+                    .await?
+                    .is_some();
 
-                res
+                files.reverse();
+
+                files
             }
-            CursorCameraFile::None => {
-                let mut res = sqlx::query_as_unchecked!(
-                    CameraFile,
-                    r#"
-                    SELECT * FROM camera_files
-                    ORDER BY start_time DESC, camera_id DESC LIMIT ?
-                    "#,
-                    limit
-                )
-                .fetch_all(pool)
-                .await?;
+            QueryCameraFileCursor::None => {
+                let mut files = qb
+                    .push(" ORDER BY start_time DESC, camera_id DESC LIMIT ")
+                    .push_bind(limit)
+                    .build_query_as::<CameraFile>()
+                    .fetch_all(pool)
+                    .await?;
 
-                if res.len() == limit as usize {
+                if files.len() == limit as usize {
                     has_after = true;
-                    res.pop();
+                    files.pop();
                 }
 
-                res
+                files
             }
         };
 
         let before = match files.first() {
-            Some(first) => CursorCameraFile::to(first.camera_id, first.start_time),
+            Some(first) => QueryCameraFileCursor::to(first.camera_id, first.start_time),
             None => "".to_string(),
         };
 
         let after = match files.last() {
-            Some(last) => CursorCameraFile::to(last.camera_id, last.start_time),
+            Some(last) => QueryCameraFileCursor::to(last.camera_id, last.start_time),
             None => "".to_string(),
         };
+
+        let count = files.len() as i32;
 
         Ok(QueryCameraFileResult {
             files,
@@ -347,40 +410,7 @@ impl CameraFile {
             before,
             has_after,
             after,
+            count,
         })
-    }
-}
-
-impl<'a> QueryCameraFile<'a> {
-    fn push_where(&self, mut qb: QueryBuilder<'a, Sqlite>) -> QueryBuilder<'a, Sqlite> {
-        if self.camera_ids.len() > 0 {
-            qb.push_bind(" AND camera_id in (");
-            let mut sep = qb.separated(",");
-            for id in self.camera_ids.iter() {
-                sep.push_bind(id.clone());
-            }
-            sep.push_unseparated(")");
-        }
-
-        if self.kinds.len() > 0 {
-            qb.push(" AND kind in (");
-            let mut sep = qb.separated(",");
-            for kind in self.kinds.iter() {
-                sep.push_bind(kind.clone());
-            }
-            sep.push_unseparated(")");
-        }
-
-        if let Some(range_start) = self.range_start {
-            qb.push(" AND start_time > ");
-            qb.push_bind(range_start);
-        }
-
-        if let Some(range_end) = self.range_end {
-            qb.push(" AND start_time < ");
-            qb.push_bind(range_end);
-        }
-
-        qb
     }
 }

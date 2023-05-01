@@ -70,20 +70,25 @@ pub struct CameraFile {
 }
 
 #[derive(Debug)]
-pub enum CursorCameraFile {
+pub enum QueryCameraFileCursor {
     Before((i64, DateTime<Utc>)),
     After((i64, DateTime<Utc>)),
     None,
 }
 
 #[derive(Debug)]
-pub struct QueryCameraFile<'a> {
-    pub cursor: CursorCameraFile,
-    pub limit: i32,
-    pub range_start: Option<DateTime<Utc>>,
-    pub range_end: Option<DateTime<Utc>>,
-    pub camera_ids: Vec<i32>,
+pub struct QueryCameraFileFilter<'a> {
+    pub begin: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
+    pub camera_ids: Vec<i64>,
     pub kinds: Vec<&'a str>,
+}
+
+#[derive(Debug)]
+pub struct QueryCameraFile<'a> {
+    pub cursor: QueryCameraFileCursor,
+    pub limit: i32,
+    pub filter: &'a QueryCameraFileFilter<'a>,
 }
 
 #[derive(Serialize, Debug)]
@@ -93,6 +98,7 @@ pub struct QueryCameraFileResult {
     pub before: String,
     pub has_after: bool,
     pub after: String,
+    pub count: i32,
 }
 
 pub struct ICamera {
