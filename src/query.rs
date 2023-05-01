@@ -33,11 +33,17 @@ impl<'a> QueryCameraFileFilter<'a> {
             end: None,
             camera_ids: vec![],
             kinds: vec![],
+            events: vec![],
         }
     }
 
     pub fn kinds(mut self, kinds: Vec<&'a str>) -> Self {
         self.kinds = kinds;
+        self
+    }
+
+    pub fn events(mut self, events: Vec<&'a str>) -> Self {
+        self.events = events;
         self
     }
 
@@ -70,9 +76,6 @@ impl<'a> QueryCameraFileFilter<'a> {
         Ok(self)
     }
 }
-
-#[derive(Debug)]
-pub struct QueryCameraFileBuilder<'a>(QueryCameraFile<'a>);
 
 impl<'a> QueryCameraFile<'a> {
     pub fn new(filter: &'a QueryCameraFileFilter) -> Self {

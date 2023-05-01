@@ -1,65 +1,5 @@
 {
   "db": "SQLite",
-  "02c479be77a545f59b0a37700c7415a6b5c6d3b1947dce446a4ea50dfd395ef4": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "camera_id",
-          "ordinal": 1,
-          "type_info": "Int64"
-        },
-        {
-          "name": "file_path",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "kind",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "size",
-          "ordinal": 4,
-          "type_info": "Int64"
-        },
-        {
-          "name": "start_time",
-          "ordinal": 5,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "end_time",
-          "ordinal": 6,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "updated_at",
-          "ordinal": 7,
-          "type_info": "Datetime"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "\n                    SELECT * FROM camera_files\n                    ORDER BY start_time DESC, camera_id DESC LIMIT ?\n                    "
-  },
   "0590d3fd8b5fdf568b2095d518c01bd8b33b7e4d698e599629501f43acf7b29a": {
     "describe": {
       "columns": [
@@ -227,7 +167,7 @@
         {
           "name": "kind",
           "ordinal": 1,
-          "type_info": "Text"
+          "type_info": "Null"
         },
         {
           "name": "range_start",
@@ -273,6 +213,16 @@
       }
     },
     "query": "DELETE FROM active_scans WHERE camera_id = ?"
+  },
+  "227438dde074dd2138064f1485998a09f46c7a0457e288a6d9c7b4cafcd4a924": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n            INSERT OR IGNORE INTO pending_scans (camera_id, kind) SELECT id, ? from cameras\n            "
   },
   "2884fc136cecbc825389b2f4b9b0eeb5c07897aab593be981cada6a58ed4bc94": {
     "describe": {
@@ -417,66 +367,6 @@
       }
     },
     "query": "DELETE FROM pending_scans WHERE id = ?"
-  },
-  "817ead4a61f8815517aea5a0b4669f03bb3d08071f4d24636e7817d6dd99e673": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "camera_id",
-          "ordinal": 1,
-          "type_info": "Int64"
-        },
-        {
-          "name": "file_path",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "kind",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "size",
-          "ordinal": 4,
-          "type_info": "Int64"
-        },
-        {
-          "name": "start_time",
-          "ordinal": 5,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "end_time",
-          "ordinal": 6,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "updated_at",
-          "ordinal": 7,
-          "type_info": "Datetime"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ],
-      "parameters": {
-        "Right": 3
-      }
-    },
-    "query": "\n                    SELECT * FROM (\n                        SELECT * FROM camera_files \n                        WHERE (start_time > ?2 OR (start_time = ?2 AND camera_id > ?1)) \n                        ORDER BY start_time ASC, camera_id ASC LIMIT ?3\n                    ) ORDER BY start_time DESC, camera_id DESC;\n                    "
   },
   "82efaf6c243cf3f3ae1ea2ecb81038c3178d49ebeee89b094a1b027e30cf647d": {
     "describe": {
@@ -771,65 +661,5 @@
       }
     },
     "query": "\n            SELECT * FROM pending_manual_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1\n            "
-  },
-  "fd751b2a4cb4b0b48a1508949f12be347f0089a260ba8112712412805577dfc4": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "camera_id",
-          "ordinal": 1,
-          "type_info": "Int64"
-        },
-        {
-          "name": "file_path",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "kind",
-          "ordinal": 3,
-          "type_info": "Text"
-        },
-        {
-          "name": "size",
-          "ordinal": 4,
-          "type_info": "Int64"
-        },
-        {
-          "name": "start_time",
-          "ordinal": 5,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "end_time",
-          "ordinal": 6,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "updated_at",
-          "ordinal": 7,
-          "type_info": "Datetime"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Right": 3
-      }
-    },
-    "query": "\n                    SELECT * FROM camera_files\n                    WHERE (start_time < ?2 OR (start_time = ?2 AND camera_id < ?1))\n                    ORDER BY start_time DESC, camera_id DESC LIMIT ?3\n                    "
   }
 }

@@ -67,6 +67,7 @@ pub struct CameraFile {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub events: sqlx::types::Json<Vec<String>>,
 }
 
 #[derive(Debug)]
@@ -82,6 +83,7 @@ pub struct QueryCameraFileFilter<'a> {
     pub end: Option<DateTime<Utc>>,
     pub camera_ids: Vec<i64>,
     pub kinds: Vec<&'a str>,
+    pub events: Vec<&'a str>,
 }
 
 #[derive(Debug)]

@@ -37,9 +37,14 @@ CREATE TABLE IF NOT EXISTS camera_files (
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
+    events JSON NOT NULL,
     UNIQUE (camera_id, file_path),
     UNIQUE (camera_id, start_time),
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ipc_events (
+    name STIRNG NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS pending_scans (

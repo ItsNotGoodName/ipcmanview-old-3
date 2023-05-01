@@ -242,6 +242,16 @@ impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
     ) -> QueryBuilder<'a, Sqlite> {
         self.push(" WHERE 1=1");
 
+        if let Some(begin) = filter.begin {
+            self.push(" AND start_time > ");
+            self.push_bind(begin);
+        }
+
+        if let Some(end) = filter.end {
+            self.push(" AND start_time < ");
+            self.push_bind(end);
+        }
+
         if filter.camera_ids.len() > 0 {
             self.push(" AND camera_id in (");
             let mut sep = self.separated(",");
@@ -260,14 +270,17 @@ impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
             sep.push_unseparated(")");
         }
 
-        if let Some(begin) = filter.begin {
-            self.push(" AND start_time > ");
-            self.push_bind(begin);
-        }
-
-        if let Some(end) = filter.end {
-            self.push(" AND start_time < ");
-            self.push_bind(end);
+        if filter.events.len() > 0 {
+            self.push(" AND (");
+            for (idx, event) in filter.events.iter().enumerate() {
+                if idx != 0 {
+                    self.push(" OR");
+                };
+                self.push(" events LIKE '%\"'||");
+                self.push_bind(event);
+                self.push("||'\"%'");
+            }
+            self.push(")");
         }
 
         self
@@ -280,7 +293,7 @@ struct CameraFileCount {
 }
 
 impl CameraFile {
-    pub async fn count(pool: &SqlitePool, filter: QueryCameraFileFilter<'_>) -> Result<i64> {
+    pub async fn count(pool: &SqlitePool, filter: &QueryCameraFileFilter<'_>) -> Result<i64> {
         let count = QueryBuilder::new("SELECT COUNT(id) AS count FROM camera_files")
             .push_camera_file_filter(&filter)
             .build_query_as::<CameraFileCount>()

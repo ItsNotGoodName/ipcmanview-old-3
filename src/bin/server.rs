@@ -134,7 +134,7 @@ async fn camera_update(
 async fn camera_data_refresh(id: i64, pool: &Pool, store: &Store) -> Result<Redirect, Status> {
     Utils::manager(store, id)
         .await?
-        .data_refresh(pool)
+        .refresh(pool)
         .await
         .map_err(|_| Status::InternalServerError)?;
 
@@ -281,15 +281,16 @@ async fn camera_file(
 
 // List Files
 
-#[get("/files?<before>&<after>&<limit>&<kind>&<camera_id>&<begin>&<end>")]
+#[get("/files?<before>&<after>&<limit>&<kinds>&<camera_ids>&<begin>&<end>&<events>")]
 async fn file_list(
     before: Option<&str>,
     after: Option<&str>,
     limit: Option<i32>,
-    kind: Vec<&str>,
-    camera_id: Vec<i64>,
+    kinds: Vec<&str>,
+    camera_ids: Vec<i64>,
     begin: Option<&str>,
     end: Option<&str>,
+    events: Vec<&str>,
     pool: &Pool,
     store: &Store,
 ) -> Result<Template, Status> {
@@ -298,8 +299,9 @@ async fn file_list(
         .map_err(|_| Status::BadRequest)?
         .maybe_end(end)
         .map_err(|_| Status::BadRequest)?
-        .kinds(kind)
-        .camera_ids(camera_id);
+        .kinds(kinds)
+        .events(events)
+        .camera_ids(camera_ids);
 
     let query = QueryCameraFile::new(&filter)
         .maybe_before(before)
@@ -311,7 +313,7 @@ async fn file_list(
         .await
         .map_err(|_| Status::InternalServerError)?;
 
-    let files_total = CameraFile::count(pool, filter)
+    let files_total = CameraFile::count(pool, &filter)
         .await
         .map_err(|_| Status::InternalServerError)?;
 

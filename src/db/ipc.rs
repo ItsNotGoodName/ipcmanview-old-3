@@ -99,26 +99,50 @@ impl IpcManager {
         timestamp: &chrono::DateTime<Utc>,
     ) -> Result<SqliteQueryResult> {
         let mut qb: QueryBuilder<Sqlite> = QueryBuilder::new(
-            "INSERT INTO camera_files (camera_id, file_path, kind, size, updated_at, start_time, end_time) ",
+            "INSERT INTO camera_files (camera_id, file_path, kind, size, updated_at, start_time, end_time, events) ",
         );
+        let mut unique_events: Vec<String> = vec![];
 
-        qb.push_values(files, |mut b, file| {
-            let (start_time, end_time) = file.unique_time();
-            b.push_bind(camera_id)
-                .push_bind(file.file_path)
-                .push_bind(file.r#type)
-                .push_bind(file.length)
-                .push_bind(timestamp)
-                .push_bind(start_time)
-                .push_bind(end_time);
-        })
-        .push("ON CONFLICT (camera_id, file_path) DO UPDATE SET updated_at=excluded.updated_at ")
-        // If for some reason the unique_time function generates a duplicate time then we should ignore the file being upserted and buy a lottery ticket
-        .push("ON CONFLICT (camera_id, start_time) DO NOTHING")
-        .build()
-        .execute(pool)
-        .await
-        .with_context(|| format!("Failed to upsert files with camera {}", camera_id))
+        // Upsert files
+        let res = qb
+            .push_values(files, |mut b, file| {
+                let (start_time, end_time) = file.unique_time();
+                let events = serde_json::json!(file.events).to_string();
+                b.push_bind(camera_id)
+                    .push_bind(file.file_path)
+                    .push_bind(file.r#type)
+                    .push_bind(file.length)
+                    .push_bind(timestamp)
+                    .push_bind(start_time)
+                    .push_bind(end_time)
+                    .push_bind(events);
+                for event in file.events {
+                    if !unique_events.contains(&event) {
+                        unique_events.push(event);
+                    };
+                }
+            })
+            .push(
+                "ON CONFLICT (camera_id, file_path) DO UPDATE SET updated_at=excluded.updated_at ",
+            )
+            // If for some reason the unique_time function generates a duplicate time then we should ignore the file being upserted and buy a lottery ticket
+            .push("ON CONFLICT (camera_id, start_time) DO NOTHING")
+            .build()
+            .execute(pool)
+            .await
+            .with_context(|| format!("Failed to upsert files with camera {}", camera_id))?;
+
+        // Upsert events
+        QueryBuilder::<Sqlite>::new("INSERT OR IGNORE INTO ipc_events (name)")
+            .push_values(unique_events, |mut b, event| {
+                b.push_bind(event);
+            })
+            .build()
+            .execute(pool)
+            .await
+            .with_context(|| format!("Failed to upsert events with camera {}", camera_id))?;
+
+        Ok(res)
     }
 
     async fn scan_files_condition(
@@ -150,7 +174,7 @@ impl IpcManager {
         }
     }
 
-    /// Make sure this is never ran concurrently.
+    /// This should never run concurrently.
     pub async fn scan_files(
         &self,
         pool: &SqlitePool,

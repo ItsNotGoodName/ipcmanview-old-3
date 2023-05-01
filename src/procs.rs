@@ -12,10 +12,15 @@ use crate::scan::{Scan, ScanHandle, ScanKindPending};
 
 impl CreateCamera<'_> {
     pub async fn create(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<i64> {
+        // Create in database
         let id = self.create_db(pool).await?;
+        // Refresh in store
         store.refresh(pool, id).await?;
-        store.get(id).await?.data_refresh(pool).await.ok();
+        // Get from store and refresh in database
+        store.get(id).await?.refresh(pool).await.ok();
+        // Queue a full scan
         Scan::queue(pool, store, id, ScanKindPending::Full).await?;
+
         Ok(id)
     }
 }
@@ -24,19 +29,27 @@ impl UpdateCamera<'_> {
     pub async fn update(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<()> {
         let id = self.id;
         self.update_db(pool).await?;
-        store.refresh(pool, id).await
+        // Refresh in store
+        store.refresh(pool, id).await?;
+        // Get from store and refresh in database
+        store.get(id).await?.refresh(pool).await.ok();
+
+        Ok(())
     }
 }
 
 impl Camera {
     pub async fn delete(pool: &SqlitePool, store: &IpcManagerStore, id: i64) -> Result<()> {
         Self::delete_db(pool, id).await?;
-        store.refresh(pool, id).await
+        // Refresh in store
+        store.refresh(pool, id).await?;
+
+        Ok(())
     }
 }
 
 impl IpcManager {
-    pub async fn data_refresh(&self, pool: &SqlitePool) -> Result<()> {
+    pub async fn refresh(&self, pool: &SqlitePool) -> Result<()> {
         IpcDetail::get(&self).await?.save(pool, self.id).await?;
         IpcSoftware::get(&self).await?.save(pool, self.id).await?;
 
@@ -82,6 +95,7 @@ impl Scan {
         Ok(())
     }
 
+    // TODO: return database access errors
     pub async fn run_pending(pool: &SqlitePool, store: &IpcManagerStore) {
         // Get a pending scan
         let first_handle = if let Ok(Some(s)) = ScanHandle::next(pool).await {
@@ -137,7 +151,7 @@ impl Scan {
 }
 
 impl ScanHandle {
-    async fn run_(&self, pool: &SqlitePool, man: &IpcManager) -> Result<CameraScanResult> {
+    async fn runner(&self, pool: &SqlitePool, man: &IpcManager) -> Result<CameraScanResult> {
         let mut res = CameraScanResult::default();
         for (range, percent) in self.range.iter() {
             res += man.scan_files(pool, range.start, range.end).await?;
@@ -148,17 +162,19 @@ impl ScanHandle {
     }
 
     async fn run(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<CameraScanResult> {
+        // Get manager
         let man = store.get(self.camera_id).await?;
 
-        // Run
-        let res = self.run_(pool, &man).await;
+        // Run scan
+        let res = self.runner(pool, &man).await;
 
+        // Handle any errors
         let handle = match res {
             Ok(_) => self,
             Err(ref err) => self.with_error(err.to_string()),
         };
 
-        // End
+        // End scan
         if let Err(err) = handle.end(pool).await {
             dbg!(err);
         };
