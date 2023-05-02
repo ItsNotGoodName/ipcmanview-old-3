@@ -2,16 +2,19 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
 use rpc::{
-    modules::{magicbox, mediafilefind},
+    modules::{license, magicbox, mediafilefind},
     reqwest, Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };
 use tokio::sync::Mutex;
 
 /// Turns rpc::ResponseError to Ok(None), Ok(o) to Ok(Some(o)) and, any other error to Err(rpc::Error)
-fn maybe<T>(check: Result<T, Error>) -> Result<Option<T>, Error> {
+fn maybe<T>(check: Result<T, Error>) -> Result<T, Error>
+where
+    T: Default,
+{
     match check {
-        Err(Error::Response(_)) => Ok(check.ok()),
-        Ok(o) => Ok(Some(o)),
+        Err(Error::Response(_)) => Ok(Default::default()),
+        Ok(o) => Ok(o),
         Err(e) => Err(e),
     }
 }
@@ -59,17 +62,17 @@ impl IpcManager {
 }
 
 pub struct IpcDetail {
-    pub sn: Option<String>,
-    pub device_class: Option<String>,
-    pub device_type: Option<String>,
-    pub hardware_version: Option<String>,
-    pub market_area: Option<String>,
-    pub process_info: Option<String>,
-    pub vendor: Option<String>,
+    pub sn: String,
+    pub device_class: String,
+    pub device_type: String,
+    pub hardware_version: String,
+    pub market_area: String,
+    pub process_info: String,
+    pub vendor: String,
 }
 
 impl IpcDetail {
-    pub async fn get(man: &IpcManager) -> Result<IpcDetail, Error> {
+    pub async fn get(man: &IpcManager) -> Result<Self, Error> {
         Ok(IpcDetail {
             sn: maybe(magicbox::get_serial_no(man.rpc().await?).await)?,
             device_class: maybe(magicbox::get_device_class(man.rpc().await?).await)?,
@@ -82,12 +85,22 @@ impl IpcDetail {
     }
 }
 
-pub struct IpcSoftware(pub Option<magicbox::GetSoftwareVersion>);
+pub struct IpcSoftware(pub magicbox::GetSoftwareVersion);
 
 impl IpcSoftware {
-    pub async fn get(man: &IpcManager) -> Result<IpcSoftware, Error> {
+    pub async fn get(man: &IpcManager) -> Result<Self, Error> {
         Ok(IpcSoftware(maybe(
             magicbox::get_software_version(man.rpc().await?).await,
+        )?))
+    }
+}
+
+pub struct IpcLicenses(pub Vec<license::Info>);
+
+impl IpcLicenses {
+    pub async fn get(man: &IpcManager) -> Result<Self, Error> {
+        Ok(IpcLicenses(maybe(
+            license::get_license_info(man.rpc().await?).await,
         )?))
     }
 }

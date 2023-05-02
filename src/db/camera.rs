@@ -1,11 +1,12 @@
 use anyhow::{Context, Result};
+use chrono::Utc;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
 use crate::{
     models::{
-        Camera, CameraDetail, CameraFile, CameraSoftware, CreateCamera, ICamera, QueryCameraFile,
-        QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult, ShowCamera,
-        UpdateCamera,
+        Camera, CameraDetail, CameraFile, CameraLicense, CameraSoftware, CreateCamera, ICamera,
+        QueryCameraFile, QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult,
+        ShowCamera, UpdateCamera,
     },
     scan::Scan,
 };
@@ -28,7 +29,8 @@ impl CreateCamera<'_> {
             cursor
         )
         .execute(&mut *pool)
-        .await?
+        .await
+        .context("Failed to create camera")?
         .last_insert_rowid();
 
         sqlx::query!(
@@ -41,7 +43,8 @@ impl CreateCamera<'_> {
             camera_id
         )
         .execute(&mut *pool)
-        .await?;
+        .await
+        .context("Failed to create camera_details")?;
 
         sqlx::query!(
             r#"
@@ -53,7 +56,8 @@ impl CreateCamera<'_> {
             camera_id
         )
         .execute(&mut *pool)
-        .await?;
+        .await
+        .context("Failed to create camera_softwares")?;
 
         pool.commit().await?;
 
@@ -65,7 +69,7 @@ impl UpdateCamera<'_> {
     pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<()> {
         sqlx::query!(
             r#"
-            UPDATE cameras SET 
+            UPDATE cameras SET
             ip = coalesce(?, ip),
             username = coalesce(?, username),
             password = coalesce(?, password)
@@ -78,18 +82,18 @@ impl UpdateCamera<'_> {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to update detail with camera {}", self.id))?;
-
-        Ok(())
+        .with_context(|| format!("Failed to update camera {}", self.id))
+        .map(|_| ())
     }
 }
 
 impl Camera {
     pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
-        sqlx::query_as!(
+        sqlx::query_as_unchecked!(
             Self,
             r#"
-            SELECT id, ip, username FROM cameras
+            SELECT id, ip, username, refreshed_at, created_at
+            FROM cameras
             "#
         )
         .fetch_all(pool)
@@ -98,10 +102,12 @@ impl Camera {
     }
 
     pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Option<Self>> {
-        sqlx::query_as!(
+        sqlx::query_as_unchecked!(
             Self,
             r#"
-            SELECT id, ip, username FROM cameras WHERE id = ?
+            SELECT id, ip, username, refreshed_at, created_at
+            FROM cameras
+            WHERE id = ?
             "#,
             camera_id,
         )
@@ -113,17 +119,28 @@ impl Camera {
     pub(crate) async fn delete_db(pool: &SqlitePool, id: i64) -> Result<()> {
         sqlx::query!(
             r#"
-            DELETE FROM cameras 
+            DELETE FROM cameras
             WHERE id = ?
             "#,
             id
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to delete camera {}", id))?
-        .rows_affected();
+        .with_context(|| format!("Failed to delete camera {}", id))
+        .map(|_| ())
+    }
 
-        Ok(())
+    pub(crate) async fn update_refreshed_at(pool: &SqlitePool, id: i64) -> Result<()> {
+        let refreshed_at = Utc::now();
+        sqlx::query!(
+            "UPDATE cameras SET refreshed_at = ? WHERE id = ?",
+            refreshed_at,
+            id
+        )
+        .execute(pool)
+        .await
+        .with_context(|| format!("Failed to update refreshed_at with camera {}", id))
+        .map(|_| ())
     }
 }
 
@@ -132,7 +149,9 @@ impl ICamera {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT id, ip, username, password FROM cameras WHERE id = ?
+            SELECT id, ip, username, password
+            FROM cameras
+            WHERE id = ?
             "#,
             camera_id,
         )
@@ -145,7 +164,8 @@ impl ICamera {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT id, ip, username, password FROM cameras
+            SELECT id, ip, username, password
+            FROM cameras
             "#
         )
         .fetch_all(pool)
@@ -159,16 +179,15 @@ impl CameraDetail {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT 
-            sn, device_class, device_type, hardware_version, market_area, process_info, vendor 
-            FROM camera_details 
+            SELECT sn, device_class, device_type, hardware_version, market_area, process_info, vendor
+            FROM camera_details
             WHERE id = ?
             "#,
             camera_id,
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find camera {}", camera_id))
+        .with_context(|| format!("Failed to find camera_details with camera {}", camera_id))
     }
 }
 
@@ -177,20 +196,41 @@ impl CameraSoftware {
         sqlx::query_as!(
             Self,
             r#"
-            SELECT 
-            build,
-            build_date,
-            security_base_line_version,
-            version,
-            web_version
-            FROM camera_softwares 
+            SELECT build, build_date, security_base_line_version, version, web_version
+            FROM camera_softwares
             WHERE id = ?
             "#,
             camera_id,
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find camera {}", camera_id))
+        .with_context(|| format!("Failed to find camera_softwares with camera {}", camera_id))
+    }
+}
+
+impl CameraLicense {
+    pub async fn list(pool: &SqlitePool, camera_id: i64) -> Result<Vec<Self>> {
+        sqlx::query_as_unchecked!(
+            Self,
+            r#"
+            SELECT
+                abroad_info,
+                all_type,
+                digit_channel,
+                effective_days,
+                effective_time,
+                license_id,
+                product_type,
+                status,
+                username
+            FROM camera_licenses
+            WHERE camera_id = ?
+            "#,
+            camera_id,
+        )
+        .fetch_all(pool)
+        .await
+        .with_context(|| format!("Failed to list camera_licenses with camera {}", camera_id))
     }
 }
 
@@ -206,6 +246,8 @@ impl ShowCamera {
             Some(s) => s,
             None => return Ok(None),
         };
+
+        let licenses = CameraLicense::list(pool, id).await?;
 
         let camera = match Camera::find(pool, id).await? {
             Some(s) => s,
@@ -224,8 +266,11 @@ impl ShowCamera {
             id: camera.id,
             ip: camera.ip,
             username: camera.username,
+            refreshed_at: camera.refreshed_at,
+            created_at: camera.created_at,
             detail,
             software,
+            licenses,
             file_count: file_count.count,
         }))
     }

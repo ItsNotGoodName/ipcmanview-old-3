@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
 
 use crate::models::{ScanActive, ScanCompleted};
-use crate::scan::{Scan, ScanCamera, ScanHandle, ScanKindPending, ScanRange};
+use crate::scan::{Scan, ScanActor, ScanCamera, ScanKindPending, ScanRange};
 
 const MAX_PENDING_MANUAL_SCANS: i32 = 5;
 
@@ -108,7 +108,7 @@ impl Scan {
     }
 }
 
-impl ScanHandle {
+impl ScanActor {
     pub(crate) async fn next(pool: &SqlitePool) -> Result<Option<Self>> {
         let mut pool = pool
             .begin()
@@ -128,7 +128,7 @@ impl ScanHandle {
 
             // Create handle from pending scan kind
             match pending.kind {
-                ScanKindPending::Full => ScanHandle::full(pending.camera_id),
+                ScanKindPending::Full => ScanActor::full(pending.camera_id),
                 ScanKindPending::Cursor => {
                     // Get scan camera
                     let scan_camera = sqlx::query_as_unchecked!(
@@ -145,7 +145,7 @@ impl ScanHandle {
                         )
                     })?;
 
-                    ScanHandle::cursor(scan_camera)
+                    ScanActor::cursor(scan_camera)
                 }
             }
         } else if let Some(pending) = sqlx::query_as_unchecked!(ScanManualPending,
@@ -159,7 +159,7 @@ impl ScanHandle {
             .await?;
 
             // Create manual scan handle
-            ScanHandle::manual(
+            ScanActor::manual(
                 pending.camera_id,
                 ScanRange {
                     start: pending.range_start,
@@ -174,16 +174,15 @@ impl ScanHandle {
         sqlx::query!(
             r#"
             INSERT INTO active_scans
-            (camera_id, kind, range_start, range_end, started_at, percent)
+            (camera_id, kind, range_start, range_end, started_at)
             VALUES
-            (?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?)
             "#,
             handle.camera_id,
             handle.kind,
             handle.range.start,
             handle.range.end,
             handle.started_at,
-            0.0,
         )
         .execute(&mut pool)
         .await
@@ -201,19 +200,25 @@ impl ScanHandle {
         Ok(Some(handle))
     }
 
-    pub(crate) async fn update_percent(&self, pool: &SqlitePool, percent: f64) -> Result<()> {
-        let percent = (percent * 100.0).round() / 100.0;
-
+    pub(crate) async fn update_status(
+        &self,
+        pool: &SqlitePool,
+        percent: f64,
+        upserted: i64,
+        deleted: i64,
+    ) -> Result<()> {
         sqlx::query!(
-            "UPDATE active_scans SET percent = ? WHERE camera_id = ?",
+            "UPDATE active_scans SET percent = ?, upserted = ?, deleted = ? WHERE camera_id = ?",
             percent,
+            upserted,
+            deleted,
             self.camera_id,
         )
         .execute(pool)
         .await
         .with_context(|| {
             format!(
-                "Failed to update percent on active scan with camera {}",
+                "Failed to update status on active scan with camera {}",
                 self.camera_id
             )
         })?;
@@ -232,17 +237,12 @@ impl ScanHandle {
             sqlx::query!(
                 r#"
                 INSERT INTO completed_scans 
-                (camera_id, kind, range_start, range_end, started_at, duration, error)
-                VALUES 
-                (?, ?, ?, ?, ?, ?, ?)
+                (camera_id, kind, range_start, range_end, started_at, upserted, deleted, duration, error)
+                SELECT camera_id, kind, range_start, range_end, started_at, upserted, deleted, ?, ? FROM active_scans WHERE camera_id = ?
                 "#,
-                self.camera_id,
-                self.kind,
-                self.range.start,
-                self.range.end,
-                self.started_at,
                 duration,
-                self.error
+                self.error,
+                self.camera_id
             )
             .execute(&mut pool)
             .await
@@ -273,9 +273,9 @@ impl ScanHandle {
             let scan_cursor = self.range.scan_cursor();
 
             sqlx::query!(
-                "UPDATE cameras SET scan_cursor = ?2 WHERE id = ?1",
-                self.camera_id,
+                "UPDATE cameras SET scan_cursor = ? WHERE id = ?",
                 scan_cursor,
+                self.camera_id,
             )
             .execute(&mut pool)
             .await

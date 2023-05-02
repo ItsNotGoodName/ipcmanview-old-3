@@ -25,6 +25,8 @@ pub struct Camera {
     pub id: i64,
     pub ip: String,
     pub username: String,
+    pub refreshed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Serialize, Debug)]
@@ -32,29 +34,45 @@ pub struct ShowCamera {
     pub id: i64,
     pub ip: String,
     pub username: String,
+    pub refreshed_at: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
     pub detail: CameraDetail,
     pub software: CameraSoftware,
     pub file_count: i32,
+    pub licenses: Vec<CameraLicense>,
 }
 
 #[derive(Serialize, Debug)]
 pub struct CameraDetail {
-    pub sn: Option<String>,
-    pub device_class: Option<String>,
-    pub device_type: Option<String>,
-    pub hardware_version: Option<String>,
-    pub market_area: Option<String>,
-    pub process_info: Option<String>,
-    pub vendor: Option<String>,
+    pub sn: String,
+    pub device_class: String,
+    pub device_type: String,
+    pub hardware_version: String,
+    pub market_area: String,
+    pub process_info: String,
+    pub vendor: String,
 }
 
 #[derive(Serialize, Debug)]
 pub struct CameraSoftware {
-    pub build: Option<String>,
-    pub build_date: Option<String>,
-    pub security_base_line_version: Option<String>,
-    pub version: Option<String>,
-    pub web_version: Option<String>,
+    pub build: String,
+    pub build_date: String,
+    pub security_base_line_version: String,
+    pub version: String,
+    pub web_version: String,
+}
+
+#[derive(Serialize, Debug)]
+pub struct CameraLicense {
+    pub abroad_info: String,
+    pub all_type: bool,
+    pub digit_channel: u32,
+    pub effective_days: u32,
+    pub effective_time: DateTime<Utc>,
+    pub license_id: u32,
+    pub product_type: String,
+    pub status: u32,
+    pub username: String,
 }
 
 #[derive(Serialize, sqlx::FromRow, Debug)]
@@ -133,6 +151,8 @@ pub struct ScanCompleted {
     pub started_at: DateTime<Utc>,
     pub duration: i64,
     pub error: Option<String>,
+    pub upserted: i64,
+    pub deleted: i64,
 }
 
 #[derive(Serialize, Debug)]
@@ -143,4 +163,6 @@ pub struct ScanActive {
     pub range_end: DateTime<Utc>,
     pub started_at: DateTime<Utc>,
     pub percent: f64,
+    pub upserted: i64,
+    pub deleted: i64,
 }

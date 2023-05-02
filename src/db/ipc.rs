@@ -4,7 +4,7 @@ use rpc::modules::mediafilefind;
 use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite, SqlitePool};
 
 use crate::{
-    ipc::{IpcDetail, IpcFileStream, IpcManager, IpcSoftware},
+    ipc::{IpcDetail, IpcFileStream, IpcLicenses, IpcManager, IpcSoftware},
     models::CameraScanResult,
 };
 
@@ -29,63 +29,97 @@ impl IpcDetail {
             self.hardware_version,
             self.market_area,
             self.process_info,
-            self.vendor
+            self.vendor,
         )
         .execute(pool)
         .await
         .with_context(|| format!("Failed to update detail with camera {}", camera_id))?;
+
         Ok(())
     }
 }
 
 impl IpcSoftware {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
-        if let Some(ref software) = self.0 {
-            sqlx::query!(
-                r#"
-                UPDATE camera_softwares SET 
-                build = ?2,
-                build_date = ?3,
-                security_base_line_version = ?4,
-                version = ?5,
-                web_version = ?6
-                WHERE id = ?1
-                "#,
-                camera_id,
-                software.build,
-                software.build_date,
-                software.security_base_line_version,
-                software.version,
-                software.web_version
-            )
-            .execute(pool)
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to update software version with camera {}",
-                    camera_id
-                )
-            })
-            .ok();
-        } else {
-            sqlx::query!(
-                r#"
-                REPLACE INTO camera_softwares
-                (id)
-                VALUES
-                (?)
-                "#,
+        sqlx::query!(
+            r#"
+            UPDATE camera_softwares SET 
+            build = ?2,
+            build_date = ?3,
+            security_base_line_version = ?4,
+            version = ?5,
+            web_version = ?6
+            WHERE id = ?1
+            "#,
+            camera_id,
+            self.0.build,
+            self.0.build_date,
+            self.0.security_base_line_version,
+            self.0.version,
+            self.0.web_version,
+        )
+        .execute(pool)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to update software version with camera {}",
                 camera_id
             )
-            .execute(pool)
+        })?;
+
+        Ok(())
+    }
+}
+
+impl IpcLicenses {
+    pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
+        let mut pool = pool.begin().await?;
+
+        sqlx::query!("DELETE FROM camera_licenses WHERE camera_id = ?", camera_id,)
+            .execute(&mut pool)
             .await
             .with_context(|| {
-                format!(
-                    "Failed to update software version with camera {}",
-                    camera_id
+                format!("Failed to delete camera_licenses with camera {}", camera_id)
+            })?;
+
+        for license in self.0.iter() {
+            sqlx::query!(
+                r#"
+                INSERT INTO camera_licenses
+                (
+                camera_id,
+                abroad_info,
+                all_type,
+                digit_channel,
+                effective_days,
+                effective_time,
+                license_id,
+                product_type,
+                status,
+                username
                 )
+                VALUES
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                "#,
+                camera_id,
+                license.info.abroad_info,
+                license.info.all_type,
+                license.info.digit_channel,
+                license.info.effective_days,
+                license.info.effective_time,
+                license.info.license_id,
+                license.info.product_type,
+                license.info.status,
+                license.info.username
+            )
+            .execute(&mut pool)
+            .await
+            .with_context(|| {
+                format!("Failed to insert camera_licenses with camera {}", camera_id)
             })?;
         }
+
+        pool.commit().await?;
 
         Ok(())
     }

@@ -30,7 +30,7 @@ pub struct ScanRange {
 }
 
 impl ScanRange {
-    pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<ScanRange> {
+    pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Self> {
         if start < end {
             bail!("start date less than end date: {start} < {end}")
         }
@@ -89,9 +89,11 @@ impl Iterator for ScanRangeIterator {
             }
         };
 
-        let percent = (((self.end - self.cursor).num_days()) as f64
+        let percent = ((((self.end - self.cursor).num_days()) as f64
             / ((self.end - self.start).num_days() as f64))
-            * 100.0;
+            * 10000.0)
+            .round()
+            / 100.0;
         let percent = if percent.is_nan() { 0.0 } else { percent };
 
         Some((ScanRange { start, end }, percent))
@@ -114,7 +116,7 @@ pub enum ScanKindPending {
     Cursor,
 }
 
-pub struct ScanHandle {
+pub struct ScanActor {
     pub camera_id: i64,
     pub range: ScanRange,
     pub kind: ScanKind,
@@ -134,9 +136,9 @@ pub struct ScanCamera {
     pub scan_cursor: DateTime<Utc>,
 }
 
-impl ScanHandle {
-    fn new(builder: ScanTask) -> ScanHandle {
-        ScanHandle {
+impl ScanActor {
+    fn new(builder: ScanTask) -> Self {
+        ScanActor {
             camera_id: builder.camera_id,
             range: builder.range,
             kind: builder.kind,
@@ -146,7 +148,7 @@ impl ScanHandle {
         }
     }
 
-    pub fn manual(camera_id: i64, range: ScanRange) -> ScanHandle {
+    pub fn manual(camera_id: i64, range: ScanRange) -> Self {
         Self::new(ScanTask {
             camera_id,
             range,
@@ -154,7 +156,7 @@ impl ScanHandle {
         })
     }
 
-    pub fn full(camera_id: i64) -> ScanHandle {
+    pub fn full(camera_id: i64) -> Self {
         Self::new(ScanTask {
             camera_id,
             range: ScanRange {
@@ -165,7 +167,7 @@ impl ScanHandle {
         })
     }
 
-    pub fn cursor(scan_camera: ScanCamera) -> ScanHandle {
+    pub fn cursor(scan_camera: ScanCamera) -> Self {
         Self::new(ScanTask {
             camera_id: scan_camera.id,
             range: ScanRange {
@@ -174,11 +176,6 @@ impl ScanHandle {
             },
             kind: ScanKind::Cursor,
         })
-    }
-
-    pub fn with_error(mut self, error: String) -> Self {
-        self.error = Some(error);
-        self
     }
 
     pub fn should_update_scan_cursor(&self) -> bool {

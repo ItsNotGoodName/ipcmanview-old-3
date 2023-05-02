@@ -3,29 +3,45 @@ CREATE TABLE IF NOT EXISTS cameras (
     ip TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL,
     password TEXT NOT NULL,
-    scan_cursor DATETIME NOT NULL
+    scan_cursor DATETIME NOT NULL,
+    refreshed_at DATETIME NOT NULL DEFAULT (DATETIME(0, 'unixepoch')),
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS camera_details (
     id INTEGER PRIMARY KEY,
-    sn TEXT,
-    device_class TEXT,
-    device_type TEXT,
-    hardware_version TEXT,
-    market_area TEXT,
-    process_info TEXT,
-    vendor TEXT,
+    sn TEXT DEFAULT '' NOT NULL,
+    device_class TEXT DEFAULT '' NOT NULL,
+    device_type TEXT DEFAULT '' NOT NULL,
+    hardware_version TEXT DEFAULT '' NOT NULL,
+    market_area TEXT DEFAULT '' NOT NULL,
+    process_info TEXT DEFAULT '' NOT NULL,
+    vendor TEXT DEFAULT '' NOT NULL,
     FOREIGN KEY (id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS camera_softwares (
     id INTEGER PRIMARY KEY,
-    build TEXT,
-    build_date TEXT,
-    security_base_line_version TEXT,
-    version TEXT,
-    web_version TEXT,
+    build TEXT DEFAULT '' NOT NULL,
+    build_date TEXT DEFAULT '' NOT NULL,
+    security_base_line_version TEXT DEFAULT '' NOT NULL,
+    version TEXT DEFAULT '' NOT NULL,
+    web_version TEXT DEFAULT '' NOT NULL,
     FOREIGN KEY (id) REFERENCES cameras (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS camera_licenses (
+    camera_id INTEGER,
+    abroad_info TEXT DEFAULT '' NOT NULL,
+    all_type BOOLEAN DEFAULT false NOT NULL,
+    digit_channel NUMBER DEFAULT 0 NOT NULL,
+    effective_days NUMBER DEFAULT 0 NOT NULL,
+    effective_time NUMBER DEFAULT 0 NOT NULL,
+    license_id NUMBER DEFAULT 0 NOT NULL,
+    product_type TEXT DEFAULT '' NOT NULL,
+    status NUMBER DEFAULT 0 NOT NULL,
+    username TEXT DEFAULT '' NOT NULL,
+    FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS camera_files (
@@ -69,7 +85,9 @@ CREATE TABLE IF NOT EXISTS active_scans (
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
     started_at DATETIME NOT NULL,
-    percent REAL NOT NULL,
+    percent REAL NOT NULL DEFAULT 0.0,
+    upserted INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
@@ -82,5 +100,7 @@ CREATE TABLE IF NOT EXISTS completed_scans (
     started_at DATETIME NOT NULL,
     duration INTEGER NOT NULL,
     error STRING,
+    upserted INTEGER NOT NULL,
+    deleted INTEGER NOT NULL,
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );

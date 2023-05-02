@@ -1,12 +1,12 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
 
-use crate::ipc::{IpcDetail, IpcManager, IpcManagerStore, IpcSoftware};
+use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcManagerStore, IpcSoftware};
 use crate::models::{
     Camera, CameraFile, CameraScanResult, CreateCamera, QueryCameraFile, QueryCameraFileCursor,
     QueryCameraFileResult, UpdateCamera,
 };
-use crate::scan::{Scan, ScanHandle, ScanKindPending};
+use crate::scan::{Scan, ScanActor, ScanKindPending};
 
 // -------------------- Camera
 
@@ -52,6 +52,8 @@ impl IpcManager {
     pub async fn refresh(&self, pool: &SqlitePool) -> Result<()> {
         IpcDetail::get(&self).await?.save(pool, self.id).await?;
         IpcSoftware::get(&self).await?.save(pool, self.id).await?;
+        IpcLicenses::get(&self).await?.save(pool, self.id).await?;
+        Camera::update_refreshed_at(pool, self.id).await?;
 
         Ok(())
     }
@@ -98,7 +100,7 @@ impl Scan {
     // TODO: return database access errors
     pub async fn run_pending(pool: &SqlitePool, store: &IpcManagerStore) {
         // Get a pending scan
-        let first_handle = if let Ok(Some(s)) = ScanHandle::next(pool).await {
+        let first_handle = if let Ok(Some(s)) = ScanActor::next(pool).await {
             s
         } else {
             return;
@@ -107,7 +109,7 @@ impl Scan {
         // Get rest of the pending scans
         let mut handles = vec![first_handle];
         loop {
-            match ScanHandle::next(&pool).await {
+            match ScanActor::next(&pool).await {
                 Ok(Some(handle)) => handles.push(handle),
                 Ok(None) | Err(_) => break,
             }
@@ -119,25 +121,17 @@ impl Scan {
             let store = store.clone();
             tokio::spawn(async move {
                 // Run pending scan
-                match handle.run(&pool, &store).await {
-                    Ok(res) => {
-                        dbg!(res);
-                    }
-                    Err(err) => {
-                        dbg!(err);
-                    }
+                if let Err(err) = handle.run(&pool, &store).await {
+                    dbg!(err);
                 }
                 // Check for more scans and run them or exit
                 loop {
-                    match ScanHandle::next(&pool).await {
-                        Ok(Some(handle)) => match handle.run(&pool, &store).await {
-                            Ok(res) => {
-                                dbg!(res);
-                            }
-                            Err(err) => {
+                    match ScanActor::next(&pool).await {
+                        Ok(Some(handle)) => {
+                            if let Err(err) = handle.run(&pool, &store).await {
                                 dbg!(err);
                             }
-                        },
+                        }
                         Ok(None) => return,
                         Err(err) => {
                             dbg!(err);
@@ -150,34 +144,30 @@ impl Scan {
     }
 }
 
-impl ScanHandle {
-    async fn runner(&self, pool: &SqlitePool, man: &IpcManager) -> Result<CameraScanResult> {
+impl ScanActor {
+    async fn runner(&self, pool: &SqlitePool, man: &IpcManager) -> Result<()> {
         let mut res = CameraScanResult::default();
         for (range, percent) in self.range.iter() {
             res += man.scan_files(pool, range.start, range.end).await?;
-            self.update_percent(pool, percent).await?
+            self.update_status(pool, percent, res.upserted as i64, res.deleted as i64)
+                .await?
         }
 
-        Ok(res)
+        Ok(())
     }
 
-    async fn run(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<CameraScanResult> {
+    async fn run(mut self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<()> {
         // Get manager
         let man = store.get(self.camera_id).await?;
 
         // Run scan
         let res = self.runner(pool, &man).await;
-
-        // Handle any errors
-        let handle = match res {
-            Ok(_) => self,
-            Err(ref err) => self.with_error(err.to_string()),
-        };
+        if let Err(ref err) = res {
+            self.error = Some(err.to_string())
+        }
 
         // End scan
-        if let Err(err) = handle.end(pool).await {
-            dbg!(err);
-        };
+        self.end(pool).await?;
 
         res
     }

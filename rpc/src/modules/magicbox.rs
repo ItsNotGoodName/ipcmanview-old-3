@@ -49,7 +49,7 @@ struct GetVendor {
     vendor: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Default, Debug)]
 pub struct GetSoftwareVersion {
     #[serde(default, rename = "Build")]
     pub build: String,
