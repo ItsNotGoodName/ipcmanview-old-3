@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS camera_softwares (
 );
 
 CREATE TABLE IF NOT EXISTS camera_licenses (
-    camera_id INTEGER,
+    camera_id INTEGER NOT NULL,
     abroad_info TEXT DEFAULT '' NOT NULL,
     all_type BOOLEAN DEFAULT false NOT NULL,
     digit_channel NUMBER DEFAULT 0 NOT NULL,
