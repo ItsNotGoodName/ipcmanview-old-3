@@ -1,33 +1,38 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 
 use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
 
 use crate::models::{ScanActive, ScanCompleted};
-use crate::scan::{Scan, ScanActor, ScanCamera, ScanKindPending, ScanRange};
-
-const MAX_PENDING_MANUAL_SCANS: i32 = 5;
+use crate::scan::{Scan, ScanActor, ScanCamera, ScanKind, ScanKindPending, ScanRange};
 
 struct ScanPending {
     id: i64,
     camera_id: i64,
-    kind: ScanKindPending,
-}
-
-struct ScanManualPending {
-    id: i64,
-    camera_id: i64,
     range_start: DateTime<Utc>,
     range_end: DateTime<Utc>,
+    kind: ScanKind,
 }
 
 impl Scan {
     pub(crate) async fn queue_all_db(pool: &SqlitePool, kind: ScanKindPending) -> Result<()> {
+        let (range_start, range_end) = kind.range();
+        let kind = ScanKind::from(kind);
+
         sqlx::query!(
             r#"
-            INSERT OR IGNORE INTO pending_scans (camera_id, kind) SELECT id, ? from cameras
+            INSERT OR IGNORE INTO pending_scans
+            (
+            camera_id,
+            kind,
+            range_start,
+            range_end
+            ) 
+            SELECT id, ?, ?, ? from cameras
             "#,
             kind,
+            range_start,
+            range_end
         )
         .execute(pool)
         .await
@@ -37,19 +42,30 @@ impl Scan {
 
     pub(crate) async fn queue_db(
         pool: &SqlitePool,
-        camera_id: i64,
         kind: ScanKindPending,
+        camera_id: i64,
     ) -> Result<()> {
+        let (range_start, range_end) = kind.range();
+        let kind = ScanKind::from(kind);
+
         sqlx::query!(
             r#"
-            INSERT INTO pending_scans 
-            (camera_id, kind)
-            VALUES
-            (?, ?)
-            ON CONFLICT DO NOTHING
+            INSERT INTO pending_scans
+            (
+            camera_id,
+            kind,
+            range_start,
+            range_end
+            )
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT (camera_id, kind) DO UPDATE SET
+            range_start=excluded.range_start,
+            range_end=excluded.range_end
             "#,
             camera_id,
             kind,
+            range_start,
+            range_end
         )
         .execute(pool)
         .await
@@ -61,51 +77,6 @@ impl Scan {
         })
         .map(|_| ())
     }
-
-    pub(crate) async fn manual_queue_db(
-        pool: &SqlitePool,
-        camera_id: i64,
-        range: ScanRange,
-    ) -> Result<()> {
-        let mut pool = pool
-            .begin()
-            .await
-            .with_context(|| format!("Failed to start transaction with camera {}", camera_id))?;
-
-        let count = sqlx::query!(
-            "SELECT count(*) AS count FROM pending_manual_scans WHERE camera_id = ?",
-            camera_id
-        )
-        .fetch_one(&mut pool)
-        .await?;
-        if count.count >= MAX_PENDING_MANUAL_SCANS {
-            bail!("Too many pending manual scans {MAX_PENDING_MANUAL_SCANS}")
-        }
-
-        sqlx::query!(
-            r#"
-            INSERT INTO pending_manual_scans
-            (camera_id, range_start, range_end)
-            VALUES
-            (?, ?, ?)
-            "#,
-            camera_id,
-            range.start,
-            range.end,
-        )
-        .execute(&mut pool)
-        .await
-        .with_context(|| {
-            format!(
-                "Failed to insert into pending_manual_scans with camera {}",
-                camera_id
-            )
-        })?;
-
-        pool.commit()
-            .await
-            .with_context(|| format!("Failed to commit transaction with camera {}", camera_id))
-    }
 }
 
 impl ScanActor {
@@ -115,21 +86,19 @@ impl ScanActor {
             .await
             .context(format!("Failed to start transaction"))?;
 
-        // Create a handle from either pending_scans or pending_manual_scans, return if there is none
-        let handle = if let Some(pending) = sqlx::query_as_unchecked!(ScanPending,
-            r#"
-            SELECT * FROM pending_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
-            "#,
+        // Create a actor from either pending_scans or pending_manual_scans, return if there is none
+        let actor = if let Some(pending) = sqlx::query_as_unchecked!(ScanPending,
+            "SELECT * FROM pending_scans WHERE camera_id NOT IN (SELECT camera_id FROM active_scans) LIMIT 1"
         ).fetch_optional(&mut pool).await? {
             // Delete pending scan
             sqlx::query!("DELETE FROM pending_scans WHERE id = ?", pending.id)
-                .execute(&mut pool)
-                .await?;
+            .execute(&mut pool)
+            .await?;
 
-            // Create handle from pending scan kind
+            // Create actor from pending scan kind
             match pending.kind {
-                ScanKindPending::Full => ScanActor::full(pending.camera_id),
-                ScanKindPending::Cursor => {
+                ScanKind::Full => ScanActor::full(pending.camera_id),
+                ScanKind::Cursor => {
                     // Get scan camera
                     let scan_camera = sqlx::query_as_unchecked!(
                         ScanCamera,
@@ -146,69 +115,87 @@ impl ScanActor {
                     })?;
 
                     ScanActor::cursor(scan_camera)
+                },
+                ScanKind::Manual => {
+                    ScanActor::manual(
+                        pending.camera_id,
+                        ScanRange {
+                            start: pending.range_start,
+                            end: pending.range_end,
+                        },
+                    )
                 }
             }
-        } else if let Some(pending) = sqlx::query_as_unchecked!(ScanManualPending,
+        } else if let Some(completed) = sqlx::query_as_unchecked!(ScanCompleted,
             r#"
-            SELECT * FROM pending_manual_scans WHERE (camera_id) NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
+            SELECT * FROM completed_scans
+            WHERE retry_queued = true
+            AND camera_id NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
             "#,
         ).fetch_optional(&mut pool).await? {
-            // Delete pending manual scan
-            sqlx::query!("DELETE FROM pending_manual_scans WHERE id = ?", pending.id)
+            sqlx::query!("UPDATE completed_scans SET retry_queued = false, can_retry = false WHERE id = ?", completed.id)
             .execute(&mut pool)
             .await?;
 
-            // Create manual scan handle
-            ScanActor::manual(
-                pending.camera_id,
-                ScanRange {
-                    start: pending.range_start,
-                    end: pending.range_end,
-                },
-            )
+            ScanActor::from(completed)
         } else {
             return Ok(None);
         };
 
-        // Insert handle into active scans
+        // Insert actor into active scans
         sqlx::query!(
             r#"
             INSERT INTO active_scans
-            (camera_id, kind, range_start, range_end, started_at)
+            (
+            camera_id,
+            kind,
+            range_start,
+            range_end,
+            started_at,
+            range_cursor
+            )
             VALUES
-            (?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?)
             "#,
-            handle.camera_id,
-            handle.kind,
-            handle.range.start,
-            handle.range.end,
-            handle.started_at,
+            actor.camera_id,
+            actor.kind,
+            actor.range.start,
+            actor.range.end,
+            actor.started_at,
+            actor.range.end,
         )
         .execute(&mut pool)
         .await
         .with_context(|| {
             format!(
                 "Failed to create active scan with camera {}",
-                handle.camera_id
+                actor.camera_id
             )
         })?;
 
-        pool.commit()
-            .await
-            .context(format!("Failed to commit transaction"))?;
+        pool.commit().await?;
 
-        Ok(Some(handle))
+        Ok(Some(actor))
     }
 
     pub(crate) async fn update_status(
         &self,
         pool: &SqlitePool,
+        range_cursor: DateTime<Utc>,
         percent: f64,
         upserted: i64,
         deleted: i64,
     ) -> Result<()> {
         sqlx::query!(
-            "UPDATE active_scans SET percent = ?, upserted = ?, deleted = ? WHERE camera_id = ?",
+            r#"
+            UPDATE active_scans SET
+            range_cursor = ?,
+            percent = ?,
+            upserted = ?,
+            deleted = ?
+            WHERE camera_id = ?
+            "#,
+            range_cursor,
             percent,
             upserted,
             deleted,
@@ -227,20 +214,50 @@ impl ScanActor {
     }
 
     pub(crate) async fn end(self, pool: &SqlitePool) -> Result<()> {
-        let mut pool = pool.begin().await.with_context(|| {
-            format!("Failed to start transaction with camera {}", self.camera_id)
-        })?;
+        let mut pool = pool.begin().await?;
 
-        // Save scan handle to completed_scans
+        // Save scan actor to completed_scans
         if self.should_save() {
-            let duration = self.instant.elapsed().as_millis() as i64;
+            let duration = self.duration();
+            let success = self.success();
+            let can_retry = self.can_retry();
             sqlx::query!(
                 r#"
                 INSERT INTO completed_scans 
-                (camera_id, kind, range_start, range_end, started_at, upserted, deleted, duration, error)
-                SELECT camera_id, kind, range_start, range_end, started_at, upserted, deleted, ?, ? FROM active_scans WHERE camera_id = ?
+                (
+                camera_id,
+                kind,
+                range_start,
+                range_end,
+                started_at,
+                range_cursor,
+                deleted,
+                upserted,
+                percent,
+                duration,
+                success,
+                can_retry,
+                error
+                )
+                SELECT
+                camera_id,
+                kind,
+                range_start,
+                range_end,
+                started_at,
+                range_cursor,
+                deleted,
+                upserted,
+                percent,
+                ?,
+                ?,
+                ?,
+                ?
+                FROM active_scans WHERE camera_id = ?
                 "#,
                 duration,
+                success,
+                can_retry,
                 self.error,
                 self.camera_id
             )
@@ -254,7 +271,7 @@ impl ScanActor {
             })?;
         }
 
-        // Delete scan handle from active_scans
+        // Delete scan actor from active_scans
         sqlx::query!(
             "DELETE FROM active_scans WHERE camera_id = ?",
             self.camera_id
@@ -287,12 +304,9 @@ impl ScanActor {
             })?;
         }
 
-        pool.commit().await.with_context(|| {
-            format!(
-                "Failed to commit transaction with camera {}",
-                self.camera_id
-            )
-        })
+        pool.commit().await?;
+
+        Ok(())
     }
 }
 
@@ -326,15 +340,25 @@ impl ScanCompleted {
         sqlx::query_as_unchecked!(
             Self,
             r#"
-            SELECT 
-            *
-            FROM completed_scans 
-            ORDER BY started_at DESC 
+            SELECT *
+            FROM completed_scans
+            ORDER BY started_at DESC
             LIMIT 5
             "#
         )
         .fetch_all(pool)
         .await
         .with_context(|| format!("Failed to list completed scans"))
+    }
+
+    pub(crate) async fn retry_db(pool: &SqlitePool, id: i64) -> Result<()> {
+        sqlx::query!(
+            "UPDATE completed_scans SET retry_queued = true WHERE id = ? AND can_retry = true",
+            id
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(())
     }
 }

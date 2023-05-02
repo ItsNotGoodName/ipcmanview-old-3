@@ -149,10 +149,15 @@ pub struct ScanCompleted {
     pub range_start: DateTime<Utc>,
     pub range_end: DateTime<Utc>,
     pub started_at: DateTime<Utc>,
+    pub range_cursor: DateTime<Utc>,
     pub duration: i64,
-    pub error: Option<String>,
+    pub error: String,
+    pub percent: f64,
     pub upserted: i64,
     pub deleted: i64,
+    pub success: bool,
+    pub retry_queued: bool,
+    pub can_retry: bool,
 }
 
 #[derive(Serialize, Debug)]
@@ -162,6 +167,7 @@ pub struct ScanActive {
     pub range_start: DateTime<Utc>,
     pub range_end: DateTime<Utc>,
     pub started_at: DateTime<Utc>,
+    pub range_cursor: DateTime<Utc>,
     pub percent: f64,
     pub upserted: i64,
     pub deleted: i64,

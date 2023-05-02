@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcManagerStore, IpcSoftware};
 use crate::models::{
     Camera, CameraFile, CameraScanResult, CreateCamera, QueryCameraFile, QueryCameraFileCursor,
-    QueryCameraFileResult, UpdateCamera,
+    QueryCameraFileResult, ScanCompleted, UpdateCamera,
 };
 use crate::scan::{Scan, ScanActor, ScanKindPending};
 
@@ -82,7 +82,7 @@ impl Scan {
         camera_id: i64,
         kind: ScanKindPending,
     ) -> Result<()> {
-        Self::queue_db(pool, camera_id, kind).await?;
+        Self::queue_db(pool, kind, camera_id).await?;
         Self::run_pending(pool, store).await;
         Ok(())
     }
@@ -144,13 +144,27 @@ impl Scan {
     }
 }
 
+impl ScanCompleted {
+    pub async fn retry(pool: &SqlitePool, store: &IpcManagerStore, id: i64) -> Result<()> {
+        Self::retry_db(pool, id).await?;
+        Scan::run_pending(pool, store).await;
+        Ok(())
+    }
+}
+
 impl ScanActor {
     async fn runner(&self, pool: &SqlitePool, man: &IpcManager) -> Result<()> {
         let mut res = CameraScanResult::default();
         for (range, percent) in self.range.iter() {
             res += man.scan_files(pool, range.start, range.end).await?;
-            self.update_status(pool, percent, res.upserted as i64, res.deleted as i64)
-                .await?
+            self.update_status(
+                pool,
+                range.start,
+                percent,
+                res.upserted as i64,
+                res.deleted as i64,
+            )
+            .await?
         }
 
         Ok(())
@@ -163,7 +177,7 @@ impl ScanActor {
         // Run scan
         let res = self.runner(pool, &man).await;
         if let Err(ref err) = res {
-            self.error = Some(err.to_string())
+            self.error = format!("{:?}", err)
         }
 
         // End scan

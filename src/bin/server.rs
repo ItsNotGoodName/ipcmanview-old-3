@@ -58,6 +58,7 @@ async fn main() -> Result<(), rocket::Error> {
                 camera_file,
                 file_list,
                 scan_list,
+                scan_completed_retry
             ],
         )
         .launch()
@@ -336,6 +337,15 @@ async fn scan_list(pool: &Pool) -> Result<Template, Status> {
         "scans",
         context!(active_scans, completed_scans),
     ))
+}
+
+#[post("/scans/completed/<id>")]
+async fn scan_completed_retry(id: i64, pool: &Pool, store: &Store) -> Result<Redirect, Status> {
+    ScanCompleted::retry(pool, store, id)
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
+    Ok(Redirect::to(uri!(scan_list())))
 }
 
 struct Utils {}

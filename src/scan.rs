@@ -3,6 +3,8 @@ use std::time::Instant;
 use anyhow::{bail, Result};
 use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
+use crate::models::ScanCompleted;
+
 pub struct Scan {}
 
 impl Scan {
@@ -31,14 +33,17 @@ pub struct ScanRange {
 
 impl ScanRange {
     pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<Self> {
-        if start < end {
-            bail!("start date less than end date: {start} < {end}")
+        if start > end {
+            bail!("start date greater than end date: {start} > {end}")
         }
         if end > Utc::now() {
-            bail!("end date is in future: {end}")
+            bail!("end date is in the future: {end}")
         }
         if start < Scan::epoch() {
-            bail!("start date is before epoch: {start}")
+            bail!(
+                "start date is before epoch: {start}<{epoch}",
+                epoch = Scan::epoch()
+            )
         }
         Ok(ScanRange { start, end })
     }
@@ -109,11 +114,30 @@ pub enum ScanKind {
     Manual,
 }
 
-#[derive(sqlx::Type, Debug)]
-#[sqlx(rename_all = "snake_case")]
+impl From<ScanKindPending> for ScanKind {
+    fn from(value: ScanKindPending) -> Self {
+        match value {
+            ScanKindPending::Full => ScanKind::Full,
+            ScanKindPending::Cursor => ScanKind::Cursor,
+            ScanKindPending::Manual(_) => ScanKind::Manual,
+        }
+    }
+}
+
 pub enum ScanKindPending {
     Full,
     Cursor,
+    Manual(ScanRange),
+}
+
+impl ScanKindPending {
+    pub fn range(&self) -> (DateTime<Utc>, DateTime<Utc>) {
+        if let ScanKindPending::Manual(scan_range) = self {
+            (scan_range.start, scan_range.end)
+        } else {
+            (Scan::epoch(), Scan::epoch())
+        }
+    }
 }
 
 pub struct ScanActor {
@@ -122,10 +146,10 @@ pub struct ScanActor {
     pub kind: ScanKind,
     pub started_at: DateTime<Utc>,
     pub instant: Instant,
-    pub error: Option<String>,
+    pub error: String,
 }
 
-struct ScanTask {
+struct ScanActorBuilder {
     camera_id: i64,
     range: ScanRange,
     kind: ScanKind,
@@ -137,19 +161,19 @@ pub struct ScanCamera {
 }
 
 impl ScanActor {
-    fn new(builder: ScanTask) -> Self {
+    fn new(builder: ScanActorBuilder) -> Self {
         ScanActor {
             camera_id: builder.camera_id,
             range: builder.range,
             kind: builder.kind,
             started_at: Utc::now(),
             instant: Instant::now(),
-            error: None,
+            error: "".to_string(),
         }
     }
 
     pub fn manual(camera_id: i64, range: ScanRange) -> Self {
-        Self::new(ScanTask {
+        Self::new(ScanActorBuilder {
             camera_id,
             range,
             kind: ScanKind::Manual,
@@ -157,7 +181,7 @@ impl ScanActor {
     }
 
     pub fn full(camera_id: i64) -> Self {
-        Self::new(ScanTask {
+        Self::new(ScanActorBuilder {
             camera_id,
             range: ScanRange {
                 start: Scan::epoch(),
@@ -168,7 +192,7 @@ impl ScanActor {
     }
 
     pub fn cursor(scan_camera: ScanCamera) -> Self {
-        Self::new(ScanTask {
+        Self::new(ScanActorBuilder {
             camera_id: scan_camera.id,
             range: ScanRange {
                 start: scan_camera.scan_cursor,
@@ -190,5 +214,30 @@ impl ScanActor {
             ScanKind::Full | ScanKind::Manual => true,
             ScanKind::Cursor => false,
         }
+    }
+
+    pub fn duration(&self) -> i64 {
+        self.instant.elapsed().as_millis() as i64
+    }
+
+    pub fn success(&self) -> bool {
+        self.error.is_empty()
+    }
+
+    pub fn can_retry(&self) -> bool {
+        !self.error.is_empty()
+    }
+}
+
+impl From<ScanCompleted> for ScanActor {
+    fn from(value: ScanCompleted) -> Self {
+        Self::new(ScanActorBuilder {
+            camera_id: value.camera_id,
+            range: ScanRange {
+                start: value.range_start,
+                end: value.range_cursor,
+            },
+            kind: value.kind,
+        })
     }
 }

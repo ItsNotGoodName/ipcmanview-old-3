@@ -6,6 +6,11 @@
   </div>
   <div>
     <h1>Show Completed Scans</h1>
-    <pre>{{ completed_scans | json_encode(pretty=true) | safe }}</pre>
+    {% for scan in completed_scans %}
+      <form method="post" action="/scans/completed/{{scan.id}}">
+        <button type="submit" {% if not scan.can_retry %}disabled{% endif %}>retry</button>
+      </form>
+    <pre>{{ scan | json_encode(pretty=true) | safe }}</pre>
+    {% endfor %}
   </div>
 {% endblock content %}

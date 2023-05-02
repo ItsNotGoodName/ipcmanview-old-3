@@ -66,16 +66,10 @@ CREATE TABLE IF NOT EXISTS ipc_events (
 CREATE TABLE IF NOT EXISTS pending_scans (
     id INTEGER PRIMARY KEY,
     camera_id INTEGER NOT NULL,
-    kind STRING NOT NULL, -- full, cursor
-    UNIQUE (camera_id, kind),
-    FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS pending_manual_scans (
-    id INTEGER PRIMARY KEY,
-    camera_id INTEGER NOT NULL,
+    kind STRING NOT NULL, -- full, cursor, manual
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
+    UNIQUE (camera_id, kind),
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
@@ -85,22 +79,37 @@ CREATE TABLE IF NOT EXISTS active_scans (
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
     started_at DATETIME NOT NULL,
-    percent REAL NOT NULL DEFAULT 0.0,
-    upserted INTEGER NOT NULL DEFAULT 0,
+
+    -- Mutable
+    range_cursor DATETIME NOT NULL,
     deleted INTEGER NOT NULL DEFAULT 0,
+    upserted INTEGER NOT NULL DEFAULT 0,
+    percent REAL NOT NULL DEFAULT 0.0,
+
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS completed_scans (
     id INTEGER PRIMARY KEY,
+    --
     camera_id INTEGER NOT NULL,
     kind STRING NOT NULL, -- full, cursor, manual
     range_start DATETIME NOT NULL,
     range_end DATETIME NOT NULL,
     started_at DATETIME NOT NULL,
-    duration INTEGER NOT NULL,
-    error STRING,
-    upserted INTEGER NOT NULL,
+    --
+    range_cursor DATETIME NOT NULL,
     deleted INTEGER NOT NULL,
+    upserted INTEGER NOT NULL,
+    percent REAL NOT NULL,
+    --
+    duration INTEGER NOT NULL,
+    success BOOLEAN NOT NULL,
+    error STRING NOT NULL,
+
+    -- Mutable
+    retry_queued BOOLEAN NOT NULL DEFAULT false,
+    can_retry BOOLEAN NOT NULL,
+
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE
 );
