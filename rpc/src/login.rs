@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use super::{modules::global, utils, Client, Connection, Error, LoginError, State};
+use super::{modules::global, utils, Client, Error, LoginError, State};
 
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
@@ -9,10 +9,7 @@ impl Client {
     pub async fn logout(&mut self) {
         if let State::Login(_) = self.state {
             global::logout(self.rpc()).await.ok();
-
-            // TRANSITION - Login -> Logout
-            self.connection = Connection::default();
-            self.state = State::Logout;
+            self.transition(State::Logout)
         }
     }
 
@@ -22,26 +19,24 @@ impl Client {
             State::Logout => {}
             State::Login(_) => {
                 global::logout(self.rpc()).await.ok();
-
-                // TRANSITION - Login -> Logout
-                self.connection = Connection::default();
-                self.state = State::Logout;
+                self.transition(State::Logout)
             }
             State::Error(err) => return Err(Error::Login(err)),
         }
 
         match self.login_procedure().await {
             Ok(o) => {
-                self.state = State::Login(Instant::now());
+                self.transition(State::Login(Instant::now()));
                 Ok(o)
             }
             Err(err) => {
-                // Block client on a login error
                 if let Error::Login(err) = err {
-                    // TRANSTION - Logout -> Error
-                    self.state = State::Error(err);
+                    // Block client on a login error
+                    self.transition(State::Error(err));
+                } else {
+                    // Reset connection
+                    self.transition(State::Logout);
                 }
-                self.connection = Connection::default();
 
                 Err(err)
             }
@@ -51,7 +46,7 @@ impl Client {
     async fn login_procedure(&mut self) -> Result<(), Error> {
         // Do a first login and set our session
         let (first_login, res) = global::first_login(self.rpc_login(), &self.username).await?;
-        self.connection.session = res.session;
+        self.connection.session = res.session();
         // Make sure the caemra supports this login procedure
         match res.error {
             Some(err) => match err.code {
@@ -105,19 +100,22 @@ impl Client {
             // Run keep alive
             match global::keep_alive(self.rpc()).await {
                 Ok(_) => {
-                    self.state = State::Login(Instant::now());
-
+                    self.transition(State::Login(Instant::now()));
                     Ok(())
                 }
                 Err(err @ Error::Request(_)) => Err(err), // Camera probably unreachable
                 Err(_) => {
                     // Let's just assume that our session is invalid
+                    self.transition(State::Logout);
 
-                    // TRANSITION - Login -> Logout
-                    self.state = State::Logout;
-                    self.connection = Connection::default();
-
-                    self.login().await
+                    match self.login().await {
+                        Ok(o) => Ok(o),
+                        // Assume error was a connection reset because we did a keep alive and login request on the same connection
+                        // This only affects some cameras such as the "SD2A500-GN-A-PV"
+                        // TODO: check error kind is OS connection reset
+                        Err(Error::Request(_)) => self.login().await,
+                        Err(err) => Err(err),
+                    }
                 }
             }
         } else {

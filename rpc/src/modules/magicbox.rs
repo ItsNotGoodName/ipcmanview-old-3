@@ -75,10 +75,11 @@ struct GetMarketArea {
 }
 
 pub async fn reboot(rpc: RequestBuilder) -> Result<bool, Error> {
-    rpc.method("magicBox.reboot")
+    Ok(rpc
+        .method("magicBox.reboot")
         .send::<Value>()
         .await?
-        .result()
+        .result())
 }
 
 pub async fn need_reboot(rpc: RequestBuilder) -> Result<bool, Error> {

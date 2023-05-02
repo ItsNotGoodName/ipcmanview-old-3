@@ -5,8 +5,6 @@ pub use reqwest;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 
-use utils::{de_int_bool_to_i64, de_number_string_to_string};
-
 pub mod cookie;
 pub mod file;
 pub mod login;
@@ -103,15 +101,30 @@ impl Error {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(untagged)]
+enum ResponseResult {
+    Bool(bool),
+    Num(i64),
+}
+
+#[derive(Deserialize, Default, Debug)]
+#[serde(untagged)]
+enum ResponseSession {
+    Str(String),
+    Num(i64),
+    #[default]
+    None,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Response<T = Value> {
     #[serde(default)]
     pub id: i32,
-    #[serde(default, deserialize_with = "de_number_string_to_string")]
-    pub session: String,
+    #[serde(default)]
+    session: ResponseSession,
     pub error: Option<ResponseError>,
     pub params: Option<T>,
-    #[serde(deserialize_with = "de_int_bool_to_i64")]
-    pub result: i64,
+    result: ResponseResult,
 }
 
 impl<T> Response<T> {
@@ -129,12 +142,27 @@ impl<T> Response<T> {
         }
     }
 
-    pub fn result(self) -> Result<bool, Error> {
-        Ok(self.result != 0)
+    pub fn session(&self) -> String {
+        match self.session {
+            ResponseSession::Str(ref session) => session.clone(),
+            ResponseSession::Num(number) => number.to_string(),
+            ResponseSession::None => "".to_string(),
+        }
     }
 
-    pub fn result_number(self) -> Result<i64, Error> {
-        Ok(self.result)
+    pub fn result(self) -> bool {
+        match self.result {
+            ResponseResult::Bool(result) => result,
+            ResponseResult::Num(result) => result != 0,
+        }
+    }
+
+    pub fn result_number(self) -> i64 {
+        match self.result {
+            ResponseResult::Bool(true) => 1,
+            ResponseResult::Bool(false) => 0,
+            ResponseResult::Num(result) => result,
+        }
     }
 }
 
@@ -275,5 +303,17 @@ impl Client {
             self.client.clone(),
             self.connection.session.clone(),
         )
+    }
+
+    fn transition(&mut self, state: State) {
+        match (&self.state, &state) {
+            // Successful login
+            (State::Logout, State::Login(_)) => {}
+            // Successful keep alive
+            (State::Login(_), State::Login(_)) => {}
+            _ => self.connection = Connection::default(),
+        }
+
+        self.state = state;
     }
 }

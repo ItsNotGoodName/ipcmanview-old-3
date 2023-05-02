@@ -44,7 +44,7 @@ pub(crate) async fn second_login(
     login_type: &str,
     authority_type: &str,
 ) -> Result<bool, Error> {
-    rpc_login
+    Ok(rpc_login
         .method("global.login")
         .params(json!({
             "userName": username,
@@ -55,11 +55,11 @@ pub(crate) async fn second_login(
         }))
         .send::<Value>()
         .await?
-        .result()
+        .result())
 }
 
 pub(crate) async fn logout(rpc: RequestBuilder) -> Result<bool, Error> {
-    rpc.method("global.logout").send::<Value>().await?.result()
+    Ok(rpc.method("global.logout").send::<Value>().await?.result())
 }
 
 pub(crate) async fn keep_alive(rpc: RequestBuilder) -> Result<i32, Error> {

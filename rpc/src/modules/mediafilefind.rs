@@ -157,10 +157,11 @@ struct GetCount {
 }
 
 pub async fn create(rpc: RequestBuilder) -> Result<i64, Error> {
-    rpc.method("mediaFileFind.factory.create")
+    Ok(rpc
+        .method("mediaFileFind.factory.create")
         .send::<Value>()
         .await?
-        .result_number()
+        .result_number())
 }
 
 pub async fn find_file(
@@ -168,14 +169,15 @@ pub async fn find_file(
     object: i64,
     condition: Condition,
 ) -> Result<bool, Error> {
-    rpc.method("mediaFileFind.findFile")
+    Ok(rpc
+        .method("mediaFileFind.findFile")
         .params(json!({
             "condition": condition,
         }))
         .object(object)
         .send::<Value>()
         .await?
-        .result()
+        .result())
 }
 
 pub async fn find_next_file(
@@ -202,19 +204,21 @@ pub async fn get_count(rpc: RequestBuilder, object: i64) -> Result<i32, Error> {
 }
 
 pub async fn close(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
-    rpc.method("mediaFileFind.close")
+    Ok(rpc
+        .method("mediaFileFind.close")
         .object(object)
         .send::<Value>()
         .await?
-        .result()
+        .result())
 }
 
 pub async fn destroy(rpc: RequestBuilder, object: i64) -> Result<bool, Error> {
-    rpc.method("mediaFileFind.destroy")
+    Ok(rpc
+        .method("mediaFileFind.destroy")
         .object(object)
         .send::<Value>()
         .await?
-        .result()
+        .result())
 }
 
 #[cfg(test)]

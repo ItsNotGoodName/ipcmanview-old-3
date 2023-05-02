@@ -39,23 +39,6 @@ where
     ))
 }
 
-pub fn de_int_bool_to_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    match serde_json::Value::deserialize(deserializer)? {
-        serde_json::Value::Bool(b) => Ok(b as i64),
-        serde_json::Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Ok(i)
-            } else {
-                Err(serde::de::Error::custom("invalid number value"))
-            }
-        }
-        _ => Err(de::Error::custom("expected bool or number")),
-    }
-}
-
 pub fn de_int_float_to_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
 where
     D: Deserializer<'de>,
@@ -71,17 +54,6 @@ where
             }
         }
         _ => Err(de::Error::custom("expected number")),
-    }
-}
-
-pub fn de_number_string_to_string<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    match de::Deserialize::deserialize(deserializer)? {
-        serde_json::Value::Number(n) => Ok(n.to_string()),
-        serde_json::Value::String(s) => Ok(s),
-        _ => Err(de::Error::custom("expected string or number")),
     }
 }
 
