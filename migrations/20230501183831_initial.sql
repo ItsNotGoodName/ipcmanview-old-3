@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS completed_scans (
     error STRING NOT NULL,
 
     -- Mutable
-    retry_queued BOOLEAN NOT NULL DEFAULT false,
+    retry_pending BOOLEAN NOT NULL DEFAULT false,
     can_retry BOOLEAN NOT NULL,
 
     FOREIGN KEY (camera_id) REFERENCES cameras (id) ON DELETE CASCADE

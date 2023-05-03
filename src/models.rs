@@ -156,7 +156,7 @@ pub struct ScanCompleted {
     pub upserted: i64,
     pub deleted: i64,
     pub success: bool,
-    pub retry_queued: bool,
+    pub retry_pending: bool,
     pub can_retry: bool,
 }
 
@@ -171,4 +171,13 @@ pub struct ScanActive {
     pub percent: f64,
     pub upserted: i64,
     pub deleted: i64,
+}
+
+#[derive(Serialize, Debug)]
+pub struct ScanPending {
+    pub id: i64,
+    pub camera_id: i64,
+    pub range_start: DateTime<Utc>,
+    pub range_end: DateTime<Utc>,
+    pub kind: ScanKind,
 }

@@ -3,16 +3,8 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
 
-use crate::models::{ScanActive, ScanCompleted};
+use crate::models::{ScanActive, ScanCompleted, ScanPending};
 use crate::scan::{Scan, ScanActor, ScanCamera, ScanKind, ScanKindPending, ScanRange};
-
-struct ScanPending {
-    id: i64,
-    camera_id: i64,
-    range_start: DateTime<Utc>,
-    range_end: DateTime<Utc>,
-    kind: ScanKind,
-}
 
 impl Scan {
     pub(crate) async fn queue_all_db(pool: &SqlitePool, kind: ScanKindPending) -> Result<()> {
@@ -21,7 +13,7 @@ impl Scan {
 
         sqlx::query!(
             r#"
-            INSERT OR IGNORE INTO pending_scans
+            REPLACE INTO pending_scans
             (
             camera_id,
             kind,
@@ -50,7 +42,7 @@ impl Scan {
 
         sqlx::query!(
             r#"
-            INSERT INTO pending_scans
+            REPLACE INTO pending_scans
             (
             camera_id,
             kind,
@@ -58,9 +50,6 @@ impl Scan {
             range_end
             )
             VALUES (?, ?, ?, ?)
-            ON CONFLICT (camera_id, kind) DO UPDATE SET
-            range_start=excluded.range_start,
-            range_end=excluded.range_end
             "#,
             camera_id,
             kind,
@@ -81,10 +70,7 @@ impl Scan {
 
 impl ScanActor {
     pub(crate) async fn next(pool: &SqlitePool) -> Result<Option<Self>> {
-        let mut pool = pool
-            .begin()
-            .await
-            .context(format!("Failed to start transaction"))?;
+        let mut pool = pool.begin().await?;
 
         // Create a actor from either pending_scans or pending_manual_scans, return if there is none
         let actor = if let Some(pending) = sqlx::query_as_unchecked!(ScanPending,
@@ -129,11 +115,11 @@ impl ScanActor {
         } else if let Some(completed) = sqlx::query_as_unchecked!(ScanCompleted,
             r#"
             SELECT * FROM completed_scans
-            WHERE retry_queued = true
+            WHERE retry_pending = true
             AND camera_id NOT IN (SELECT camera_id FROM active_scans) LIMIT 1
             "#,
         ).fetch_optional(&mut pool).await? {
-            sqlx::query!("UPDATE completed_scans SET retry_queued = false, can_retry = false WHERE id = ?", completed.id)
+            sqlx::query!("UPDATE completed_scans SET retry_pending = false, can_retry = false WHERE id = ?", completed.id)
             .execute(&mut pool)
             .await?;
 
@@ -353,12 +339,21 @@ impl ScanCompleted {
 
     pub(crate) async fn retry_db(pool: &SqlitePool, id: i64) -> Result<()> {
         sqlx::query!(
-            "UPDATE completed_scans SET retry_queued = true WHERE id = ? AND can_retry = true",
+            "UPDATE completed_scans SET retry_pending = true WHERE id = ? AND can_retry = true",
             id
         )
         .execute(pool)
         .await?;
 
         Ok(())
+    }
+}
+
+impl ScanPending {
+    pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
+        sqlx::query_as_unchecked!(Self, "SELECT * FROM pending_scans")
+            .fetch_all(pool)
+            .await
+            .with_context(|| format!("Failed to list pending scans"))
     }
 }

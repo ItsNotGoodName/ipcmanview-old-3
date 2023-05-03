@@ -6,7 +6,7 @@ use ipcmanview::db;
 use ipcmanview::ipc::{IpcManager, IpcManagerStore};
 use ipcmanview::models::{
     Camera, CameraFile, CreateCamera, QueryCameraFile, QueryCameraFileFilter, ScanActive,
-    ScanCompleted, ShowCamera, UpdateCamera,
+    ScanCompleted, ScanPending, ShowCamera, UpdateCamera,
 };
 use ipcmanview::scan::{Scan, ScanKindPending};
 use rocket::form::Form;
@@ -333,9 +333,13 @@ async fn scan_list(pool: &Pool) -> Result<Template, Status> {
         .await
         .map_err(|_| Status::InternalServerError)?;
 
+    let pending_scans = ScanPending::list(pool)
+        .await
+        .map_err(|_| Status::InternalServerError)?;
+
     Ok(Template::render(
         "scans",
-        context!(active_scans, completed_scans),
+        context!(active_scans, completed_scans, pending_scans),
     ))
 }
 
