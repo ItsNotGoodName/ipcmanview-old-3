@@ -1,7 +1,7 @@
-use super::Client;
+use crate::Client;
 
 impl Client {
-    pub fn cookie(&self) -> String {
+    pub fn cookie_raw(&self) -> String {
         format!("WebClientSessionID={session}; DWebClientSessionID={session}; DhWebClientSessionID={session}", session=self.connection.session)
     }
 }

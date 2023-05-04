@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use super::{modules::global, utils, Client, Error, LoginError, State};
+use crate::{modules::global, utils, Client, Error, LoginError, RequestBuilder, State};
 
 const TIMEOUT: u64 = 60;
 const WATCH_NET: &str = "WatchNet";
@@ -8,7 +8,7 @@ const WATCH_NET: &str = "WatchNet";
 impl Client {
     pub async fn logout(&mut self) {
         if let State::Login(_) = self.state {
-            global::logout(self.rpc()).await.ok();
+            global::logout(self.rpc_raw()).await.ok();
             self.transition(State::Logout)
         }
     }
@@ -18,7 +18,7 @@ impl Client {
         match self.state {
             State::Logout => {}
             State::Login(_) => {
-                global::logout(self.rpc()).await.ok();
+                global::logout(self.rpc_raw()).await.ok();
                 self.transition(State::Logout)
             }
             State::Error(err) => return Err(Error::Login(err)),
@@ -98,7 +98,7 @@ impl Client {
             }
 
             // Run keep alive
-            match global::keep_alive(self.rpc()).await {
+            match global::keep_alive(self.rpc_raw()).await {
                 Ok(_) => {
                     self.transition(State::Login(Instant::now()));
                     Ok(())
@@ -121,5 +121,13 @@ impl Client {
         } else {
             self.login().await
         }
+    }
+
+    pub async fn rpc(&mut self) -> Result<RequestBuilder, Error> {
+        self.keep_alive_or_login().await.map(|_| self.rpc_raw())
+    }
+
+    pub async fn cookie(&mut self) -> Result<String, Error> {
+        self.keep_alive_or_login().await.map(|_| self.cookie_raw())
     }
 }

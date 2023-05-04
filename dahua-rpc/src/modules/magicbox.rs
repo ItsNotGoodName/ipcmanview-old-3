@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use serde_json::{json, Value};
 
-use super::super::{utils::de_int_float_to_i64, Error, RequestBuilder};
+use crate::{utils::de_int_float_to_i64, Error, RequestBuilder};
 
 #[derive(Deserialize, Debug)]
 struct NeedReboot {

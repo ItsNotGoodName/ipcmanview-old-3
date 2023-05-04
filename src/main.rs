@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use dotenvy::dotenv;
 use ipcmanview::{db, http, ipc::IpcManagerStore};
@@ -9,17 +9,28 @@ async fn main() {
 
     dotenv().ok();
 
-    // Setup
-    let database_url =
+    let config_database_url =
         std::env::var("DATABASE_URL").unwrap_or("sqlite://ipcmanview.db".to_string());
-    let pool = db::new(&database_url).await.unwrap();
-    let store = IpcManagerStore::new(&pool).await.unwrap();
+    let config_port: u16 = std::env::var("HTTP_PORT")
+        .map_or_else(|_| 8000, |port| port.parse().expect("Invalid HTTP_PORT"));
+    let config_ip: IpAddr = std::env::var("HTTP_IP").map_or_else(
+        |_| IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+        |ip| ip.parse().expect("Invalid HTTP_IP"),
+    );
+
+    // Setup
+    let pool = db::new(&config_database_url)
+        .await
+        .expect("Failed to open database");
+    let store = IpcManagerStore::new(&pool)
+        .await
+        .expect("Failed to create store");
     let client = reqwest::ClientBuilder::new()
         .no_deflate()
         // HACK: prevent connection reset when requesting too fast
         .pool_max_idle_per_host(0)
         .build()
-        .unwrap();
+        .expect("Failed to create reqwest client");
 
     // App
     let app = http::app(http::AppState {
@@ -29,7 +40,7 @@ async fn main() {
     });
 
     // Listen
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8000));
+    let addr = SocketAddr::from((config_ip, config_port));
     tracing::debug!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
@@ -42,13 +53,13 @@ pub async fn shutdown_signal(store: IpcManagerStore) {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await
-            .expect("failed to install Ctrl+C handler");
+            .expect("Failed to install Ctrl+C handler");
     };
 
     #[cfg(unix)]
     let terminate = async {
         tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
+            .expect("Failed to install signal handler")
             .recv()
             .await;
     };

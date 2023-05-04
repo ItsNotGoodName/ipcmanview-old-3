@@ -286,7 +286,7 @@ impl Client {
         }
     }
 
-    pub fn rpc(&mut self) -> RequestBuilder {
+    pub fn rpc_raw(&mut self) -> RequestBuilder {
         RequestBuilder::new(
             self.connection.next_id(),
             format!("http://{}/RPC2", self.ip),

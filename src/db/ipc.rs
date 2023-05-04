@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use rpc::modules::mediafilefind;
+use dahua_rpc::modules::mediafilefind;
 use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite, SqlitePool};
 
 use crate::{

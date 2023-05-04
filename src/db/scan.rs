@@ -276,7 +276,7 @@ impl ScanActor {
             let scan_cursor = self.range.scan_cursor();
 
             sqlx::query!(
-                "UPDATE cameras SET scan_cursor = ? WHERE id = ?",
+                "UPDATE cameras SET scan_cursor = ?1 WHERE id = ?2 AND scan_cursor < ?1",
                 scan_cursor,
                 self.camera_id,
             )

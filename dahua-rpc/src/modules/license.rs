@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 
-use super::super::{Error, RequestBuilder};
+use crate::{Error, RequestBuilder};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct InfoInfo {
+pub struct Info {
     #[serde(rename = "AbroadInfo")]
     pub abroad_info: String,
     #[serde(rename = "AllType")]
@@ -25,14 +25,14 @@ pub struct InfoInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Info {
+pub struct InfoContainer {
     #[serde(rename = "Info")]
-    pub info: InfoInfo,
+    pub info: Info,
 }
 
-pub async fn get_license_info(rpc: RequestBuilder) -> Result<Vec<Info>, Error> {
+pub async fn get_license_info(rpc: RequestBuilder) -> Result<Vec<InfoContainer>, Error> {
     rpc.method("License.getLicenseInfo")
-        .send::<Vec<Info>>()
+        .send::<Vec<InfoContainer>>()
         .await?
         .params()
 }

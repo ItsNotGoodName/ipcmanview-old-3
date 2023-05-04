@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::{bail, Context, Result};
-use rpc::{
+use dahua_rpc::{
     modules::{license, magicbox, mediafilefind},
     reqwest, Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };
@@ -41,15 +41,14 @@ impl IpcManager {
 
     pub async fn rpc(&self) -> Result<RequestBuilder, Error> {
         let mut client = self.client.lock().await;
-        client.keep_alive_or_login().await.map(|_| client.rpc())
+        client.rpc().await
     }
 
     pub async fn file(&self, file_path: &str) -> Result<IpcFile, Error> {
         let mut client = self.client.lock().await;
-        client.keep_alive_or_login().await?;
 
         Ok(IpcFile {
-            cookie: client.cookie(),
+            cookie: client.cookie().await?,
             url: client.file_url(file_path),
         })
     }
@@ -57,7 +56,7 @@ impl IpcManager {
     pub async fn close(&self) {
         let mut client = self.client.lock().await;
         client.logout().await;
-        client.state = rpc::State::Error(rpc::LoginError::Closed)
+        client.state = dahua_rpc::State::Error(dahua_rpc::LoginError::Closed)
     }
 }
 
@@ -95,7 +94,7 @@ impl IpcSoftware {
     }
 }
 
-pub struct IpcLicenses(pub Vec<license::Info>);
+pub struct IpcLicenses(pub Vec<license::InfoContainer>);
 
 impl IpcLicenses {
     pub async fn get(man: &IpcManager) -> Result<Self, Error> {
@@ -202,14 +201,14 @@ impl ICamera {
     pub fn to_camera_manager(self, client: reqwest::Client) -> IpcManager {
         IpcManager::new(
             self.id,
-            rpc::Client::new(client, self.ip, self.username, self.password),
+            dahua_rpc::Client::new(client, self.ip, self.username, self.password),
         )
     }
 }
 
 impl IpcManagerStore {
     pub async fn new(pool: &sqlx::SqlitePool) -> Result<IpcManagerStore> {
-        let client = rpc::recommended_reqwest_client_builder()
+        let client = dahua_rpc::recommended_reqwest_client_builder()
             .build()
             .context("Failed to build reqwest client")?;
         let mans = ICamera::list(pool)

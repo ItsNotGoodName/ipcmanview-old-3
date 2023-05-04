@@ -1,4 +1,4 @@
-use super::Client;
+use crate::Client;
 
 impl Client {
     pub fn file_url(&self, file_path: &str) -> String {
