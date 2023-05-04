@@ -5,12 +5,12 @@ use axum::{
     Router,
 };
 
-use crate::ipc::{IpcManager, IpcManagerStore};
+use crate::ipc::{IpcManager, IpcStore};
 
 #[derive(Clone)]
 pub struct AppState {
     pub pool: sqlx::SqlitePool,
-    pub store: IpcManagerStore,
+    pub store: IpcStore,
     pub client: reqwest::Client,
 }
 

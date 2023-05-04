@@ -1,7 +1,7 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use dotenvy::dotenv;
-use ipcmanview::{db, http, ipc::IpcManagerStore};
+use ipcmanview::{db, http, ipc::IpcStore};
 
 #[tokio::main]
 async fn main() {
@@ -23,7 +23,7 @@ async fn main() {
     let pool = db::new(&config_database_url)
         .await
         .expect("Failed to open database");
-    let store = IpcManagerStore::new(&pool)
+    let store = IpcStore::new(pool.clone())
         .await
         .expect("Failed to create store");
     let client = reqwest::ClientBuilder::new()
@@ -50,7 +50,7 @@ async fn main() {
         .unwrap();
 }
 
-pub async fn shutdown_signal(store: IpcManagerStore) {
+pub async fn shutdown_signal(store: IpcStore) {
     let ctrl_c = async {
         tokio::signal::ctrl_c()
             .await
@@ -75,7 +75,7 @@ pub async fn shutdown_signal(store: IpcManagerStore) {
 
     println!("signal received, starting graceful shutdown");
 
-    store.reset().await;
+    store.shutdown().await;
 
     println!("done");
 }

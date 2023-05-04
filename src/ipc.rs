@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{anyhow, Context, Result};
 use dahua_rpc::{
     modules::{license, magicbox, mediafilefind},
     reqwest, Client, Error, RequestBuilder, ResponseError, ResponseKind,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{mpsc, oneshot, Mutex};
 
 /// Turns rpc::ResponseError to Ok(None), Ok(o) to Ok(Some(o)) and, any other error to Err(rpc::Error)
 fn maybe<T>(check: Result<T, Error>) -> Result<T, Error>
@@ -189,84 +189,151 @@ impl IpcFileStream<'_> {
     }
 }
 
-#[derive(Clone)]
-pub struct IpcManagerStore {
-    mans: Arc<Mutex<Vec<IpcManager>>>,
-    client: reqwest::Client,
-}
-
 use crate::models::ICamera;
 
-impl ICamera {
-    pub fn to_camera_manager(self, client: reqwest::Client) -> IpcManager {
+impl From<(ICamera, reqwest::Client)> for IpcManager {
+    fn from(value: (ICamera, reqwest::Client)) -> Self {
         IpcManager::new(
-            self.id,
-            dahua_rpc::Client::new(client, self.ip, self.username, self.password),
+            value.0.id,
+            dahua_rpc::Client::new(value.1, value.0.ip, value.0.username, value.0.password),
         )
     }
 }
 
-impl IpcManagerStore {
-    pub async fn new(pool: &sqlx::SqlitePool) -> Result<IpcManagerStore> {
+enum IpcStoreMessage {
+    Get(i64, oneshot::Sender<Option<IpcManager>>),
+    Refresh(i64),
+    Shutdown(oneshot::Sender<()>),
+}
+
+struct IpcStoreActor {
+    receiver: mpsc::Receiver<IpcStoreMessage>,
+    mans: Vec<IpcManager>,
+    client: reqwest::Client,
+    pool: sqlx::SqlitePool,
+}
+
+impl IpcStoreActor {
+    async fn new(
+        receiver: mpsc::Receiver<IpcStoreMessage>,
+        pool: sqlx::SqlitePool,
+    ) -> Result<Self> {
         let client = dahua_rpc::recommended_reqwest_client_builder()
             .build()
             .context("Failed to build reqwest client")?;
-        let mans = ICamera::list(pool)
+
+        let mans = ICamera::list(&pool)
             .await?
             .into_iter()
-            .map(|c| c.to_camera_manager(client.clone()))
+            .map(|c| IpcManager::from((c, client.clone())))
             .collect();
 
-        Ok(IpcManagerStore {
-            mans: Arc::new(Mutex::new(mans)),
+        Ok(IpcStoreActor {
+            receiver,
+            mans,
             client,
+            pool,
         })
     }
 
-    pub async fn refresh(&self, pool: &sqlx::SqlitePool, id: i64) -> Result<()> {
-        let mut mans = self.mans.lock().await;
-        let icam = ICamera::find(pool, id).await?;
-        let old = mans.iter().enumerate().find(|(_, old)| old.id == id);
-        match (icam, old) {
-            // Update
-            (Some(icam), Some((idx, old))) => {
-                old.close().await;
-                mans[idx] = icam.to_camera_manager(self.client.clone());
-            }
-            // Add
-            (Some(icam), None) => mans.push(icam.to_camera_manager(self.client.clone())),
-            // Delete
-            (None, Some((idx, _))) => {
-                mans.remove(idx);
-            }
-            (None, None) => {}
-        }
+    async fn handle_message(&mut self, msg: IpcStoreMessage) {
+        match msg {
+            IpcStoreMessage::Get(id, respond_to) => {
+                for man in self.mans.iter() {
+                    if man.id == id {
+                        respond_to.send(Some(man.clone())).ok();
+                        return;
+                    }
+                }
 
-        Ok(())
+                respond_to.send(None).ok();
+            }
+            IpcStoreMessage::Refresh(id) => {
+                let icam = match ICamera::find(&self.pool, id).await {
+                    Ok(o) => o,
+                    Err(err) => {
+                        tracing::error!("{err:?}");
+                        return;
+                    }
+                };
+                let old = self.mans.iter().enumerate().find(|(_, old)| old.id == id);
+
+                match (icam, old) {
+                    // Update
+                    (Some(icam), Some((idx, old))) => {
+                        old.close().await;
+                        self.mans[idx] = IpcManager::from((icam, self.client.clone()));
+                    }
+                    // Add
+                    (Some(icam), None) => self
+                        .mans
+                        .push(IpcManager::from((icam, self.client.clone()))),
+                    // Delete
+                    (None, Some((idx, old))) => {
+                        old.close().await;
+                        self.mans.remove(idx);
+                    }
+                    (None, None) => {}
+                }
+            }
+            IpcStoreMessage::Shutdown(respond_to) => {
+                for man in self.mans.iter() {
+                    man.close().await;
+                }
+
+                self.receiver.close();
+
+                respond_to.send(()).ok();
+            }
+        }
     }
 
-    pub async fn list(&self) -> Vec<IpcManager> {
-        self.mans.lock().await.clone()
+    async fn run(mut self) {
+        while let Some(msg) = self.receiver.recv().await {
+            self.handle_message(msg).await
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct IpcStore {
+    sender: mpsc::Sender<IpcStoreMessage>,
+}
+
+impl IpcStore {
+    pub async fn new(pool: sqlx::SqlitePool) -> Result<Self> {
+        let (sender, receiver) = mpsc::channel(8);
+        let actor = IpcStoreActor::new(receiver, pool).await?;
+        tokio::spawn(actor.run());
+
+        Ok(Self { sender })
+    }
+
+    pub async fn get_optional(&self, id: i64) -> Result<Option<IpcManager>> {
+        let (send, recv) = oneshot::channel();
+        let msg = IpcStoreMessage::Get(id, send);
+        self.sender.send(msg).await.ok();
+        recv.await.context("Store is shutdown")
     }
 
     pub async fn get(&self, id: i64) -> Result<IpcManager> {
-        let mans = self.mans.lock().await;
-        for man in mans.iter() {
-            if man.id == id {
-                return Ok(man.clone());
-            }
-        }
-
-        bail!("Failed to get ipc manager with id {}", id)
+        self.get_optional(id)
+            .await?
+            .ok_or_else(|| anyhow!("Manager not found with id {id}"))
     }
 
-    pub async fn reset(&self) {
-        let mut mans = self.mans.lock().await;
+    pub async fn refresh(&self, id: i64) -> Result<()> {
+        let msg = IpcStoreMessage::Refresh(id);
+        self.sender
+            .send(msg)
+            .await
+            .map_err(|_| anyhow!("Store is shutdown"))
+    }
 
-        for man in mans.iter() {
-            man.close().await;
-        }
-
-        *mans = vec![];
+    pub async fn shutdown(&self) {
+        let (send, recv) = oneshot::channel();
+        let msg = IpcStoreMessage::Shutdown(send);
+        self.sender.send(msg).await.ok();
+        recv.await.ok();
     }
 }

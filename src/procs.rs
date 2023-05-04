@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
 
-use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcManagerStore, IpcSoftware};
+use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcSoftware, IpcStore};
 use crate::models::{
     Camera, CameraFile, CameraScanResult, CreateCamera, QueryCameraFile, QueryCameraFileCursor,
     QueryCameraFileResult, ScanCompleted, UpdateCamera,
@@ -11,11 +11,11 @@ use crate::scan::{Scan, ScanActor, ScanKindPending};
 // -------------------- Camera
 
 impl CreateCamera {
-    pub async fn create(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<i64> {
+    pub async fn create(self, pool: &SqlitePool, store: &IpcStore) -> Result<i64> {
         // Create in database
         let id = self.create_db(pool).await?;
         // Refresh in store
-        store.refresh(pool, id).await?;
+        store.refresh(id).await?;
         // Get from store and refresh in database
         store.get(id).await?.refresh(pool).await.ok();
         // Queue a full scan
@@ -26,11 +26,11 @@ impl CreateCamera {
 }
 
 impl UpdateCamera {
-    pub async fn update(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<()> {
+    pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<()> {
         let id = self.id;
         self.update_db(pool).await?;
         // Refresh in store
-        store.refresh(pool, id).await?;
+        store.refresh(id).await?;
         // Get from store and refresh in database
         store.get(id).await?.refresh(pool).await.ok();
 
@@ -39,10 +39,10 @@ impl UpdateCamera {
 }
 
 impl Camera {
-    pub async fn delete(pool: &SqlitePool, store: &IpcManagerStore, id: i64) -> Result<()> {
+    pub async fn delete(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<()> {
         Self::delete_db(pool, id).await?;
         // Refresh in store
-        store.refresh(pool, id).await?;
+        store.refresh(id).await?;
 
         Ok(())
     }
@@ -62,7 +62,7 @@ impl IpcManager {
 impl CameraFile {
     pub async fn query(
         pool: &SqlitePool,
-        store: &IpcManagerStore,
+        store: &IpcStore,
         query: QueryCameraFile<'_>,
     ) -> Result<QueryCameraFileResult> {
         if let QueryCameraFileCursor::None = query.cursor {
@@ -78,7 +78,7 @@ impl CameraFile {
 impl Scan {
     pub async fn queue(
         pool: &SqlitePool,
-        store: &IpcManagerStore,
+        store: &IpcStore,
         camera_id: i64,
         kind: ScanKindPending,
     ) -> Result<()> {
@@ -89,7 +89,7 @@ impl Scan {
 
     pub async fn queue_all(
         pool: &SqlitePool,
-        store: &IpcManagerStore,
+        store: &IpcStore,
         kind: ScanKindPending,
     ) -> Result<()> {
         Self::queue_all_db(pool, kind).await?;
@@ -98,7 +98,7 @@ impl Scan {
     }
 
     // TODO: return database access errors
-    pub async fn run_pending(pool: &SqlitePool, store: &IpcManagerStore) {
+    pub async fn run_pending(pool: &SqlitePool, store: &IpcStore) {
         // Get a pending scan
         let first_handle = if let Ok(Some(s)) = ScanActor::next(pool).await {
             s
@@ -145,7 +145,7 @@ impl Scan {
 }
 
 impl ScanCompleted {
-    pub async fn retry(pool: &SqlitePool, store: &IpcManagerStore, id: i64) -> Result<()> {
+    pub async fn retry(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<()> {
         Self::retry_db(pool, id).await?;
         Scan::run_pending(pool, store).await;
         Ok(())
@@ -170,7 +170,7 @@ impl ScanActor {
         Ok(())
     }
 
-    async fn run(mut self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<()> {
+    async fn run(mut self, pool: &SqlitePool, store: &IpcStore) -> Result<()> {
         // Get manager
         let man = store.get(self.camera_id).await?;
 
