@@ -94,11 +94,10 @@ mod route {
 
     use super::{utils, AppError, AppState};
     use crate::{
-        db,
+        dto::{CreateCamera, UpdateCamera},
         models::{
-            Camera, CameraFile, CreateCamera, QueryCameraFile, QueryCameraFileFilter,
+            Camera, CameraFile, IpcEvent, QueryCameraFile, QueryCameraFileFilter,
             QueryCameraFileResult, ScanActive, ScanCompleted, ScanPending, ShowCamera,
-            UpdateCamera,
         },
         scan::{Scan, ScanKindPending},
     };
@@ -147,9 +146,9 @@ mod route {
         Query(query): Query<FilesPageQuery>,
         State(state): State<AppState>,
     ) -> Result<impl IntoResponse, AppError> {
-        let mut query2 = query.clone();
-        query2.after = None;
-        query2.before = None;
+        let mut current_query = query.clone();
+        current_query.after = None;
+        current_query.before = None;
 
         let filter = QueryCameraFileFilter::new()
             .begin(query.begin)
@@ -164,22 +163,22 @@ mod route {
             .maybe_limit(query.limit);
         let files = CameraFile::query(&state.pool, &state.store, query).await?;
 
-        let events = db::camera::events(&state.pool).await?;
+        let ipc_events = IpcEvent::list(&state.pool).await?;
         let cameras = Camera::list(&state.pool).await?;
 
         let files_total = CameraFile::count(&state.pool, &filter).await?;
 
-        query2.after = Some(files.after.clone());
-        let after_query = { serde_html_form::ser::to_string(&query2).unwrap_or_default() };
-        query2.after = None;
+        current_query.after = Some(files.after.clone());
+        let after_query = serde_html_form::ser::to_string(&current_query).unwrap_or_default();
+        current_query.after = None;
 
-        query2.before = Some(files.before.clone());
-        let before_query = serde_html_form::ser::to_string(&query2).unwrap_or_default();
-        query2.before = None;
+        current_query.before = Some(files.before.clone());
+        let before_query = serde_html_form::ser::to_string(&current_query).unwrap_or_default();
+        current_query.before = None;
 
         Ok(FilesPageTemplate {
             cameras,
-            events,
+            ipc_events,
             files_total,
             files,
             before_query,
@@ -191,7 +190,7 @@ mod route {
     #[template(path = "files.j2.html")]
     struct FilesPageTemplate {
         cameras: Vec<Camera>,
-        events: Vec<String>,
+        ipc_events: Vec<IpcEvent>,
         files_total: i64,
         files: QueryCameraFileResult,
         before_query: String,
@@ -209,7 +208,7 @@ mod route {
         let resp = state
             .client
             .get(file.url)
-            .header("Cookie", file.cookie)
+            .header(header::COOKIE, file.cookie)
             .send()
             .await?
             .error_for_status()?;
@@ -347,6 +346,9 @@ mod route {
     }
 
     mod filters {
+        use chrono::{DateTime, Local, Utc};
+        use humantime::format_duration;
+
         use crate::models::CameraFile;
 
         pub fn url_camera_file(file: &CameraFile) -> ::askama::Result<String> {
@@ -360,8 +362,21 @@ mod route {
             if file.kind == "jpg" {
                 url_camera_file(file)
             } else {
-                Ok("https://bulma.io/images/placeholders/128x128.png".to_string())
+                Ok("https://placehold.co/600x400.png".to_string())
             }
+        }
+
+        pub fn format_date(date: &DateTime<Utc>) -> ::askama::Result<String> {
+            Ok(date
+                .with_timezone(&Local)
+                .format("%d/%m/%Y %I:%M %p")
+                .to_string())
+        }
+
+        pub fn duration(start: &DateTime<Utc>, end: &DateTime<Utc>) -> ::askama::Result<String> {
+            Ok((end.clone() - start.clone())
+                .to_std()
+                .map_or("".to_string(), |d| format_duration(d).to_string()))
         }
     }
 }

@@ -9,17 +9,17 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.12.0/dist/cdn.min.js"></script>
   </head>
 
-  <body>
-    <nav class="navbar" role="navigation" aria-label="main navigation" x-data="{ open: false }">
+  <body class="has-navbar-fixed-top">
+    <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation" x-data="{ open: false }">
       <div class="navbar-brand">
-        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="top-nav" x-bind:class="open ? 'is-active' : ''" x-on:click="open = !open">
+        <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="main-navbar" x-bind:class="open ? 'is-active' : ''" x-on:click="open = !open">
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
           <span aria-hidden="true"></span>
         </a>
       </div>
 
-      <div id="top-navbar" class="navbar-menu" x-bind:class="open ? 'is-active' : ''">
+      <div id="main-navbar" class="navbar-menu" x-bind:class="open ? 'is-active' : ''">
         <div class="navbar-start">
           <a class="navbar-item" href="/">Home</a>
           <a class="navbar-item" href="/files">Files</a>
@@ -28,11 +28,17 @@
       </div>
     </nav>
 
-    <main>
-      <div class="container is-fluid">
-        {% block content %}{% endblock %}
-      </div>
+    <main class="container column" style="min-height: 100vh;">
+      {% block content %}{% endblock %}
     </main>
+
+    <footer class="footer">
+      <div class="content has-text-centered">
+        <p>
+          <strong>IPCManView</strong>. The source code is located at <a href="https://github.com/ItsNotGoodName/ipcmanview">GitHub</a>.
+        </p>
+      </div>
+    </footer>
   </body>
 
 </html>

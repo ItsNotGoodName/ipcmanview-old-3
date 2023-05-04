@@ -1,24 +1,9 @@
 use std::ops::AddAssign;
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::scan::ScanKind;
-
-#[derive(Deserialize, Debug)]
-pub struct CreateCamera {
-    pub ip: String,
-    pub username: String,
-    pub password: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct UpdateCamera {
-    pub id: i64,
-    pub ip: Option<String>,
-    pub username: Option<String>,
-    pub password: Option<String>,
-}
 
 #[derive(Serialize, Debug)]
 pub struct Camera {
@@ -86,6 +71,11 @@ pub struct CameraFile {
     pub end_time: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub events: sqlx::types::Json<Vec<String>>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct IpcEvent {
+    pub name: String,
 }
 
 #[derive(Debug)]

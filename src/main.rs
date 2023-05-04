@@ -14,9 +14,9 @@ async fn main() {
         std::env::var("DATABASE_URL").unwrap_or("sqlite://ipcmanview.db".to_string());
     let config_port: u16 = std::env::var("HTTP_PORT")
         .map_or_else(|_| 8000, |port| port.parse().expect("Invalid HTTP_PORT"));
-    let config_ip: IpAddr = std::env::var("HTTP_IP").map_or_else(
+    let config_ip: IpAddr = std::env::var("HTTP_ADDRESS").map_or_else(
         |_| IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-        |ip| ip.parse().expect("Invalid HTTP_IP"),
+        |ip| ip.parse().expect("Invalid HTTP_ADDRESS"),
     );
 
     // Setup

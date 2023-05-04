@@ -31,4 +31,5 @@ sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "sqlite", "chron
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
+humantime = "2.1.0"
 

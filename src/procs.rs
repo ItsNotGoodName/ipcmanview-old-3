@@ -1,10 +1,11 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
 
+use crate::dto::{CreateCamera, UpdateCamera};
 use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcSoftware, IpcStore};
 use crate::models::{
-    Camera, CameraFile, CameraScanResult, CreateCamera, QueryCameraFile, QueryCameraFileCursor,
-    QueryCameraFileResult, ScanCompleted, UpdateCamera,
+    Camera, CameraFile, CameraScanResult, QueryCameraFile, QueryCameraFileCursor,
+    QueryCameraFileResult, ScanCompleted,
 };
 use crate::scan::{Scan, ScanActor, ScanKindPending};
 

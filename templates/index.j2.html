@@ -1,7 +1,7 @@
 {% extends "base.j2.html" %}
 {% block content %}
   <div class="box">
-    <h1 class="title">Cameras</h1>
+    <h1 class="title">Show Cameras</h1>
     <div class="table-container">
       <table class="table is-striped is-fullwidth">
         <tr>
@@ -12,7 +12,7 @@
         </tr>
         {% for camera in cameras %}
           <tr>
-            <td><a href="/cameras/{{camera.id}}">{{camera.id}}</a></td>
+            <td>{{camera.id}}</td>
             <td><a href="http://{{camera.ip}}">{{camera.ip}}</a></td>
             <td>{{camera.username}}</td>
             <td>

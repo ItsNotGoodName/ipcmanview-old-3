@@ -2,11 +2,11 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
+use crate::dto::{CreateCamera, UpdateCamera};
 use crate::{
     models::{
-        Camera, CameraDetail, CameraFile, CameraLicense, CameraSoftware, CreateCamera, ICamera,
-        QueryCameraFile, QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult,
-        ShowCamera, UpdateCamera,
+        Camera, CameraDetail, CameraFile, CameraLicense, CameraSoftware, ICamera, QueryCameraFile,
+        QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult, ShowCamera,
     },
     scan::Scan,
 };
@@ -471,20 +471,4 @@ impl CameraFile {
             count,
         })
     }
-}
-
-struct Events {
-    name: String,
-}
-
-pub async fn events(pool: &SqlitePool) -> Result<Vec<String>> {
-    Ok(
-        sqlx::query_as_unchecked!(Events, "SELECT name FROM ipc_events")
-            .fetch_all(pool)
-            .await
-            .context("Failed to get all ipc_events")?
-            .into_iter()
-            .map(|event| event.name)
-            .collect(),
-    )
 }

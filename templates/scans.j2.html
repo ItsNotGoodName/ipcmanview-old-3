@@ -13,13 +13,13 @@
   <div class="block">
     <h1 class="title">Show Completed Scans</h1>
     {% for scan in completed_scans %}
+      <hr>
       <div class="block">
         <form method="post" action="/scans/completed/{{scan.id}}">
           <button class="button" type="submit" {% if !scan.can_retry || scan.retry_pending %}disabled{% endif %}>Retry</button>
         </form>
       </div>
       <pre>{{ scan|json|safe }}</pre>
-      <hr>
     {% endfor %}
   </div>
 {% endblock %}

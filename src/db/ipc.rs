@@ -5,7 +5,7 @@ use sqlx::{sqlite::SqliteQueryResult, QueryBuilder, Sqlite, SqlitePool};
 
 use crate::{
     ipc::{IpcDetail, IpcFileStream, IpcLicenses, IpcManager, IpcSoftware},
-    models::CameraScanResult,
+    models::{CameraScanResult, IpcEvent},
 };
 
 impl IpcDetail {
@@ -238,7 +238,7 @@ impl IpcManager {
         let deleted = sqlx::query!(
             r#"
             DELETE FROM camera_files 
-            WHERE updated_at < ?1 and camera_id = ?2 and start_time >= ?3 and end_time <= ?4
+            WHERE updated_at < ? AND camera_id = ? AND start_time >= ? AND start_time <= ?
             "#,
             timestamp,
             self.id,
@@ -251,5 +251,14 @@ impl IpcManager {
         .rows_affected();
 
         Ok(CameraScanResult { deleted, upserted })
+    }
+}
+
+impl IpcEvent {
+    pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
+        sqlx::query_as_unchecked!(Self, "SELECT name FROM ipc_events")
+            .fetch_all(pool)
+            .await
+            .context("Failed to list ipc_events")
     }
 }

@@ -1,6 +1,6 @@
 {% extends "base.j2.html" %}
 {% block content %}
-  <div class="box">
+  <div class="block">
 
     <h1 class="title">Show Files</h1>
 
@@ -20,11 +20,46 @@
       </ul>
     </nav>
 
-    <div class="is-flex is-flex-wrap-wrap is-justify-content-center">
+    <div class="columns is-multiline">
       {% for file in files.files %}
-        <a class="image m-1" href="{{ file|url_camera_file }}" >
-          <img style="object-fit: cover;width: 128px;height: 128px;" src="{{ file|url_camera_file_image }}">
-        </a>
+        <div class="column is-one-quarter">
+          <div class="card">
+            <div class="card-image" >
+              <figure class="image is-4by3">
+                <img src="{{ file|url_camera_file_image }}">
+              </figure>
+            </div>
+
+            <div class="card-content">
+              <div class="content">
+                <details>
+                  <summary>
+                    <time datetime="{{file.start_time}}">{{file.start_time|format_date}}</time>
+                  </summary>
+                  <strong>Kind</strong>
+                  <span>{{file.kind}}</span>
+                  <br>
+                  <strong>Duration</strong>
+                  <span>{{ file.start_time|duration(file.end_time) }}</span>
+                  <br>
+                  <strong>Size</strong>
+                  <span>{{file.size|filesizeformat}}</span>
+                  <br>
+                  <strong>Updated At</strong>
+                  <time datetime="{{file.updated_at}}">{{file.updated_at|format_date}}</time>
+                  <br>
+                  <strong>Events</strong>
+                  <span>{{file.events|json|safe}}</span>
+                </details>
+              </div>
+            </div>
+
+            <footer class="card-footer">
+              <a href="/cameras/{{file.camera_id}}" class="card-footer-item">Camera</a>
+              <a href="{{ file|url_camera_file }}" class="card-footer-item">Source</a>
+            </footer>
+          </div>
+        </div>
       {% endfor %}
     </div>
   </div>
@@ -39,8 +74,8 @@
             <div class="control">
               <div class="select is-multiple">
                 <select multiple size="8" name="events">
-                  {% for event in events %}
-                    <option value="{{event}}">{{event}}</option>
+                  {% for ipc_event in ipc_events %}
+                    <option value="{{ipc_event.name}}">{{ipc_event.name}}</option>
                   {% endfor %}
                 </select>
               </div>
@@ -96,6 +131,4 @@
       </div>
     </form>
   </div>
-
-  <pre>{{ files|json|safe }}</pre>
 {% endblock %}
