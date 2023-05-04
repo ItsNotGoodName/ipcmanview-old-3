@@ -1,10 +1,9 @@
-{% extends "base" %}
+{% extends "base.j2.html" %}
 {% block content %}
   <h1>Camera Show</h1>
-  <pre>{{ show_cam | json_encode(pretty=true) | safe }}</pre>
+  <pre>{{ show_cameras|json|safe }}</pre>
   <h1>Update Camera</h1>
-  <form method="post" action="/cameras/{{show_cam.id}}">
-    <input type="hidden" name="_method" value="patch" />
+  <form method="post" action="/cameras/{{show_cameras.id}}">
     <label for="ip">IP Address</label><br>
     <input type="text" id="ip" name="ip"><br>
 
@@ -16,4 +15,4 @@
 
     <input type="submit" value="Update Camera">
   </form>
-{% endblock content %}
+{% endblock %}

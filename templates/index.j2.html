@@ -1,7 +1,8 @@
-{% extends "base" %}
+{% extends "base.j2.html" %}
 {% block content %}
+  <h1>Homepage</h1>
   <div>
-    <h1>Camera List</h1>
+    <h2>Camera List</h2>
     <table>
       <tr>
         <th>ID</th>
@@ -15,8 +16,7 @@
           <td><a href="http://{{cam.ip}}" target="_blank">{{cam.ip}}</a></td>
           <td>{{cam.username}}</td>
           <td>
-            <form method="post" action="/cameras/{{cam.id}}">
-              <input type="hidden" name="_method" value="delete" />
+            <form method="post" action="/cameras/{{cam.id}}/delete">
               <button type="submit">delete</button>
             </form>
           </td>
@@ -49,4 +49,4 @@
       <input type="submit" value="Add Camera">
     </form>
   </div>
-{% endblock content %}
+{% endblock %}

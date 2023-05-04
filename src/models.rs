@@ -6,18 +6,18 @@ use serde::{Deserialize, Serialize};
 use crate::scan::ScanKind;
 
 #[derive(Deserialize, Debug)]
-pub struct CreateCamera<'a> {
-    pub ip: &'a str,
-    pub username: &'a str,
-    pub password: &'a str,
+pub struct CreateCamera {
+    pub ip: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct UpdateCamera<'a> {
+pub struct UpdateCamera {
     pub id: i64,
-    pub ip: Option<&'a str>,
-    pub username: Option<&'a str>,
-    pub password: Option<&'a str>,
+    pub ip: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Serialize, Debug)]
@@ -96,19 +96,19 @@ pub enum QueryCameraFileCursor {
 }
 
 #[derive(Debug)]
-pub struct QueryCameraFileFilter<'a> {
+pub struct QueryCameraFileFilter {
     pub begin: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
     pub camera_ids: Vec<i64>,
-    pub kinds: Vec<&'a str>,
-    pub events: Vec<&'a str>,
+    pub kinds: Vec<String>,
+    pub events: Vec<String>,
 }
 
 #[derive(Debug)]
 pub struct QueryCameraFile<'a> {
     pub cursor: QueryCameraFileCursor,
     pub limit: i32,
-    pub filter: &'a QueryCameraFileFilter<'a>,
+    pub filter: &'a QueryCameraFileFilter,
 }
 
 #[derive(Serialize, Debug)]

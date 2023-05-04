@@ -1,0 +1,17 @@
+{% extends "base.j2.html" %}
+{% block content %}
+  <h1>Show {{ files_total }} Files</h1>
+  {% if files.has_before %}
+    <a href="/files?{{before_query}}">before</a>
+  {% endif %}
+  {% if files.has_after %}
+    <a href="/files?{{after_query}}">next</a>
+  {% endif %}
+  <br />
+  {% for file in files.files %}
+    <a href="{{ file|url_camera_file }}">
+      <img width="200px" src="{{ file|url_camera_file }}" alt="">
+    </a>
+  {% endfor %}
+  <pre>{{ files|json|safe }}</pre>
+{% endblock %}

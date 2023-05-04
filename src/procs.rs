@@ -10,7 +10,7 @@ use crate::scan::{Scan, ScanActor, ScanKindPending};
 
 // -------------------- Camera
 
-impl CreateCamera<'_> {
+impl CreateCamera {
     pub async fn create(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<i64> {
         // Create in database
         let id = self.create_db(pool).await?;
@@ -25,7 +25,7 @@ impl CreateCamera<'_> {
     }
 }
 
-impl UpdateCamera<'_> {
+impl UpdateCamera {
     pub async fn update(self, pool: &SqlitePool, store: &IpcManagerStore) -> Result<()> {
         let id = self.id;
         self.update_db(pool).await?;
@@ -122,19 +122,19 @@ impl Scan {
             tokio::spawn(async move {
                 // Run pending scan
                 if let Err(err) = handle.run(&pool, &store).await {
-                    dbg!(err);
+                    tracing::error!("{err:?}");
                 }
                 // Check for more scans and run them or exit
                 loop {
                     match ScanActor::next(&pool).await {
                         Ok(Some(handle)) => {
                             if let Err(err) = handle.run(&pool, &store).await {
-                                dbg!(err);
+                                tracing::error!("{err:?}");
                             }
                         }
                         Ok(None) => return,
                         Err(err) => {
-                            dbg!(err);
+                            tracing::error!("{err:?}");
                             return;
                         }
                     }

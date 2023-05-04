@@ -11,7 +11,7 @@ use crate::{
     scan::Scan,
 };
 
-impl CreateCamera<'_> {
+impl CreateCamera {
     pub(crate) async fn create_db(self, pool: &SqlitePool) -> Result<i64> {
         let mut pool = pool.begin().await?;
 
@@ -65,7 +65,7 @@ impl CreateCamera<'_> {
     }
 }
 
-impl UpdateCamera<'_> {
+impl UpdateCamera {
     pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<()> {
         sqlx::query!(
             r#"
@@ -338,7 +338,7 @@ struct CameraFileCount {
 }
 
 impl CameraFile {
-    pub async fn count(pool: &SqlitePool, filter: &QueryCameraFileFilter<'_>) -> Result<i64> {
+    pub async fn count(pool: &SqlitePool, filter: &QueryCameraFileFilter) -> Result<i64> {
         let count = QueryBuilder::new("SELECT COUNT(id) AS count FROM camera_files")
             .push_camera_file_filter(&filter)
             .build_query_as::<CameraFileCount>()

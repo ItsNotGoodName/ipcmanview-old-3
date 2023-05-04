@@ -26,7 +26,7 @@ impl QueryCameraFileCursor {
     }
 }
 
-impl<'a> QueryCameraFileFilter<'a> {
+impl QueryCameraFileFilter {
     pub fn new() -> Self {
         QueryCameraFileFilter {
             begin: None,
@@ -37,12 +37,12 @@ impl<'a> QueryCameraFileFilter<'a> {
         }
     }
 
-    pub fn kinds(mut self, kinds: Vec<&'a str>) -> Self {
+    pub fn kinds(mut self, kinds: Vec<String>) -> Self {
         self.kinds = kinds;
         self
     }
 
-    pub fn events(mut self, events: Vec<&'a str>) -> Self {
+    pub fn events(mut self, events: Vec<String>) -> Self {
         self.events = events;
         self
     }
@@ -52,11 +52,11 @@ impl<'a> QueryCameraFileFilter<'a> {
         self
     }
 
-    pub fn maybe_begin(mut self, begin: Option<&'a str>) -> Result<Self> {
+    pub fn maybe_begin(mut self, begin: Option<String>) -> Result<Self> {
         if let Some(begin) = begin {
             self.begin = Some(
                 // TODO: move to FromParam rocket
-                DateTime::parse_from_rfc3339(begin)
+                DateTime::parse_from_rfc3339(&begin)
                     .map(|f| f.with_timezone(&Utc))
                     .context("parsing begin")?,
             );
@@ -64,11 +64,11 @@ impl<'a> QueryCameraFileFilter<'a> {
         Ok(self)
     }
 
-    pub fn maybe_end(mut self, end: Option<&'a str>) -> Result<Self> {
+    pub fn maybe_end(mut self, end: Option<String>) -> Result<Self> {
         if let Some(end) = end {
             self.end = Some(
                 // TODO: move to FromParam rocket
-                DateTime::parse_from_rfc3339(end)
+                DateTime::parse_from_rfc3339(&end)
                     .map(|f| f.with_timezone(&Utc))
                     .context("parsing end")?,
             );
@@ -99,19 +99,19 @@ impl<'a> QueryCameraFile<'a> {
         self
     }
 
-    pub fn maybe_after(mut self, cursor: Option<&'a str>) -> Result<Self> {
+    pub fn maybe_after(mut self, cursor: Option<String>) -> Result<Self> {
         if let Some(cursor) = cursor {
             if !cursor.is_empty() {
-                self.cursor = QueryCameraFileCursor::After(QueryCameraFileCursor::from(cursor)?);
+                self.cursor = QueryCameraFileCursor::After(QueryCameraFileCursor::from(&cursor)?);
             }
         }
         Ok(self)
     }
 
-    pub fn maybe_before(mut self, cursor: Option<&'a str>) -> Result<Self> {
+    pub fn maybe_before(mut self, cursor: Option<String>) -> Result<Self> {
         if let Some(cursor) = cursor {
             if !cursor.is_empty() {
-                self.cursor = QueryCameraFileCursor::Before(QueryCameraFileCursor::from(cursor)?);
+                self.cursor = QueryCameraFileCursor::Before(QueryCameraFileCursor::from(&cursor)?);
             }
         }
         Ok(self)
