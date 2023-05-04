@@ -1,18 +1,38 @@
 {% extends "base.j2.html" %}
 {% block content %}
-  <h1>Camera Show</h1>
-  <pre>{{ show_cameras|json|safe }}</pre>
-  <h1>Update Camera</h1>
-  <form method="post" action="/cameras/{{show_cameras.id}}">
-    <label for="ip">IP Address</label><br>
-    <input type="text" id="ip" name="ip"><br>
+  <div class="block">
+    <h1 class="title">Camera Show</h1>
+    <pre>{{ show_cameras|json|safe }}</pre>
+  </div>
+  <div class="box">
+    <h1 class="title">Update Camera</h1>
+    <form method="post" action="/cameras/{{show_cameras.id}}">
+      <div class="field">
+        <label class="label">IP Address</label>
+        <div class="control">
+          <input class="input" type="text" name="ip">
+        </div>
+      </div>
 
-    <label for="username">Username</label><br>
-    <input type="text" id="username" name="username"><br>
+      <div class="field">
+        <label class="label">Username</label>
+        <div class="control">
+          <input class="input" type="text" name="username">
+        </div>
+      </div>
 
-    <label for="password">Password</label><br>
-    <input type="password" id="password" name="password"><br><br>
+      <div class="field">
+        <label class="label">Password</label>
+        <div class="control">
+          <input class="input" type="password" name="password">
+        </div>
+      </div>
 
-    <input type="submit" value="Update Camera">
-  </form>
+      <div class="field">
+        <div class="control">
+          <button class="button is-link">Update Camera</button>
+        </div>
+      </div>
+    </form>
+  </div>
 {% endblock %}

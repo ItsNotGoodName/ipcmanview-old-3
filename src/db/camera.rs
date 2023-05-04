@@ -15,7 +15,7 @@ impl CreateCamera {
     pub(crate) async fn create_db(self, pool: &SqlitePool) -> Result<i64> {
         let mut pool = pool.begin().await?;
 
-        let cursor = Scan::current_cursor();
+        let cursor = Scan::cursor();
         let camera_id = sqlx::query!(
             r#"
             INSERT INTO cameras
@@ -471,4 +471,14 @@ impl CameraFile {
             count,
         })
     }
+}
+
+pub async fn events(pool: &SqlitePool) -> Result<Vec<String>> {
+    Ok(sqlx::query!("SELECT name FROM ipc_events")
+        .fetch_all(pool)
+        .await
+        .context("Failed to get all ipc_events")?
+        .into_iter()
+        .map(|event| event.name)
+        .collect())
 }

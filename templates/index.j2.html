@@ -1,52 +1,68 @@
 {% extends "base.j2.html" %}
 {% block content %}
-  <h1>Homepage</h1>
-  <div>
-    <h2>Camera List</h2>
-    <table>
-      <tr>
-        <th>ID</th>
-        <th>IP Address</th>
-        <th>Username</th>
-        <th></th>
-      </tr>
-      {% for cam in cams %}
+  <div class="box">
+    <h1 class="title">Cameras</h1>
+    <div class="table-container">
+      <table class="table is-striped is-fullwidth">
         <tr>
-          <td><a href="/cameras/{{cam.id}}">{{cam.id}}</a></td>
-          <td><a href="http://{{cam.ip}}" target="_blank">{{cam.ip}}</a></td>
-          <td>{{cam.username}}</td>
-          <td>
-            <form method="post" action="/cameras/{{cam.id}}/delete">
-              <button type="submit">delete</button>
-            </form>
-          </td>
-          <td>
-            <form method="post" action="/cameras/{{cam.id}}/data">
-              <button type="submit">refresh</button>
-            </form>
-          </td>
-          <td>
-            <form method="post" action="/cameras/{{cam.id}}/scan/full">
-              <button type="submit">full scan</button>
-            </form>
-          </td>
+          <th>ID</th>
+          <th>IP Address</th>
+          <th>Username</th>
+          <th></th>
         </tr>
-      {% endfor %}
-    </table>
+        {% for camera in cameras %}
+          <tr>
+            <td><a href="/cameras/{{camera.id}}">{{camera.id}}</a></td>
+            <td><a href="http://{{camera.ip}}">{{camera.ip}}</a></td>
+            <td>{{camera.username}}</td>
+            <td>
+              <div class="buttons">
+                <a class="button is-link" href="/cameras/{{camera.id}}">Show</a>
+                <form method="post" action="/cameras/{{camera.id}}/data">
+                  <button class="button mr-1" type="submit">Refresh</button>
+                </form>
+                <form method="post" action="/cameras/{{camera.id}}/scan/full">
+                  <button class="button mr-1" type="submit">Full Scan</button>
+                </form>
+                <form method="post" action="/cameras/{{camera.id}}/delete">
+                  <button class="button mr-1 is-danger" type="submit">Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </table>
+    </div>
   </div>
-  <div>
-    <h1>Add Camera</h1>
+  <div class="box">
+    <h1 class="title">Add Camera</h1>
     <form method="post" action="/cameras">
-      <label for="ip">IP Address</label><br>
-      <input type="text" id="ip" name="ip"><br>
+      <div class="field">
+        <label class="label">IP Address</label>
+        <div class="control">
+          <input class="input" type="text" name="ip">
+        </div>
+      </div>
 
-      <label for="username">Username</label><br>
-      <input type="text" id="username" name="username"><br>
+      <div class="field">
+        <label class="label">Username</label>
+        <div class="control">
+          <input class="input" type="text" name="username">
+        </div>
+      </div>
 
-      <label for="password">Password</label><br>
-      <input type="password" id="password" name="password"><br><br>
+      <div class="field">
+        <label class="label">Password</label>
+        <div class="control">
+          <input class="input" type="password" name="password">
+        </div>
+      </div>
 
-      <input type="submit" value="Add Camera">
+      <div class="field">
+        <div class="control">
+          <button class="button is-link">Add Camera</button>
+        </div>
+      </div>
     </form>
   </div>
 {% endblock %}

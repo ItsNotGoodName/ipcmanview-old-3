@@ -8,7 +8,7 @@ use crate::models::ScanCompleted;
 pub struct Scan {}
 
 impl Scan {
-    pub fn current_cursor() -> DateTime<Utc> {
+    pub fn cursor() -> DateTime<Utc> {
         Utc::now() - Duration::hours(8)
     }
 
@@ -53,16 +53,6 @@ impl ScanRange {
             start: self.start,
             cursor: self.end,
             end: self.end,
-        }
-    }
-
-    pub fn scan_cursor(&self) -> DateTime<Utc> {
-        let current = Scan::current_cursor();
-
-        if self.end < current {
-            self.end
-        } else {
-            current
         }
     }
 }
@@ -202,10 +192,18 @@ impl ScanActor {
         })
     }
 
-    pub fn should_update_scan_cursor(&self) -> bool {
+    pub fn should_update_scan_cursor(&self) -> Option<DateTime<Utc>> {
         match self.kind {
-            ScanKind::Full | ScanKind::Cursor => true,
-            ScanKind::Manual => false,
+            ScanKind::Full | ScanKind::Cursor => {
+                let current = Scan::cursor();
+
+                if self.range.end < current {
+                    Some(self.range.end)
+                } else {
+                    Some(current)
+                }
+            }
+            ScanKind::Manual => None,
         }
     }
 

@@ -9,6 +9,7 @@ async fn main() {
 
     dotenv().ok();
 
+    // Config
     let config_database_url =
         std::env::var("DATABASE_URL").unwrap_or("sqlite://ipcmanview.db".to_string());
     let config_port: u16 = std::env::var("HTTP_PORT")

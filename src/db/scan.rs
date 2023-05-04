@@ -272,9 +272,7 @@ impl ScanActor {
         })?;
 
         // Update camera scan cursor
-        if self.should_update_scan_cursor() {
-            let scan_cursor = self.range.scan_cursor();
-
+        if let Some(scan_cursor) = self.should_update_scan_cursor() {
             sqlx::query!(
                 "UPDATE cameras SET scan_cursor = ?1 WHERE id = ?2 AND scan_cursor < ?1",
                 scan_cursor,

@@ -52,28 +52,14 @@ impl QueryCameraFileFilter {
         self
     }
 
-    pub fn maybe_begin(mut self, begin: Option<String>) -> Result<Self> {
-        if let Some(begin) = begin {
-            self.begin = Some(
-                // TODO: move to FromParam rocket
-                DateTime::parse_from_rfc3339(&begin)
-                    .map(|f| f.with_timezone(&Utc))
-                    .context("parsing begin")?,
-            );
-        }
-        Ok(self)
+    pub fn begin(mut self, begin: Option<DateTime<Utc>>) -> Self {
+        self.begin = begin;
+        self
     }
 
-    pub fn maybe_end(mut self, end: Option<String>) -> Result<Self> {
-        if let Some(end) = end {
-            self.end = Some(
-                // TODO: move to FromParam rocket
-                DateTime::parse_from_rfc3339(&end)
-                    .map(|f| f.with_timezone(&Utc))
-                    .context("parsing end")?,
-            );
-        }
-        Ok(self)
+    pub fn end(mut self, end: Option<DateTime<Utc>>) -> Self {
+        self.end = end;
+        self
     }
 }
 

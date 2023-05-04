@@ -1,17 +1,101 @@
 {% extends "base.j2.html" %}
 {% block content %}
-  <h1>Show {{ files_total }} Files</h1>
-  {% if files.has_before %}
-    <a href="/files?{{before_query}}">before</a>
-  {% endif %}
-  {% if files.has_after %}
-    <a href="/files?{{after_query}}">next</a>
-  {% endif %}
-  <br />
-  {% for file in files.files %}
-    <a href="{{ file|url_camera_file }}">
-      <img width="200px" src="{{ file|url_camera_file }}" alt="">
-    </a>
-  {% endfor %}
+  <div class="box">
+
+    <h1 class="title">Show Files</h1>
+
+    <nav class="pagination" role="navigation" aria-label="pagination">
+      {% if files.has_before %}
+        <a class="pagination-previous" href="/files?{{before_query}}">Previous</a>
+      {% else %}
+        <a class="pagination-previous is-disabled">Previous</a>
+      {% endif %}
+      {% if files.has_after %}
+        <a class="pagination-next" href="/files?{{after_query}}">Next</a>
+      {% else %}
+        <a class="pagination-next is-disabled">Next</a>
+      {% endif %}
+      <ul class="pagination-list">
+        <li class="pagination-link is-current">{{ files_total }}</li>
+      </ul>
+    </nav>
+
+    <div class="is-flex is-flex-wrap-wrap is-justify-content-center">
+      {% for file in files.files %}
+        <a class="image m-1" href="{{ file|url_camera_file }}" >
+          <img style="object-fit: cover;width: 128px;height: 128px;" src="{{ file|url_camera_file_image }}">
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="block is-flex">
+    <form method="get" action="/files">
+      <div class="field is-horizontal">
+        <div class="field-body">
+
+          <div class="field">
+            <label class="label">Events</label>
+            <div class="control">
+              <div class="select is-multiple">
+                <select multiple size="8" name="events">
+                  {% for event in events %}
+                    <option value="{{event}}">{{event}}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Kind</label>
+            <div class="control">
+              <div class="select is-multiple">
+                <select multiple name="kinds">
+                  <option value="jpg">jpg</option>
+                  <option value="dav">dav</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Limit</label>
+            <div class="control">
+              <div class="select">
+                <select name="limit">
+                  <option selected></option>
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Cameras</label>
+            <div class="control">
+              <div class="select is-multiple">
+                <select multiple name="camera_ids">
+                  {% for camera in cameras %}
+                    <option value="{{camera.id}}">{{camera.ip}}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="control">
+          <button class="button is-link">Search</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
   <pre>{{ files|json|safe }}</pre>
 {% endblock %}

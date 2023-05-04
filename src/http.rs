@@ -89,10 +89,12 @@ mod route {
         Form,
     };
     use axum_extra::extract::Query;
+    use chrono::{DateTime, Utc};
     use serde::{Deserialize, Serialize};
 
     use super::{utils, AppError, AppState};
     use crate::{
+        db,
         models::{
             Camera, CameraFile, CreateCamera, QueryCameraFile, QueryCameraFileFilter,
             QueryCameraFileResult, ScanActive, ScanCompleted, ScanPending, ShowCamera,
@@ -110,15 +112,15 @@ mod route {
     struct Error404Template {}
 
     pub async fn index_page(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
-        let cams = Camera::list(&state.pool).await?;
+        let cameras = Camera::list(&state.pool).await?;
 
-        Ok(IndexPageTemplate { cams })
+        Ok(IndexPageTemplate { cameras })
     }
 
     #[derive(Template)]
     #[template(path = "index.j2.html")]
     struct IndexPageTemplate {
-        cams: Vec<Camera>,
+        cameras: Vec<Camera>,
     }
 
     #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -130,9 +132,9 @@ mod route {
         #[serde(default, deserialize_with = "utils::empty_string_as_none")]
         pub limit: Option<i32>,
         #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-        pub begin: Option<String>,
+        pub begin: Option<DateTime<Utc>>,
         #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-        pub end: Option<String>,
+        pub end: Option<DateTime<Utc>>,
         #[serde(default)]
         pub kinds: Vec<String>,
         #[serde(default)]
@@ -150,8 +152,8 @@ mod route {
         query2.before = None;
 
         let filter = QueryCameraFileFilter::new()
-            .maybe_begin(query.begin)?
-            .maybe_end(query.end)?
+            .begin(query.begin)
+            .end(query.end)
             .kinds(query.kinds)
             .events(query.events)
             .camera_ids(query.camera_ids);
@@ -161,6 +163,9 @@ mod route {
             .maybe_after(query.after)?
             .maybe_limit(query.limit);
         let files = CameraFile::query(&state.pool, &state.store, query).await?;
+
+        let events = db::camera::events(&state.pool).await?;
+        let cameras = Camera::list(&state.pool).await?;
 
         let files_total = CameraFile::count(&state.pool, &filter).await?;
 
@@ -173,6 +178,8 @@ mod route {
         query2.before = None;
 
         Ok(FilesPageTemplate {
+            cameras,
+            events,
             files_total,
             files,
             before_query,
@@ -183,6 +190,8 @@ mod route {
     #[derive(Template)]
     #[template(path = "files.j2.html")]
     struct FilesPageTemplate {
+        cameras: Vec<Camera>,
+        events: Vec<String>,
         files_total: i64,
         files: QueryCameraFileResult,
         before_query: String,
@@ -345,6 +354,14 @@ mod route {
                 "/cameras/{}/file/{}",
                 file.camera_id, file.file_path
             ))
+        }
+
+        pub fn url_camera_file_image(file: &CameraFile) -> ::askama::Result<String> {
+            if file.kind == "jpg" {
+                url_camera_file(file)
+            } else {
+                Ok("https://bulma.io/images/placeholders/128x128.png".to_string())
+            }
         }
     }
 }
