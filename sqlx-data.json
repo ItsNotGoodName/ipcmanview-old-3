@@ -10,16 +10,6 @@
     },
     "query": "UPDATE completed_scans SET retry_pending = false, can_retry = false WHERE id = ?"
   },
-  "06d92af9c0c2a8c28c603f5cade83c9906a287ae4c576e7a69bc84dfe54d95a4": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 2
-      }
-    },
-    "query": "UPDATE cameras SET scan_cursor = ? WHERE id = ?"
-  },
   "07bccee452e81cd13d2ee4f48fcaf39a95d83f27be28ff0648b9aae755ff2173": {
     "describe": {
       "columns": [
@@ -280,6 +270,24 @@
     },
     "query": "\n            UPDATE camera_softwares SET \n            build = ?2,\n            build_date = ?3,\n            security_base_line_version = ?4,\n            version = ?5,\n            web_version = ?6\n            WHERE id = ?1\n            "
   },
+  "378b1b68fcd96bdbc75f136110d9d1835f395c99c49f984107b51d399f6a2b55": {
+    "describe": {
+      "columns": [
+        {
+          "name": "name",
+          "ordinal": 0,
+          "type_info": "Text"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "SELECT name FROM ipc_events"
+  },
   "3bebfeb496f2c42d37e1753e88b6c4885c372460837ce8cdfea05ae5e3d9fb8c": {
     "describe": {
       "columns": [],
@@ -481,6 +489,16 @@
       }
     },
     "query": "DELETE FROM pending_scans WHERE id = ?"
+  },
+  "87cc6dacfcf0a4ed841704a70bc5f8cdc1c766646cb1b5b983d3518de311c26e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "UPDATE cameras SET scan_cursor = ?1 WHERE id = ?2 AND scan_cursor < ?1"
   },
   "8ce467be4e7cc11dfd4bb69528e0aef9bdd4a17e9fd97bd4a4a99885c3ff32c9": {
     "describe": {
