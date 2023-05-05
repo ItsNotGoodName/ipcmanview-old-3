@@ -334,16 +334,6 @@
     },
     "query": "\n            SELECT id, ip, username, password\n            FROM cameras\n            "
   },
-  "44d22f7c77a8436ff9c627099cfd8885bf8eb291702326ef688c601650e36bd8": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 4
-      }
-    },
-    "query": "\n            DELETE FROM camera_files \n            WHERE updated_at < ?1 and camera_id = ?2 and start_time >= ?3 and end_time <= ?4\n            "
-  },
   "4ce453ecd2ccbbf16cf3ebf834f067045a7bdcf3ab45de1e4de58535610c7875": {
     "describe": {
       "columns": [
@@ -451,6 +441,16 @@
       }
     },
     "query": "\n            DELETE FROM cameras\n            WHERE id = ?\n            "
+  },
+  "61a5edd3cecd3b4698b1683812e7ac3b551e4f2b86e286f5e43ac53d261386a4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 4
+      }
+    },
+    "query": "\n            DELETE FROM camera_files \n            WHERE updated_at < ? AND camera_id = ? AND start_time >= ? AND start_time <= ?\n            "
   },
   "70584507bd7c434dd48bfdc1deaf253a12ec4bf3c86705b66f1b58c348cf13fc": {
     "describe": {
