@@ -1,6 +1,7 @@
+pub use sqlx;
+
 pub mod db;
 pub mod dto;
-pub mod http;
 pub mod ipc;
 pub mod models;
 pub mod procs;

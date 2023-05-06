@@ -1,7 +1,8 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use dotenvy::dotenv;
-use ipcmanview::{db, http, ipc::IpcStore};
+use ipcmanview::{db, ipc::IpcStore};
+use ipcmanview_server::http;
 
 #[tokio::main]
 async fn main() {

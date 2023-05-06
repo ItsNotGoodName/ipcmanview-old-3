@@ -5,7 +5,10 @@ use axum::{
     Router,
 };
 
-use crate::ipc::{IpcManager, IpcStore};
+use ipcmanview::{
+    ipc::{IpcManager, IpcStore},
+    sqlx,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -93,7 +96,7 @@ mod route {
     use serde::{Deserialize, Serialize};
 
     use super::{utils, AppError, AppState};
-    use crate::{
+    use ipcmanview::{
         dto::{CreateCamera, UpdateCamera},
         models::{
             Camera, CameraFile, IpcEvent, QueryCameraFile, QueryCameraFileFilter,
@@ -349,7 +352,7 @@ mod route {
         use chrono::{DateTime, Local, Utc};
         use humantime::format_duration;
 
-        use crate::models::CameraFile;
+        use ipcmanview::models::CameraFile;
 
         pub fn url_camera_file(file: &CameraFile) -> ::askama::Result<String> {
             Ok(format!(
