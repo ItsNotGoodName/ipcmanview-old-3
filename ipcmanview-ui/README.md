@@ -1,42 +1,34 @@
-# Nuxt 3 Minimal Starter
+## Usage
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
 
-## Setup
-
-Make sure to install the dependencies:
+This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
 
 ```bash
-# yarn
-yarn install
-
-# npm
-npm install
-
-# pnpm
-pnpm install
+$ npm install # or pnpm install or yarn install
 ```
 
-## Development Server
+### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
 
-Start the development server on `http://localhost:3000`
+## Available Scripts
 
-```bash
-npm run dev
-```
+In the project directory, you can run:
 
-## Production
+### `npm dev` or `npm start`
 
-Build the application for production:
+Runs the app in the development mode.<br>
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
-```bash
-npm run build
-```
+The page will reload if you make edits.<br>
 
-Locally preview production build:
+### `npm run build`
 
-```bash
-npm run preview
-```
+Builds the app for production to the `dist` folder.<br>
+It correctly bundles Solid in production mode and optimizes the build for the best performance.
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+The build is minified and the filenames include the hashes.<br>
+Your app is ready to be deployed!
+
+## Deployment
+
+You can deploy the `dist` folder to any static host provider (netlify, surge, now, etc.)

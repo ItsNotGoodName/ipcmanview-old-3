@@ -2,7 +2,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 use dotenvy::dotenv;
 use ipcmanview::{db, ipc::IpcStore};
-use ipcmanview_server::http;
+use ipcmanview_agent::http;
 
 #[tokio::main]
 async fn main() {

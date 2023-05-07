@@ -1,9 +1,9 @@
 [workspace]
 members = [
   "dahua-rpc",
-  "ipcmanview-server"
+  "ipcmanview-agent"
 ]
-default-members = ["ipcmanview-server"]
+default-members = ["ipcmanview-agent"]
 
 [package]
 name = "ipcmanview"
