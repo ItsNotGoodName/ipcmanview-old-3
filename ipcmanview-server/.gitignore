@@ -28,3 +28,6 @@ go.work
 
 # PocketBase
 pb_data
+
+# ipcmanview-server
+ipcmanview-server
