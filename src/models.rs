@@ -87,7 +87,7 @@ pub enum QueryCameraFileCursor {
 
 #[derive(Debug)]
 pub struct QueryCameraFileFilter {
-    pub begin: Option<DateTime<Utc>>,
+    pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
     pub camera_ids: Vec<i64>,
     pub kinds: Vec<String>,

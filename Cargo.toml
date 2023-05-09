@@ -1,9 +1,9 @@
 [workspace]
 members = [
   "dahua-rpc",
-  "ipcmanview-agent"
+  "ipcmanview-station"
 ]
-default-members = ["ipcmanview-agent"]
+default-members = ["ipcmanview-station"]
 
 [package]
 name = "ipcmanview"
@@ -21,4 +21,3 @@ serde_json = "1.0"
 sqlx = { version = "0.6.3", features = ["runtime-tokio-rustls", "sqlite", "chrono", "offline", "json"] }
 tokio = { version = "1.0", features = ["full"] }
 tracing = "0.1"
-tracing-subscriber = "0.3"

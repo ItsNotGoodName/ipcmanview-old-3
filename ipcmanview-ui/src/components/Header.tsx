@@ -15,7 +15,7 @@ const Header: Component<HeaderProps> = (props) => {
         props.class
       )}
     >
-      <div class="flex gap-1 overflow-auto">
+      <div class="flex gap-1 overflow-clip">
         <h1 class="my-auto text-xl font-bold text-white">IPCManView</h1>
       </div>
 

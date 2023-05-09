@@ -1,5 +1,4 @@
-{% extends "base.j2.html" %}
-{% block content %}
+{% extends "base.jinja.html" %} {% block content %}
   <div class="block">
     <h1 class="title">Show Active Scans</h1>
     <pre>{{ active_scans|json|safe }}</pre>
@@ -13,10 +12,18 @@
   <div class="block">
     <h1 class="title">Show Completed Scans</h1>
     {% for scan in completed_scans %}
-      <hr>
+      <hr />
       <div class="block">
         <form method="post" action="/scans/completed/{{scan.id}}">
-          <button class="button" type="submit" {% if !scan.can_retry || scan.retry_pending %}disabled{% endif %}>Retry</button>
+          <button
+            class="button"
+            type="submit"
+            {% if !scan.can_retry || scan.retry_pending %}
+              disabled
+            {% endif %}
+          >
+            Retry
+          </button>
         </form>
       </div>
       <pre>{{ scan|json|safe }}</pre>

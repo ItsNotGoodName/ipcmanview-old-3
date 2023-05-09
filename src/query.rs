@@ -29,7 +29,7 @@ impl QueryCameraFileCursor {
 impl QueryCameraFileFilter {
     pub fn new() -> Self {
         QueryCameraFileFilter {
-            begin: None,
+            start: None,
             end: None,
             camera_ids: vec![],
             kinds: vec![],
@@ -52,8 +52,8 @@ impl QueryCameraFileFilter {
         self
     }
 
-    pub fn begin(mut self, begin: Option<DateTime<Utc>>) -> Self {
-        self.begin = begin;
+    pub fn start(mut self, start: Option<DateTime<Utc>>) -> Self {
+        self.start = start;
         self
     }
 

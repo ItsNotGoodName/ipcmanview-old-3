@@ -1,3 +1,4 @@
+pub use dahua_rpc;
 pub use sqlx;
 
 pub mod db;

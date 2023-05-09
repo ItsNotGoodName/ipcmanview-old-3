@@ -287,9 +287,9 @@ impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
     ) -> QueryBuilder<'a, Sqlite> {
         self.push(" WHERE 1=1");
 
-        if let Some(begin) = filter.begin {
+        if let Some(start) = filter.start {
             self.push(" AND start_time > ");
-            self.push_bind(begin);
+            self.push_bind(start);
         }
 
         if let Some(end) = filter.end {

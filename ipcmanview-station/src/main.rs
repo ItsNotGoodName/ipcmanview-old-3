@@ -1,23 +1,32 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::SocketAddr;
+use tower_http::trace::TraceLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use dotenvy::dotenv;
 use ipcmanview::{db, ipc::IpcStore};
-use ipcmanview_agent::http;
+use ipcmanview_station::{api, app::AppState, mpa};
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::fmt::init();
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
     dotenv().ok();
 
     // Config
     let config_database_url =
         std::env::var("DATABASE_URL").unwrap_or("sqlite://ipcmanview.db".to_string());
-    let config_port: u16 = std::env::var("HTTP_PORT")
-        .map_or_else(|_| 8000, |port| port.parse().expect("Invalid HTTP_PORT"));
-    let config_ip: IpAddr = std::env::var("HTTP_ADDRESS").map_or_else(
-        |_| IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-        |ip| ip.parse().expect("Invalid HTTP_ADDRESS"),
+    let config_socket_address: SocketAddr = std::env::var("HTTP_ADDRESS").map_or_else(
+        |_| "127.0.0.1:8000".parse().unwrap(),
+        |address| address.parse().expect("Invalid HTTP_ADDRESS"),
     );
 
     // Setup
@@ -35,16 +44,19 @@ async fn main() {
         .expect("Failed to create reqwest client");
 
     // App
-    let app = http::app(http::AppState {
+    let app_state = AppState {
         pool,
         store: store.clone(),
         client,
-    });
+    };
+    let app = mpa::router()
+        .nest("/api", api::router())
+        .with_state(app_state)
+        .layer(TraceLayer::new_for_http());
 
     // Listen
-    let addr = SocketAddr::from((config_ip, config_port));
-    tracing::debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
+    tracing::info!("listening on {}", config_socket_address);
+    axum::Server::bind(&config_socket_address)
         .serve(app.into_make_service())
         .with_graceful_shutdown(shutdown_signal(store))
         .await

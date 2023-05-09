@@ -1,5 +1,4 @@
-{% extends "base.j2.html" %}
-{% block content %}
+{% extends "base.jinja.html" %} {% block content %}
   <div class="block">
     <h1 class="title">Camera Show</h1>
     <pre>{{ show_cameras|json|safe }}</pre>
@@ -10,21 +9,21 @@
       <div class="field">
         <label class="label">IP Address</label>
         <div class="control">
-          <input class="input" type="text" name="ip">
+          <input class="input" type="text" name="ip" />
         </div>
       </div>
 
       <div class="field">
         <label class="label">Username</label>
         <div class="control">
-          <input class="input" type="text" name="username">
+          <input class="input" type="text" name="username" />
         </div>
       </div>
 
       <div class="field">
         <label class="label">Password</label>
         <div class="control">
-          <input class="input" type="password" name="password">
+          <input class="input" type="password" name="password" />
         </div>
       </div>
 

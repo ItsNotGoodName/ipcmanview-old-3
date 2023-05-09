@@ -1,7 +1,7 @@
 /target
 
 # dotenvy and sqlx
-.env
+/.env
 
 # Sqlite
 *.db

@@ -1,5 +1,4 @@
-{% extends "base.j2.html" %}
-{% block content %}
+{% extends "base.jinja.html" %} {% block content %}
   <div class="box">
     <h1 class="title">Show Cameras</h1>
     <div class="table-container">
@@ -25,7 +24,9 @@
                   <button class="button mr-1" type="submit">Full Scan</button>
                 </form>
                 <form method="post" action="/cameras/{{camera.id}}/delete">
-                  <button class="button mr-1 is-danger" type="submit">Delete</button>
+                  <button class="button mr-1 is-danger" type="submit">
+                    Delete
+                  </button>
                 </form>
               </div>
             </td>
@@ -40,21 +41,21 @@
       <div class="field">
         <label class="label">IP Address</label>
         <div class="control">
-          <input class="input" type="text" name="ip">
+          <input class="input" type="text" name="ip" />
         </div>
       </div>
 
       <div class="field">
         <label class="label">Username</label>
         <div class="control">
-          <input class="input" type="text" name="username">
+          <input class="input" type="text" name="username" />
         </div>
       </div>
 
       <div class="field">
         <label class="label">Password</label>
         <div class="control">
-          <input class="input" type="password" name="password">
+          <input class="input" type="password" name="password" />
         </div>
       </div>
 
