@@ -1,4 +1,9 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
 use axum_extra::extract::Query;
 use chrono::{DateTime, Utc};
 use ipcmanview::models::{CameraFile, QueryCameraFile, QueryCameraFileFilter};
@@ -46,6 +51,15 @@ impl From<Filter> for QueryCameraFileFilter {
     }
 }
 
+pub async fn query_by_camera(
+    Path(id): Path<i64>,
+    mut file_query: Query<FileQuery>,
+    state: State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    file_query.filter.camera_ids = vec![id];
+    query(file_query, state).await
+}
+
 pub async fn query(
     Query(query): Query<FileQuery>,
     State(state): State<AppState>,
@@ -64,11 +78,20 @@ pub async fn query(
     Ok(Json(files))
 }
 
-pub async fn query_total(
-    Query(query): Query<Filter>,
+pub async fn total_by_camera(
+    Path(id): Path<i64>,
+    mut filter: Query<Filter>,
+    state: State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    filter.camera_ids = vec![id];
+    total(filter, state).await
+}
+
+pub async fn total(
+    Query(filter): Query<Filter>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let filter = QueryCameraFileFilter::from(query);
+    let filter = QueryCameraFileFilter::from(filter);
     let total = CameraFile::count(&state.pool, &filter)
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
