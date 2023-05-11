@@ -19,23 +19,25 @@ const App: Component = () => {
   );
 
   return (
-    <Show when={authStore().isValid} fallback={<Login />}>
-      <div class="flex h-screen w-screen flex-col">
-        <div>
-          <Header class="h-14" />
-        </div>
-        <div class="flex h-full flex-col overflow-hidden sm:flex-row">
+    <div class="text-ship-950">
+      <Show when={authStore().isValid} fallback={<Login />}>
+        <div class="flex h-screen w-screen flex-col">
           <div>
-            <NavBar class="h-14 w-full flex-row sm:h-full sm:w-14 sm:flex-col" />
+            <Header class="h-14" />
           </div>
-          <div class="w-full overflow-auto p-2">
-            <Routes>
-              <Route path="/" component={Home} />
-            </Routes>
+          <div class="flex h-full flex-col overflow-hidden sm:flex-row">
+            <div>
+              <NavBar class="h-14 w-full flex-row sm:h-full sm:w-14 sm:flex-col" />
+            </div>
+            <div class="w-full overflow-auto p-2">
+              <Routes>
+                <Route path="/" component={Home} />
+              </Routes>
+            </div>
           </div>
         </div>
-      </div>
-    </Show>
+      </Show>
+    </div>
   );
 };
 

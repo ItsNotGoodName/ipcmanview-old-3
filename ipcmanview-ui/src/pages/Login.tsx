@@ -9,7 +9,7 @@ type LoginForm = {
 };
 
 const Home: Component = () => {
-  const [form, { Form, Field }] = createForm<LoginForm>();
+  const [form, { Form, Field }] = createForm<LoginForm>({});
   const [error, setError] = createSignal("");
 
   const onSubmit: SubmitHandler<LoginForm> = (values) =>
@@ -23,7 +23,7 @@ const Home: Component = () => {
   return (
     <div class="flex items-center px-4 py-16">
       <Form
-        class="mx-auto flex max-w-md flex-grow flex-col gap-2 rounded p-4 shadow"
+        class="mx-auto flex max-w-md flex-grow flex-col gap-2 rounded p-4 shadow shadow-ship-300"
         onSubmit={onSubmit}
       >
         <h1 class="mx-auto text-2xl">Log in</h1>
@@ -39,10 +39,11 @@ const Home: Component = () => {
                 type="email"
                 placeholder="Email or Username"
                 required
-                class="w-full"
+                class="w-full rounded"
+                classList={{ "border-danger": !!field.error }}
               />
               <Show when={field.error}>
-                <div class="text-red-500">{field.error}</div>
+                <div class="text-danger">{field.error}</div>
               </Show>
             </>
           )}
@@ -58,10 +59,11 @@ const Home: Component = () => {
                 {...props}
                 type="password"
                 placeholder="Password"
-                class="w-full"
+                class="w-full rounded"
+                classList={{ "border-danger": !!field.error }}
               />
               <Show when={field.error}>
-                <div class="text-red-500">{field.error}</div>
+                <div class="text-danger">{field.error}</div>
               </Show>
             </>
           )}
@@ -69,7 +71,7 @@ const Home: Component = () => {
 
         <button
           type="submit"
-          class="flex w-full rounded bg-blue-600 p-2 text-white"
+          class="flex w-full rounded bg-ship-600 p-2 text-ship-50"
           disabled={form.submitting}
         >
           <div class="mx-auto">
@@ -86,7 +88,7 @@ const Home: Component = () => {
           </div>
         </button>
         <Show when={error}>
-          <div class="text-red-500">{error()}</div>
+          <div class="text-danger">{error()}</div>
         </Show>
       </Form>
     </div>

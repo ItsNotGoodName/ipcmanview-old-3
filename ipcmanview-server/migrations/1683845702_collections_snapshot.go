@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "yugkj86nauvh93p",
 				"created": "2023-05-09 00:31:36.129Z",
-				"updated": "2023-05-09 22:47:17.047Z",
+				"updated": "2023-05-11 22:07:07.234Z",
 				"name": "stations",
 				"type": "base",
 				"system": false,
@@ -50,8 +50,8 @@ func init() {
 					"CREATE UNIQUE INDEX ` + "`" + `idx_goOFdFl` + "`" + ` ON ` + "`" + `stations` + "`" + ` (` + "`" + `url` + "`" + `)",
 					"CREATE UNIQUE INDEX ` + "`" + `idx_S38EZva` + "`" + ` ON ` + "`" + `stations` + "`" + ` (` + "`" + `name` + "`" + `)"
 				],
-				"listRule": "id ?= @request.auth.access_stations.id",
-				"viewRule": "id ?= @request.auth.access_stations.id",
+				"listRule": "@request.auth.id != \"\"",
+				"viewRule": "@request.auth.id != \"\"",
 				"createRule": null,
 				"updateRule": null,
 				"deleteRule": null,
@@ -60,7 +60,7 @@ func init() {
 			{
 				"id": "_pb_users_auth_",
 				"created": "2023-05-09 03:56:27.282Z",
-				"updated": "2023-05-09 22:41:42.120Z",
+				"updated": "2023-05-11 21:33:35.147Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -97,21 +97,6 @@ func init() {
 							],
 							"thumbs": null,
 							"protected": false
-						}
-					},
-					{
-						"system": false,
-						"id": "jtgee2us",
-						"name": "access_stations",
-						"type": "relation",
-						"required": false,
-						"unique": false,
-						"options": {
-							"collectionId": "yugkj86nauvh93p",
-							"cascadeDelete": false,
-							"minSelect": null,
-							"maxSelect": null,
-							"displayFields": []
 						}
 					}
 				],
