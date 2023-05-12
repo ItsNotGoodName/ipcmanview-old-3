@@ -13,6 +13,9 @@ dependencies:
   pocketbase:
     specifier: ^0.14.4
     version: 0.14.4
+  solid-headless:
+    specifier: ^0.13.1
+    version: 0.13.1(solid-js@1.6.10)
   solid-icons:
     specifier: ^1.0.4
     version: 1.0.4(solid-js@1.6.10)
@@ -1356,6 +1359,16 @@ packages:
     hasBin: true
     dev: true
 
+  /solid-headless@0.13.1(solid-js@1.6.10):
+    resolution: {integrity: sha512-FZJai49YmdBu6oEo8aJGPMQ1Qn8xiW0cnD6vNFDIQWMKJdXEUtDEwz0hTR9aZ7Epq3IkrZs+98E0vNiv1+pZpA==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      solid-js: ^1.2
+    dependencies:
+      solid-js: 1.6.10
+      solid-use: 0.6.2(solid-js@1.6.10)
+    dev: false
+
   /solid-icons@1.0.4(solid-js@1.6.10):
     resolution: {integrity: sha512-gJTp4in3+OYCs9WvDkSLt4Los2unR3Uoder8wjh15GsfP20xiNOLfPTJllXmn+fI8+k3x7bRYtLGIgWd9fUQug==}
     engines: {node: '>= 16'}
@@ -1380,6 +1393,15 @@ packages:
       '@babel/types': 7.20.7
       solid-js: 1.6.10
     dev: true
+
+  /solid-use@0.6.2(solid-js@1.6.10):
+    resolution: {integrity: sha512-0ShJ5s+4PIN0pJB/BtsQucsZB+xnUeeTGaxErQDu6USn5jygZWXicAtOEvFbI8gv40xE751uY1Tz7Aib9lxL/Q==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      solid-js: ^1.5
+    dependencies:
+      solid-js: 1.6.10
+    dev: false
 
   /source-map-js@1.0.2:
     resolution: {integrity: sha512-R0XvVJ9WusLiqTCEiGCmICCMplcCkIwwR11mOSD9CR5u+IXYdiseeEuXCVAjS54zqwkLcPNnmU4OeJ6tUrWhDw==}

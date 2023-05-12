@@ -41,6 +41,7 @@ const Home: Component = () => {
                 required
                 class="w-full rounded"
                 classList={{ "border-danger": !!field.error }}
+                autocomplete="username"
               />
               <Show when={field.error}>
                 <div class="text-danger">{field.error}</div>
@@ -61,6 +62,7 @@ const Home: Component = () => {
                 placeholder="Password"
                 class="w-full rounded"
                 classList={{ "border-danger": !!field.error }}
+                autocomplete="current-password"
               />
               <Show when={field.error}>
                 <div class="text-danger">{field.error}</div>
@@ -71,7 +73,7 @@ const Home: Component = () => {
 
         <button
           type="submit"
-          class="flex w-full rounded bg-ship-600 p-2 text-ship-50"
+          class="flex w-full rounded bg-ship-500 p-2 text-ship-50"
           disabled={form.submitting}
         >
           <div class="mx-auto">
