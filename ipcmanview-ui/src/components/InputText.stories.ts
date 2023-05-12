@@ -2,12 +2,12 @@ import type { Meta, StoryObj } from "storybook-solidjs";
 
 import "../index.css";
 
-import FormTextInput from "./FormTextInput";
+import InputText from "./InputText";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/solid/writing-stories/introduction
 const meta = {
-  component: FormTextInput,
-} satisfies Meta<typeof FormTextInput>;
+  component: InputText,
+} satisfies Meta<typeof InputText>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;

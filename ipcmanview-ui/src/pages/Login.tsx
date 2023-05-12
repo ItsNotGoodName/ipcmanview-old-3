@@ -1,8 +1,8 @@
 import { createForm, required, SubmitHandler } from "@modular-forms/solid";
-import { Component, Show, createSignal } from "solid-js";
+import { Component, createSignal } from "solid-js";
 import pb from "../pb";
 import Button from "../components/Button";
-import FormTextInput from "../components/FormTextInput";
+import InputText from "../components/InputText";
 import InputError from "../components/InputError";
 
 type LoginForm = {
@@ -35,7 +35,7 @@ const Home: Component = () => {
           validate={[required("Please enter your username or email.")]}
         >
           {(field, props) => (
-            <FormTextInput
+            <InputText
               {...props}
               label="Username or Email"
               placeholder="Username or Email"
@@ -50,7 +50,7 @@ const Home: Component = () => {
           validate={[required("Please enter your password.")]}
         >
           {(field, props) => (
-            <FormTextInput
+            <InputText
               {...props}
               label="Password"
               type="password"

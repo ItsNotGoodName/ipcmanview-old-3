@@ -48,13 +48,15 @@ const Header: Component<HeaderProps> = (props) => {
           </MenuTrigger>
           <Portal>
             <MenuPositioner>
-              <MenuContent class="w-32 space-y-1 rounded-lg bg-ship-50 p-1 shadow">
+              <MenuContent class="w-32 space-y-1 rounded-lg bg-ship-500 p-1 shadow">
                 <MenuItem id="profile">
                   <A
-                    class="flex w-full rounded p-1 hover:bg-ship-500 hover:text-ship-50"
-                    classList={{
-                      "bg-ship-500 text-ship-50": isProfileRoute(),
-                    }}
+                    class={clsx(
+                      "flex w-full rounded p-1",
+                      isProfileRoute()
+                        ? "bg-ship-50 text-ship-950"
+                        : "text-ship-50 hover:bg-ship-50 hover:text-ship-950"
+                    )}
                     href="/profile"
                   >
                     Profile
@@ -62,7 +64,7 @@ const Header: Component<HeaderProps> = (props) => {
                 </MenuItem>
                 <MenuItem id="logout">
                   <button
-                    class="flex w-full rounded p-1 hover:bg-ship-500 hover:text-ship-50"
+                    class="flex w-full rounded p-1 text-ship-50 hover:bg-ship-50 hover:text-ship-950"
                     onClick={props.onLogout}
                   >
                     Logout

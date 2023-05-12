@@ -1,8 +1,8 @@
-import { createForm, email, SubmitHandler } from "@modular-forms/solid";
+import { createForm, SubmitHandler } from "@modular-forms/solid";
 import clsx from "clsx";
-import { Component, createSignal, Show } from "solid-js";
+import { Component, createSignal } from "solid-js";
 import Button from "../components/Button";
-import FormTextInput from "../components/FormTextInput";
+import InputText from "../components/InputText";
 import InputError from "../components/InputError";
 import pb, { authStore, eagerUpdateUser, UserRecord } from "../pb";
 import { formatDateTime } from "../utils";
@@ -48,7 +48,6 @@ const Profile: Component = () => {
 type UpdateForm = {
   name?: string;
   username?: string;
-  email?: string;
 };
 
 const UpdateForm: Component<{ class?: string }> = (props) => {
@@ -57,15 +56,6 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
 
   const onSubmit: SubmitHandler<UpdateForm> = (values) => {
     setError("");
-
-    // TODO: make the form send undefined
-    for (let key in values) {
-      //@ts-ignore
-      if (values[key] == "") {
-        //@ts-ignore
-        values[key] = undefined;
-      }
-    }
 
     return pb
       .collection("users")
@@ -83,10 +73,11 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
         props.class
       )}
       onSubmit={onSubmit}
+      shouldDirty={true}
     >
       <Field name="name">
         {(field, props) => (
-          <FormTextInput
+          <InputText
             label="Name"
             {...props}
             placeholder="Name"
@@ -97,21 +88,10 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
 
       <Field name="username">
         {(field, props) => (
-          <FormTextInput
+          <InputText
             label="Username"
             {...props}
             placeholder="Username"
-            error={field.error}
-          />
-        )}
-      </Field>
-
-      <Field name="email" validate={[email("Please enter a valid email.")]}>
-        {(field, props) => (
-          <FormTextInput
-            label="Email"
-            {...props}
-            placeholder="Email"
             error={field.error}
           />
         )}

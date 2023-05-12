@@ -2,13 +2,13 @@ import clsx from "clsx";
 import { Component, JSX, mergeProps, Show, splitProps } from "solid-js";
 import InputError from "./InputError";
 
-type FormTextInputProps = {
+type InputTextProps = {
   loading?: boolean;
   error?: string;
   label?: string;
 } & JSX.InputHTMLAttributes<HTMLInputElement>;
 
-const FormTextInput: Component<FormTextInputProps> = (props) => {
+const InputText: Component<InputTextProps> = (props) => {
   const [, other] = splitProps(mergeProps({ type: "text" }, props), [
     "loading",
     "error",
@@ -26,7 +26,12 @@ const FormTextInput: Component<FormTextInputProps> = (props) => {
       </Show>
       <input
         {...other}
-        class={clsx("rounded", props.error && "border-danger", props.class)}
+        class={clsx(
+          "rounded",
+          props.error && "border-danger",
+          props.loading && "opacity-80",
+          props.class
+        )}
         disabled={props.loading}
       />
       <InputError error={props.error} />
@@ -34,4 +39,4 @@ const FormTextInput: Component<FormTextInputProps> = (props) => {
   );
 };
 
-export default FormTextInput;
+export default InputText;
