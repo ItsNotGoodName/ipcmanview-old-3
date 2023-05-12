@@ -1,7 +1,6 @@
-import { Component } from "solid-js";
+import { Component, JSX } from "solid-js";
 import { RiUserAccountCircleFill } from "solid-icons/ri";
 import clsx from "clsx";
-import pb from "../pb";
 import {
   Menu,
   MenuItem,
@@ -14,6 +13,7 @@ import { A, useLocation } from "@solidjs/router";
 
 type HeaderProps = {
   class?: string;
+  onLogout?: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent>;
 };
 
 const Header: Component<HeaderProps> = (props) => {
@@ -75,9 +75,7 @@ const Header: Component<HeaderProps> = (props) => {
                     <MenuItem
                       as="button"
                       class="rounded p-1 text-left hover:bg-ship-500 hover:text-ship-50"
-                      onClick={() => {
-                        pb.authStore.clear();
-                      }}
+                      onClick={props.onLogout}
                     >
                       Logout
                     </MenuItem>
