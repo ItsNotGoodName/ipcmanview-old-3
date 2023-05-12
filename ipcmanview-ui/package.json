@@ -34,11 +34,11 @@
     "vite-plugin-solid": "^2.5.0"
   },
   "dependencies": {
+    "@ark-ui/solid": "^0.3.0",
     "@modular-forms/solid": "^0.13.1",
     "@solidjs/router": "^0.8.2",
     "clsx": "^1.2.1",
     "pocketbase": "^0.14.4",
-    "solid-headless": "^0.13.1",
     "solid-icons": "^1.0.4",
     "solid-js": "^1.6.10"
   }

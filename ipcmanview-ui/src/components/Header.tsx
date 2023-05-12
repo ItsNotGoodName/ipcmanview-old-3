@@ -1,14 +1,22 @@
-import { Component, JSX } from "solid-js";
+import { Component, createSignal, JSX } from "solid-js";
 import { RiUserAccountCircleFill } from "solid-icons/ri";
 import clsx from "clsx";
 import {
   Menu,
+  MenuArrow,
+  MenuArrowTip,
+  MenuContent,
+  MenuContextTrigger,
   MenuItem,
-  Popover,
-  PopoverButton,
-  PopoverPanel,
-  Transition,
-} from "solid-headless";
+  MenuItemGroup,
+  MenuItemGroupLabel,
+  MenuOptionItem,
+  MenuPositioner,
+  MenuSeparator,
+  MenuTrigger,
+  MenuTriggerItem,
+} from "@ark-ui/solid";
+import { Portal } from "solid-js/web";
 import { A, useLocation } from "@solidjs/router";
 
 type HeaderProps = {
@@ -19,6 +27,7 @@ type HeaderProps = {
 const Header: Component<HeaderProps> = (props) => {
   const location = useLocation();
   const isProfileRoute = () => location.pathname.startsWith("/profile");
+  const [isOpen, setOpen] = createSignal(false);
 
   return (
     <header
@@ -32,59 +41,45 @@ const Header: Component<HeaderProps> = (props) => {
       </div>
 
       <div class="flex">
-        <Popover defaultOpen={false} class="relative">
-          {({ isOpen, setState }) => (
-            <>
-              <PopoverButton
-                class="m-auto rounded-xl p-2 text-ship-50 hover:bg-ship-50 hover:text-ship-950"
-                classList={{
-                  "bg-ship-50 text-ship-950": isOpen() || isProfileRoute(),
-                }}
-              >
-                <RiUserAccountCircleFill class="h-6 w-6" aria-hidden="true" />
-              </PopoverButton>
-              <Transition
-                show={isOpen()}
-                enter="transition duration-200"
-                enterFrom="opacity-0 -translate-y-1 scale-50"
-                enterTo="opacity-100 translate-y-0 scale-100"
-                leave="transition duration-150"
-                leaveFrom="opacity-100 translate-y-0 scale-100"
-                leaveTo="opacity-0 -translate-y-1 scale-50"
-              >
-                <PopoverPanel
-                  unmount={false}
-                  class="absolute right-0 z-10 mt-2"
-                >
-                  <Menu class="flex w-32 flex-col space-y-1 overflow-hidden rounded-lg bg-ship-50 p-1 shadow">
-                    <MenuItem
-                      as="button"
-                      class="flex rounded p-1 text-left hover:bg-ship-500 hover:text-ship-50"
-                      classList={{
-                        "bg-ship-500 text-ship-50": isProfileRoute(),
-                      }}
-                    >
-                      <A
-                        class="w-full"
-                        href="/profile"
-                        onClick={() => setState(false)}
-                      >
-                        Profile
-                      </A>
-                    </MenuItem>
-                    <MenuItem
-                      as="button"
-                      class="rounded p-1 text-left hover:bg-ship-500 hover:text-ship-50"
-                      onClick={props.onLogout}
-                    >
-                      Logout
-                    </MenuItem>
-                  </Menu>
-                </PopoverPanel>
-              </Transition>
-            </>
-          )}
-        </Popover>
+        <Menu
+          onOpen={() => setOpen(true)}
+          onClose={() => setOpen(false)}
+          closeOnSelect
+        >
+          <MenuTrigger
+            class="m-auto rounded-xl p-2 text-ship-50 hover:bg-ship-50 hover:text-ship-950"
+            classList={{
+              "bg-ship-50 text-ship-950": isOpen() || isProfileRoute(),
+            }}
+          >
+            <RiUserAccountCircleFill class="h-6 w-6" aria-hidden="true" />
+          </MenuTrigger>
+          <Portal>
+            <MenuPositioner>
+              <MenuContent class="w-32 space-y-1 rounded-lg bg-ship-50 p-1 shadow">
+                <MenuItem id="profile">
+                  <A
+                    class="flex w-full rounded p-1 hover:bg-ship-500 hover:text-ship-50"
+                    classList={{
+                      "bg-ship-500 text-ship-50": isProfileRoute(),
+                    }}
+                    href="/profile"
+                  >
+                    Profile
+                  </A>
+                </MenuItem>
+                <MenuItem id="logout">
+                  <button
+                    class="flex w-full rounded p-1 hover:bg-ship-500 hover:text-ship-50"
+                    onClick={props.onLogout}
+                  >
+                    Logout
+                  </button>
+                </MenuItem>
+              </MenuContent>
+            </MenuPositioner>
+          </Portal>
+        </Menu>
       </div>
     </header>
   );
