@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { Component } from "solid-js";
 import { BiSolidCctv } from "solid-icons/bi";
-import NavLink from "./NavLink";
+import NavButton from "./NavButton";
 import { RiBuildingsHome5Line } from "solid-icons/ri";
 
 type NavBarProps = {
@@ -16,13 +16,13 @@ const NavBar: Component<NavBarProps> = (props) => {
         props.class
       )}
     >
-      <NavLink title="Home" href="/" end>
+      <NavButton title="Home" href="/" end>
         <RiBuildingsHome5Line class="h-6 w-6" />
-      </NavLink>
+      </NavButton>
 
-      <NavLink title="Cameras" href="/cameras">
+      <NavButton title="Cameras" href="/cameras">
         <BiSolidCctv class="h-6 w-6" />
-      </NavLink>
+      </NavButton>
     </nav>
   );
 };

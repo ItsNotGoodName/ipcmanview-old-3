@@ -2,13 +2,13 @@ import type { Meta, StoryObj } from "storybook-solidjs";
 
 import "../index.css";
 
-import NavLink from "./NavLink";
+import NavButton from "./NavButton";
 import { RiBuildingsHome5Line } from "solid-icons/ri";
 import { Router } from "@solidjs/router";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/solid/writing-stories/introduction
 const meta = {
-  component: NavLink,
+  component: NavButton,
   decorators: [
     (Story) => (
       <Router>
@@ -16,7 +16,7 @@ const meta = {
       </Router>
     ),
   ],
-} satisfies Meta<typeof NavLink>;
+} satisfies Meta<typeof NavButton>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
