@@ -25,7 +25,7 @@ const Home: Component = () => {
   return (
     <div class="flex items-center px-4 py-16">
       <Form
-        class="mx-auto flex max-w-md flex-grow flex-col gap-2 rounded p-4 shadow shadow-ship-300"
+        class="mx-auto flex max-w-sm flex-grow flex-col gap-2 rounded p-4 shadow shadow-ship-300"
         onSubmit={onSubmit}
       >
         <h1 class="mx-auto text-2xl">Log in</h1>
