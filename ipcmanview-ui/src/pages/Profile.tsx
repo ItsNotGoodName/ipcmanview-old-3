@@ -1,4 +1,11 @@
-import { createForm, SubmitHandler } from "@modular-forms/solid";
+import {
+  createForm,
+  FieldValues,
+  FormStore,
+  reset,
+  ResponseData,
+  SubmitHandler,
+} from "@modular-forms/solid";
 import clsx from "clsx";
 import { Accessor, batch, Component, createSignal } from "solid-js";
 import Button from "../components/Button";
@@ -10,15 +17,14 @@ import { formatDateTime } from "../utils";
 const Profile: Component = () => {
   return (
     <div class="mx-auto flex max-w-4xl flex-wrap gap-4">
-      <div class="flex-1">
+      <div class="flex flex-1 flex-col gap-4">
         <div class="rounded p-4 shadow shadow-ship-300">
           <ProfileFrag />
         </div>
       </div>
-      <div class="flex-1 rounded shadow shadow-ship-300 sm:max-w-sm">
-        <UpdateForm />
-        <hr class="mx-4 border-ship-300" />
-        <PasswordForm />
+      <div class="flex flex-1 flex-col gap-4 rounded sm:max-w-sm">
+        <ProfileForm class="rounded p-4 shadow shadow-ship-300" />
+        <PasswordForm class="rounded p-4 shadow shadow-ship-300" />
       </div>
     </div>
   );
@@ -33,15 +39,15 @@ const ProfileFrag: Component = () => {
         <tbody>
           <tr>
             <th class="pr-2 text-right">Name</th>
-            <td>{authStore().model?.name}</td>
+            <td>{authStore().model!.name}</td>
           </tr>
           <tr>
             <th class="pr-2 text-right">Username</th>
-            <td>{authStore().model?.username}</td>
+            <td>{authStore().model!.username}</td>
           </tr>
           <tr>
             <th class="pr-2 text-right">Email</th>
-            <td>{authStore().model?.email}</td>
+            <td>{authStore().model!.email}</td>
           </tr>
           <tr>
             <th class="pr-2 text-right">Created</th>
@@ -70,7 +76,9 @@ type UpdateFormReturn = {
   fieldErrors: Accessor<UpdateForm>;
 };
 
-const useUpdateForm = (): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
+const useUpdateForm = (
+  form: FormStore<FieldValues, ResponseData>
+): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
   const [error, setError] = createSignal("");
   const [fieldErrors, setFieldErrors] = createSignal<UpdateForm>({});
 
@@ -89,6 +97,7 @@ const useUpdateForm = (): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
         } else {
           eagerUpdateUser(user);
         }
+        reset(form);
       })
       .catch((err) => {
         const pbErr = err.data as PbError;
@@ -110,16 +119,13 @@ const useUpdateForm = (): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
   return [submit, { error, fieldErrors }];
 };
 
-const UpdateForm: Component<{ class?: string }> = (props) => {
+const ProfileForm: Component<{ class?: string }> = (props) => {
   const [form, { Form, Field }] = createForm<UpdateForm>({});
-  const [submit, { error, fieldErrors }] = useUpdateForm();
+  const [submit, { error, fieldErrors }] = useUpdateForm(form);
 
   return (
     <Form
-      class={clsx(
-        "flex flex-col gap-2 rounded p-4 shadow-ship-300",
-        props.class
-      )}
+      class={clsx("flex flex-col gap-2", props.class)}
       onSubmit={submit}
       shouldDirty={true}
     >
@@ -129,6 +135,7 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
             label="New name"
             {...props}
             placeholder="New name"
+            value={field.value || ""}
             error={field.error || fieldErrors()["name"]}
           />
         )}
@@ -140,6 +147,7 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
             label="New username"
             {...props}
             placeholder="New username"
+            value={field.value || ""}
             error={field.error || fieldErrors()["username"]}
           />
         )}
@@ -154,18 +162,11 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
 };
 
 const PasswordForm: Component<{ class?: string }> = (props) => {
-  const [form, { Form, Field }] = createForm<UpdateForm>({});
-  const [submit, { error, fieldErrors }] = useUpdateForm();
+  const [form, { Form, Field }] = createForm<UpdateForm>();
+  const [submit, { error, fieldErrors }] = useUpdateForm(form);
 
   return (
-    <Form
-      class={clsx(
-        "flex flex-col gap-2 rounded p-4 shadow-ship-300",
-        props.class
-      )}
-      onSubmit={submit}
-      shouldDirty={true}
-    >
+    <Form class={clsx("flex flex-col gap-2", props.class)} onSubmit={submit}>
       <input autocomplete="username" hidden />
 
       <Field name="oldPassword">
@@ -175,6 +176,7 @@ const PasswordForm: Component<{ class?: string }> = (props) => {
             type="password"
             {...props}
             placeholder="Old password"
+            value={field.value || ""}
             error={field.error || fieldErrors()["oldPassword"]}
             autocomplete="current-password"
           />
@@ -188,6 +190,7 @@ const PasswordForm: Component<{ class?: string }> = (props) => {
             type="password"
             {...props}
             placeholder="New password"
+            value={field.value || ""}
             error={field.error || fieldErrors()["password"]}
             autocomplete="new-password"
           />
@@ -201,6 +204,7 @@ const PasswordForm: Component<{ class?: string }> = (props) => {
             type="password"
             {...props}
             placeholder="Confirm new password"
+            value={field.value || ""}
             error={field.error || fieldErrors()["passwordConfirm"]}
             autocomplete="new-password"
           />
