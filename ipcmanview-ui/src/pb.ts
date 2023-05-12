@@ -6,7 +6,9 @@ const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL);
 export type PbError = {
   code: number;
   message: string;
-  data: {};
+  data: {
+    [string: string]: Omit<PbError, "data">;
+  };
 };
 
 export type UserRecord = {
@@ -55,12 +57,12 @@ try {
   pb.authStore.clear();
 }
 
-const eagerUpdateUser = (user: UserRecord) => {
+export const authStoreEagerUpdate = (user: UserRecord) => {
   setAuthStore((prev) => {
     prev.model = user;
     return prev;
   });
 };
 
-export { authStore, eagerUpdateUser };
 export default pb;
+export { authStore };

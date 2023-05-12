@@ -33,7 +33,7 @@ const App: Component = () => {
           <div>
             <NavBar class="h-14 w-full flex-row sm:h-full sm:w-14 sm:flex-col" />
           </div>
-          <div class="w-full overflow-auto p-4">
+          <div class="h-full w-full overflow-auto p-4">
             <Routes>
               <Route path="/" component={Home} />
               <Route path="/profile" component={Profile} />

@@ -11,7 +11,12 @@ import { Accessor, batch, Component, createSignal } from "solid-js";
 import Button from "../components/Button";
 import InputText from "../components/InputText";
 import InputError from "../components/InputError";
-import pb, { authStore, eagerUpdateUser, PbError, UserRecord } from "../pb";
+import pb, {
+  authStore,
+  authStoreEagerUpdate,
+  PbError,
+  UserRecord,
+} from "../pb";
 import { formatDateTime } from "../utils";
 
 const Profile: Component = () => {
@@ -82,38 +87,39 @@ const useUpdateForm = (
   const [error, setError] = createSignal("");
   const [fieldErrors, setFieldErrors] = createSignal<UpdateForm>({});
 
-  const submit: SubmitHandler<UpdateForm> = (values) => {
+  const submit: SubmitHandler<UpdateForm> = async (values) => {
     batch(() => {
       setError("");
       setFieldErrors({});
     });
 
-    return pb
-      .collection("users")
-      .update<UserRecord>(authStore().model!.id, values)
-      .then((user) => {
-        if (values.password) {
-          pb.authStore.clear();
-        } else {
-          eagerUpdateUser(user);
-        }
-        reset(form);
-      })
-      .catch((err) => {
-        const pbErr = err.data as PbError;
-        let keys = Object.keys(pbErr.data);
-        if (keys.length < 0) {
-          setError(err.message);
-          return;
-        }
+    try {
+      const user = await pb
+        .collection("users")
+        .update<UserRecord>(authStore().model!.id, values);
 
-        let newFieldErrors = {};
+      if (values.password) {
+        // Logout on password change
+        pb.authStore.clear();
+      } else {
+        // Update auth store
+        authStoreEagerUpdate(user);
+      }
+
+      reset(form);
+    } catch (err: any) {
+      const pbErr = err.data as PbError;
+      let keys = Object.keys(pbErr.data) as Array<keyof UpdateForm>;
+      if (keys.length > 0) {
+        let newFieldErrors: UpdateForm = {};
         for (const key of keys) {
-          //@ts-ignore
           newFieldErrors[key] = pbErr.data[key].message;
         }
         setFieldErrors(newFieldErrors);
-      });
+      } else {
+        setError(err.message);
+      }
+    }
   };
 
   return [submit, { error, fieldErrors }];
