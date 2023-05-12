@@ -24,7 +24,7 @@ func stationProxy(app *pocketbase.PocketBase) echo.HandlerFunc {
 		}
 
 		// Proxy request
-		// TODO: fix panic from echo request is canceled -> http: superfluous response.WriteHeader call from github.com/labstack/echo/v5.(*Response).WriteHeader (response.go:64)
+		// TODO: fix panic from echo request when HTTP request is canceled -> http: superfluous response.WriteHeader call from github.com/labstack/echo/v5.(*Response).WriteHeader (response.go:64)
 		path := "/" + c.PathParam("*")
 		proxy := &httputil.ReverseProxy{
 			Rewrite: func(r *httputil.ProxyRequest) {

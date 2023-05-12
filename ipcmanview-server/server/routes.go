@@ -1,10 +1,7 @@
 package server
 
 import (
-	"net/http"
-
 	ui "github.com/ItsNotGoodName/ipcmanview-ui"
-	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 	"github.com/pocketbase/pocketbase"
 	"github.com/pocketbase/pocketbase/apis"
@@ -22,10 +19,7 @@ func Routes(app *pocketbase.PocketBase) func(e *core.ServeEvent) error {
 		}
 
 		{
-			uiRedirect := func(c echo.Context) error { return c.Redirect(http.StatusTemporaryRedirect, "/ui/") }
-			e.Router.GET("/", uiRedirect)
-			e.Router.GET("/ui", uiRedirect)
-			e.Router.GET("/ui/*", echo.StaticDirectoryHandler(ui.FS, false), middleware.Gzip())
+			e.Router.GET("/*", apis.StaticDirectoryHandler(ui.FS, true), middleware.Gzip())
 		}
 
 		return nil
