@@ -1,9 +1,9 @@
 import { createForm, required, SubmitHandler } from "@modular-forms/solid";
 import { Component, Show, createSignal } from "solid-js";
 import pb from "../pb";
-import { RiSystemLoader4Fill } from "solid-icons/ri";
 import Button from "../components/Button";
 import FormTextInput from "../components/FormTextInput";
+import InputError from "../components/InputError";
 
 type LoginForm = {
   usernameOrEmail: string;
@@ -35,16 +35,13 @@ const Home: Component = () => {
           validate={[required("Please enter your username or email.")]}
         >
           {(field, props) => (
-            <>
-              <FormTextInput
-                {...props}
-                type="email"
-                placeholder="Email or Username"
-                required
-                autocomplete="username"
-                error={field.error}
-              />
-            </>
+            <FormTextInput
+              {...props}
+              label="Username or Email"
+              placeholder="Username or Email"
+              autocomplete="username"
+              error={field.error}
+            />
           )}
         </Field>
 
@@ -53,24 +50,21 @@ const Home: Component = () => {
           validate={[required("Please enter your password.")]}
         >
           {(field, props) => (
-            <>
-              <FormTextInput
-                {...props}
-                type="password"
-                placeholder="Password"
-                autocomplete="current-password"
-                error={field.error}
-              />
-            </>
+            <FormTextInput
+              {...props}
+              label="Password"
+              type="password"
+              placeholder="Password"
+              autocomplete="current-password"
+              error={field.error}
+            />
           )}
         </Field>
 
-        <Button type="submit" loading={form.submitting}>
+        <Button class="mt-2" type="submit" loading={form.submitting}>
           <div class="mx-auto">Log in</div>
         </Button>
-        <Show when={error()}>
-          <div class="text-danger">{error()}</div>
-        </Show>
+        <InputError error={error()} />
       </Form>
     </div>
   );

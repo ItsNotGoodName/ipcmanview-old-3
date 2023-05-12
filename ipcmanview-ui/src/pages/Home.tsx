@@ -1,12 +1,6 @@
 import { RiSystemLoader4Fill } from "solid-icons/ri";
 import { Component, For, createResource, Switch, Match, Show } from "solid-js";
-import pb from "../pb";
-
-type Station = {
-  id: string;
-  url: string;
-  name: string;
-};
+import pb, { StationRecord } from "../pb";
 
 const Home: Component = () => {
   return (
@@ -18,7 +12,7 @@ const Home: Component = () => {
 
 const StationListCard: Component = () => {
   const [stations] = createResource(() =>
-    pb.collection("stations").getFullList<Station>()
+    pb.collection("stations").getFullList<StationRecord>()
   );
 
   return (

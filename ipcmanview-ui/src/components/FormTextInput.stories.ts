@@ -19,5 +19,7 @@ export const Default: Story = {
     loading: false,
     error: "",
     placeholder: "",
+    required: false,
+    label: "",
   },
 };

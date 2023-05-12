@@ -5,6 +5,7 @@ import Login from "./pages/Login";
 import NavBar from "./components/NavBar";
 import Header from "./components/Header";
 import pb, { authStore } from "./pb";
+import Profile from "./pages/Profile";
 
 const App: Component = () => {
   const navigate = useNavigate();
@@ -32,9 +33,10 @@ const App: Component = () => {
           <div>
             <NavBar class="h-14 w-full flex-row sm:h-full sm:w-14 sm:flex-col" />
           </div>
-          <div class="w-full overflow-auto p-2">
+          <div class="w-full overflow-auto p-4">
             <Routes>
               <Route path="/" component={Home} />
+              <Route path="/profile" component={Profile} />
             </Routes>
           </div>
         </div>
