@@ -12,40 +12,48 @@ const Profile: Component = () => {
     <div class="mx-auto flex max-w-4xl flex-wrap gap-4">
       <div class="flex-1">
         <div class="rounded p-4 shadow shadow-ship-300">
-          <h1 class="text-2xl">{authStore().model?.username}</h1>
-          <hr class="my-2 text-ship-300" />
-          <table class="table">
-            <tbody>
-              <tr>
-                <th class="pr-2 text-right">Name</th>
-                <td>{authStore().model?.name}</td>
-              </tr>
-              <tr>
-                <th class="pr-2 text-right">Username</th>
-                <td>{authStore().model?.username}</td>
-              </tr>
-              <tr>
-                <th class="pr-2 text-right">Email</th>
-                <td>{authStore().model?.email}</td>
-              </tr>
-              <tr>
-                <th class="pr-2 text-right">Created</th>
-                <td>{formatDateTime(authStore().model!.created)}</td>
-              </tr>
-              <tr>
-                <th class="pr-2 text-right">Updated</th>
-                <td>{formatDateTime(authStore().model!.updated)}</td>
-              </tr>
-            </tbody>
-          </table>
+          <ProfileFrag />
         </div>
       </div>
-      <div class="w-full flex-1 rounded shadow shadow-ship-300 sm:max-w-sm">
+      <div class="flex-1 rounded shadow shadow-ship-300 sm:max-w-sm">
         <UpdateForm />
         <hr class="mx-4 border-ship-300" />
         <PasswordForm />
       </div>
     </div>
+  );
+};
+
+const ProfileFrag: Component = () => {
+  return (
+    <>
+      <h1 class="text-2xl">{authStore().model?.username}</h1>
+      <hr class="my-2 text-ship-300" />
+      <table class="table">
+        <tbody>
+          <tr>
+            <th class="pr-2 text-right">Name</th>
+            <td>{authStore().model?.name}</td>
+          </tr>
+          <tr>
+            <th class="pr-2 text-right">Username</th>
+            <td>{authStore().model?.username}</td>
+          </tr>
+          <tr>
+            <th class="pr-2 text-right">Email</th>
+            <td>{authStore().model?.email}</td>
+          </tr>
+          <tr>
+            <th class="pr-2 text-right">Created</th>
+            <td>{formatDateTime(authStore().model!.created)}</td>
+          </tr>
+          <tr>
+            <th class="pr-2 text-right">Updated</th>
+            <td>{formatDateTime(authStore().model!.updated)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </>
   );
 };
 

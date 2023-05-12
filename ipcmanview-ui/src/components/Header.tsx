@@ -9,17 +9,29 @@ import {
   MenuTrigger,
 } from "@ark-ui/solid";
 import { Portal } from "solid-js/web";
-import { A, useLocation } from "@solidjs/router";
+import { useNavigate, useLocation } from "@solidjs/router";
 
 type HeaderProps = {
   class?: string;
-  onLogout?: JSX.EventHandlerUnion<HTMLButtonElement, MouseEvent>;
+  onLogout?: () => void;
 };
 
 const Header: Component<HeaderProps> = (props) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isProfileRoute = () => location.pathname.startsWith("/profile");
   const [isOpen, setOpen] = createSignal(false);
+
+  const onSelect: ((details: { value: string }) => void) | undefined = (id) => {
+    switch (id.value) {
+      case "profile":
+        navigate("/profile");
+        break;
+      case "logout":
+        props.onLogout && props.onLogout();
+        break;
+    }
+  };
 
   return (
     <header
@@ -34,6 +46,7 @@ const Header: Component<HeaderProps> = (props) => {
 
       <div class="flex">
         <Menu
+          onSelect={onSelect}
           onOpen={() => setOpen(true)}
           onClose={() => setOpen(false)}
           closeOnSelect
@@ -49,26 +62,22 @@ const Header: Component<HeaderProps> = (props) => {
           <Portal>
             <MenuPositioner>
               <MenuContent class="w-32 space-y-1 rounded-lg bg-ship-500 p-1 shadow">
-                <MenuItem id="profile">
-                  <A
-                    class={clsx(
-                      "flex w-full rounded p-1",
-                      isProfileRoute()
-                        ? "bg-ship-50 text-ship-950"
-                        : "text-ship-50 hover:bg-ship-50 hover:text-ship-950"
-                    )}
-                    href="/profile"
-                  >
-                    Profile
-                  </A>
+                <MenuItem
+                  id="profile"
+                  class={clsx(
+                    "flex w-full rounded p-1",
+                    isProfileRoute()
+                      ? "bg-ship-50 text-ship-950"
+                      : "text-ship-50 hover:bg-ship-50 hover:text-ship-950"
+                  )}
+                >
+                  Profile
                 </MenuItem>
-                <MenuItem id="logout">
-                  <button
-                    class="flex w-full rounded p-1 text-ship-50 hover:bg-ship-50 hover:text-ship-950"
-                    onClick={props.onLogout}
-                  >
-                    Logout
-                  </button>
+                <MenuItem
+                  id="logout"
+                  class="flex w-full rounded p-1 text-ship-50 hover:bg-ship-50 hover:text-ship-950"
+                >
+                  Logout
                 </MenuItem>
               </MenuContent>
             </MenuPositioner>
