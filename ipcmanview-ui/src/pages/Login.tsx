@@ -2,6 +2,8 @@ import { createForm, required, SubmitHandler } from "@modular-forms/solid";
 import { Component, Show, createSignal } from "solid-js";
 import pb from "../pb";
 import { RiSystemLoader4Fill } from "solid-icons/ri";
+import Button from "../components/Button";
+import FormTextInput from "../components/FormTextInput";
 
 type LoginForm = {
   usernameOrEmail: string;
@@ -34,18 +36,14 @@ const Home: Component = () => {
         >
           {(field, props) => (
             <>
-              <input
+              <FormTextInput
                 {...props}
                 type="email"
                 placeholder="Email or Username"
                 required
-                class="w-full rounded"
-                classList={{ "border-danger": !!field.error }}
                 autocomplete="username"
+                error={field.error}
               />
-              <Show when={field.error}>
-                <div class="text-danger">{field.error}</div>
-              </Show>
             </>
           )}
         </Field>
@@ -56,40 +54,21 @@ const Home: Component = () => {
         >
           {(field, props) => (
             <>
-              <input
+              <FormTextInput
                 {...props}
                 type="password"
                 placeholder="Password"
-                class="w-full rounded"
-                classList={{ "border-danger": !!field.error }}
                 autocomplete="current-password"
+                error={field.error}
               />
-              <Show when={field.error}>
-                <div class="text-danger">{field.error}</div>
-              </Show>
             </>
           )}
         </Field>
 
-        <button
-          type="submit"
-          class="flex w-full rounded bg-ship-500 p-2 text-ship-50"
-          disabled={form.submitting}
-        >
-          <div class="mx-auto">
-            <Show
-              when={!form.submitting}
-              fallback={
-                <div class="animate-spin">
-                  <RiSystemLoader4Fill class="h-6 w-6" />
-                </div>
-              }
-            >
-              Log in
-            </Show>
-          </div>
-        </button>
-        <Show when={error}>
+        <Button type="submit" loading={form.submitting}>
+          <div class="mx-auto">Log in</div>
+        </Button>
+        <Show when={error()}>
           <div class="text-danger">{error()}</div>
         </Show>
       </Form>
