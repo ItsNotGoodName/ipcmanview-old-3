@@ -3,6 +3,12 @@ import { createSignal } from "solid-js";
 
 const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL);
 
+export type PbError = {
+  code: number;
+  message: string;
+  data: {};
+};
+
 export type UserRecord = {
   avatar: string;
   collectionId: string;

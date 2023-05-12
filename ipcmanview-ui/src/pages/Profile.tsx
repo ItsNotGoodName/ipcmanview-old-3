@@ -1,10 +1,10 @@
 import { createForm, SubmitHandler } from "@modular-forms/solid";
 import clsx from "clsx";
-import { Component, createSignal } from "solid-js";
+import { Accessor, batch, Component, createSignal } from "solid-js";
 import Button from "../components/Button";
 import InputText from "../components/InputText";
 import InputError from "../components/InputError";
-import pb, { authStore, eagerUpdateUser, UserRecord } from "../pb";
+import pb, { authStore, eagerUpdateUser, PbError, UserRecord } from "../pb";
 import { formatDateTime } from "../utils";
 
 const Profile: Component = () => {
@@ -40,7 +40,11 @@ const Profile: Component = () => {
           </table>
         </div>
       </div>
-      <UpdateForm class="w-full flex-1 rounded shadow shadow-ship-300 sm:max-w-sm" />
+      <div class="w-full flex-1 rounded shadow shadow-ship-300 sm:max-w-sm">
+        <UpdateForm />
+        <hr class="mx-4 border-ship-300" />
+        <PasswordForm />
+      </div>
     </div>
   );
 };
@@ -48,23 +52,59 @@ const Profile: Component = () => {
 type UpdateForm = {
   name?: string;
   username?: string;
+  oldPassword?: string;
+  password?: string;
+  passwordConfirm?: string;
 };
 
-const UpdateForm: Component<{ class?: string }> = (props) => {
-  const [form, { Form, Field }] = createForm<UpdateForm>({});
-  const [error, setError] = createSignal("");
+type UpdateFormReturn = {
+  error: Accessor<string>;
+  fieldErrors: Accessor<UpdateForm>;
+};
 
-  const onSubmit: SubmitHandler<UpdateForm> = (values) => {
-    setError("");
+const useUpdateForm = (): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
+  const [error, setError] = createSignal("");
+  const [fieldErrors, setFieldErrors] = createSignal<UpdateForm>({});
+
+  const submit: SubmitHandler<UpdateForm> = (values) => {
+    batch(() => {
+      setError("");
+      setFieldErrors({});
+    });
 
     return pb
       .collection("users")
       .update<UserRecord>(authStore().model!.id, values)
-      .then((user) => eagerUpdateUser(user))
+      .then((user) => {
+        if (values.password) {
+          pb.authStore.clear();
+        } else {
+          eagerUpdateUser(user);
+        }
+      })
       .catch((err) => {
-        setError(err.message);
+        const pbErr = err.data as PbError;
+        let keys = Object.keys(pbErr.data);
+        if (keys.length < 0) {
+          setError(err.message);
+          return;
+        }
+
+        let newFieldErrors = {};
+        for (const key of keys) {
+          //@ts-ignore
+          newFieldErrors[key] = pbErr.data[key].message;
+        }
+        setFieldErrors(newFieldErrors);
       });
   };
+
+  return [submit, { error, fieldErrors }];
+};
+
+const UpdateForm: Component<{ class?: string }> = (props) => {
+  const [form, { Form, Field }] = createForm<UpdateForm>({});
+  const [submit, { error, fieldErrors }] = useUpdateForm();
 
   return (
     <Form
@@ -72,16 +112,16 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
         "flex flex-col gap-2 rounded p-4 shadow-ship-300",
         props.class
       )}
-      onSubmit={onSubmit}
+      onSubmit={submit}
       shouldDirty={true}
     >
       <Field name="name">
         {(field, props) => (
           <InputText
-            label="Name"
+            label="New name"
             {...props}
-            placeholder="Name"
-            error={field.error}
+            placeholder="New name"
+            error={field.error || fieldErrors()["name"]}
           />
         )}
       </Field>
@@ -89,16 +129,78 @@ const UpdateForm: Component<{ class?: string }> = (props) => {
       <Field name="username">
         {(field, props) => (
           <InputText
-            label="Username"
+            label="New username"
             {...props}
-            placeholder="Username"
-            error={field.error}
+            placeholder="New username"
+            error={field.error || fieldErrors()["username"]}
           />
         )}
       </Field>
 
       <Button class="mt-2" type="submit" loading={form.submitting}>
         <div class="mx-auto">Update profile</div>
+      </Button>
+      <InputError error={error()} />
+    </Form>
+  );
+};
+
+const PasswordForm: Component<{ class?: string }> = (props) => {
+  const [form, { Form, Field }] = createForm<UpdateForm>({});
+  const [submit, { error, fieldErrors }] = useUpdateForm();
+
+  return (
+    <Form
+      class={clsx(
+        "flex flex-col gap-2 rounded p-4 shadow-ship-300",
+        props.class
+      )}
+      onSubmit={submit}
+      shouldDirty={true}
+    >
+      <input autocomplete="username" hidden />
+
+      <Field name="oldPassword">
+        {(field, props) => (
+          <InputText
+            label="Old password"
+            type="password"
+            {...props}
+            placeholder="Old password"
+            error={field.error || fieldErrors()["oldPassword"]}
+            autocomplete="current-password"
+          />
+        )}
+      </Field>
+
+      <Field name="password">
+        {(field, props) => (
+          <InputText
+            label="New Password"
+            type="password"
+            {...props}
+            placeholder="New password"
+            error={field.error || fieldErrors()["password"]}
+            autocomplete="new-password"
+          />
+        )}
+      </Field>
+
+      <Field name="passwordConfirm">
+        {(field, props) => (
+          <InputText
+            label="Confirm new password"
+            type="password"
+            {...props}
+            placeholder="Confirm new password"
+            error={field.error || fieldErrors()["passwordConfirm"]}
+            autocomplete="new-password"
+          />
+        )}
+      </Field>
+
+      <Button class="mt-2" type="submit" loading={form.submitting}>
+        <div class="mx-auto">Update password</div>
       </Button>
       <InputError error={error()} />
     </Form>
