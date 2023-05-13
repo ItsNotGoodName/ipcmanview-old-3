@@ -3,6 +3,8 @@ import { createSignal } from "solid-js";
 
 const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL);
 
+export const adminPageUrl = import.meta.env.VITE_BACKEND_URL + "/_/";
+
 export type PbError = {
   code: number;
   message: string;

@@ -14,7 +14,7 @@ const Button: ParentComponent<Omit<ButtonProps, "disabled">> = (props) => {
     <button
       {...other}
       class={clsx(
-        "flex w-full gap-1 truncate rounded bg-ship-500 p-2 text-ship-50",
+        "flex w-full gap-1 truncate rounded bg-ship-500 p-2 text-ship-50 hover:bg-ship-600",
         props.class
       )}
       disabled={props.loading}

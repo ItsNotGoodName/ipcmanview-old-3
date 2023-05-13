@@ -23,6 +23,7 @@ module.exports = {
         950: "#2b3140",
       },
       danger: "#ef4444",
+      link: "#2563eb",
     },
   },
   plugins: [require("@tailwindcss/forms")],
