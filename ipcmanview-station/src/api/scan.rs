@@ -14,7 +14,7 @@ use serde_json::json;
 
 use crate::app::AppState;
 
-use super::api::{Error, ResultExt};
+use super::api::{Error, OptionExt, ResultExt};
 
 pub async fn full(
     Path(id): Path<i64>,
@@ -73,6 +73,18 @@ pub async fn completed_list(State(state): State<AppState>) -> Result<impl IntoRe
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(completed_scans))
+}
+
+pub async fn completed_show(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    let completed_scan = ScanCompleted::get(&state.pool, id)
+        .await
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
+        .or_option_error()?;
+
+    Ok(Json(completed_scan))
 }
 
 pub async fn completed_retry(

@@ -1,5 +1,5 @@
 use axum::{
-    routing::{delete, get, post},
+    routing::{get, post},
     Router,
 };
 
@@ -12,11 +12,13 @@ mod scan;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/cameras", get(camera::list))
-        .route("/cameras", post(camera::create))
-        .route("/cameras/:id", post(camera::update))
-        .route("/cameras/:id", get(camera::show))
-        .route("/cameras/:id", delete(camera::delete))
+        .route("/cameras", get(camera::list).post(camera::create))
+        .route(
+            "/cameras/:id",
+            get(camera::show)
+                .post(camera::update)
+                .delete(camera::delete),
+        )
         .route("/cameras/:id/refresh", post(camera::refresh))
         .route("/cameras/:id/fs/*file_path", get(camera::fs))
         .route("/cameras/:id/files", get(file::query_by_camera))
@@ -25,11 +27,10 @@ pub fn router() -> Router<AppState> {
         .route("/cameras/:id/scans/manual", post(scan::manual))
         .route("/files", get(file::query))
         .route("/files/total", get(file::total))
-        .route("/scans/cameras/:id/full", post(scan::full))
-        .route("/scans/cameras/:id/manual", post(scan::manual))
         .route("/scans/pending", get(scan::pending_list))
         .route("/scans/active", get(scan::active_list))
         .route("/scans/completed", get(scan::completed_list))
+        .route("/scans/completed/:id", get(scan::completed_show))
         .route("/scans/completed/:id/retry", post(scan::completed_retry))
         .fallback(api::fallback)
 }

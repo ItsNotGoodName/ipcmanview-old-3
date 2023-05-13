@@ -42,11 +42,17 @@ Content-Type: application/json
   "end": "2023-05-01T00:00:00.000Z"
 }
 
+# List pending scanj
+GET http://localhost:8000/api/scans/pending
+
 # List active scans
 GET http://localhost:8000/api/scans/active
 
 # List completed scans
 GET http://localhost:8000/api/scans/completed
+
+# Get completed scans
+GET http://localhost:8000/api/scans/completed/1
 
 # List files
 GET http://localhost:8000/api/files

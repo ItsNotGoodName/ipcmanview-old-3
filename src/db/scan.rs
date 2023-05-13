@@ -335,6 +335,21 @@ impl ScanCompleted {
         .with_context(|| format!("Failed to list completed scans"))
     }
 
+    pub async fn get(pool: &SqlitePool, id: i64) -> Result<Option<Self>> {
+        sqlx::query_as_unchecked!(
+            Self,
+            r#"
+            SELECT *
+            FROM completed_scans
+            WHERE id = ?
+            "#,
+            id
+        )
+        .fetch_optional(pool)
+        .await
+        .with_context(|| format!("Failed to find completed scan {id}"))
+    }
+
     pub(crate) async fn retry_db(pool: &SqlitePool, id: i64) -> Result<()> {
         sqlx::query!(
             "UPDATE completed_scans SET retry_pending = true WHERE id = ? AND can_retry = true",
