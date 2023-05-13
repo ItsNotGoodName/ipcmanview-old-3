@@ -19,7 +19,7 @@ pub fn router() -> Router<AppState> {
                 .post(camera::update)
                 .delete(camera::delete),
         )
-        .route("/cameras/:id/refresh", post(camera::refresh))
+        .route("/cameras/:id/ipc", post(camera::refresh))
         .route("/cameras/:id/fs/*file_path", get(camera::fs))
         .route("/cameras/:id/files", get(file::query_by_camera))
         .route("/cameras/:id/files/total", get(file::total_by_camera))

@@ -29,6 +29,7 @@ impl CreateCamera {
 impl UpdateCamera {
     pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<()> {
         let id = self.id;
+        // Update in database
         self.update_db(pool).await?;
         // Refresh in store
         store.refresh(id).await?;
@@ -41,6 +42,7 @@ impl UpdateCamera {
 
 impl Camera {
     pub async fn delete(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<()> {
+        // Delete in database
         Self::delete_db(pool, id).await?;
         // Refresh in store
         store.refresh(id).await?;
@@ -66,6 +68,7 @@ impl CameraFile {
         store: &IpcStore,
         query: QueryCameraFile<'_>,
     ) -> Result<QueryCameraFileResult> {
+        // Cursor scan when query has no cursor
         if let QueryCameraFileCursor::None = query.cursor {
             Scan::queue_all(pool, store, ScanKindPending::Cursor).await?;
         }

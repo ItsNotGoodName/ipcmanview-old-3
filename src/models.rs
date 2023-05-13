@@ -23,7 +23,7 @@ pub struct ShowCamera {
     pub created_at: DateTime<Utc>,
     pub detail: CameraDetail,
     pub software: CameraSoftware,
-    pub file_count: i32,
+    pub file_total: i32,
     pub licenses: Vec<CameraLicense>,
 }
 

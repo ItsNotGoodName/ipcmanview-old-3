@@ -254,8 +254,8 @@ impl ShowCamera {
             None => return Ok(None),
         };
 
-        let file_count = sqlx::query!(
-            "SELECT count(*) AS count FROM camera_files WHERE camera_id = ?",
+        let file = sqlx::query!(
+            "SELECT count(*) AS total FROM camera_files WHERE camera_id = ?",
             id
         )
         .fetch_one(pool)
@@ -271,7 +271,7 @@ impl ShowCamera {
             detail,
             software,
             licenses,
-            file_count: file_count.count,
+            file_total: file.total,
         }))
     }
 }
