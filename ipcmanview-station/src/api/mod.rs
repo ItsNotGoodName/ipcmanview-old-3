@@ -30,7 +30,9 @@ pub fn router() -> Router<AppState> {
         .route("/scans/pending", get(scan::pending_list))
         .route("/scans/active", get(scan::active_list))
         .route("/scans/completed", get(scan::completed_list))
-        .route("/scans/completed/:id", get(scan::completed_show))
-        .route("/scans/completed/:id/retry", post(scan::completed_retry))
+        .route(
+            "/scans/completed/:id",
+            get(scan::completed_show).post(scan::completed_retry),
+        )
         .fallback(api::fallback)
 }
