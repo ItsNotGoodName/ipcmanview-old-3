@@ -1,0 +1,54 @@
+@camera_id = 1
+@camera_ip = 192.168.60.13
+@camera_username = admin
+
+# List cameras
+GET http://localhost:8000/api/cameras
+
+# Create camera
+POST http://localhost:8000/api/cameras
+Content-Type: application/json
+
+{
+  "ip": "{{camera_ip}}",
+  "username": "{{camera_username}}",
+  "password": "{{IPC_PASSWORD}}"
+}
+
+# Get camera
+GET http://localhost:8000/api/cameras/{{camera_id}}
+
+# Update camera
+POST http://localhost:8000/api/cameras/{{camera_id}}
+Content-Type: application/json
+
+{
+  "id": {{camera_id}},
+  "ip": "192.168.60.15"
+}
+
+# Delete camera
+DELETE http://localhost:8000/api/cameras/{{camera_id}}
+
+# Run full scan on camera
+POST http://localhost:8000/api/cameras/{{camera_id}}/scans/full
+
+# Run manual scan on camera
+POST http://localhost:8000/api/cameras/{{camera_id}}/scans/manual
+Content-Type: application/json
+
+{
+  "start": "2022-05-01T00:00:00.000Z",
+  "end": "2023-05-01T00:00:00.000Z"
+}
+
+# List active scans
+GET http://localhost:8000/api/scans/active
+
+# List completed scans
+GET http://localhost:8000/api/scans/completed
+
+# List files
+GET http://localhost:8000/api/files
+GET http://localhost:8000/api/files?limit=10
+
