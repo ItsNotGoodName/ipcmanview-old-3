@@ -27,27 +27,31 @@ impl CreateCamera {
 }
 
 impl UpdateCamera {
-    pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<()> {
+    pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<Option<()>> {
         let id = self.id;
         // Update in database
-        self.update_db(pool).await?;
+        if let None = self.update_db(pool).await? {
+            return Ok(None);
+        };
         // Refresh in store
         store.refresh(id).await?;
         // Get from store and refresh in database
         store.get(id).await?.refresh(pool).await.ok();
 
-        Ok(())
+        Ok(Some(()))
     }
 }
 
 impl Camera {
-    pub async fn delete(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<()> {
+    pub async fn delete(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<Option<()>> {
         // Delete in database
-        Self::delete_db(pool, id).await?;
+        if let None = Self::delete_db(pool, id).await? {
+            return Ok(None);
+        };
         // Refresh in store
         store.refresh(id).await?;
 
-        Ok(())
+        Ok(Some(()))
     }
 }
 

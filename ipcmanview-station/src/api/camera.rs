@@ -79,7 +79,7 @@ pub async fn create(
     let id = json
         .create(&state.pool, &state.store)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either BadRequest, Conflict, or InternalServerError
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: add BadRequest and Conflict
 
     Ok((StatusCode::CREATED, Json(json!({ "id": id }))))
 }
@@ -90,7 +90,8 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, Error> {
     Camera::delete(&state.pool, &state.store, id)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either NotFound or InternalServerError
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
+        .or_option_error()?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -113,7 +114,8 @@ pub async fn update(
 ) -> Result<impl IntoResponse, Error> {
     json.update(&state.pool, &state.store)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either BadRequest, Conflict, or InternalServerError
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
+        .or_option_error()?; // TODO: map to either Conflict
 
     Ok(StatusCode::NO_CONTENT)
 }

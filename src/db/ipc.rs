@@ -33,9 +33,8 @@ impl IpcDetail {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to update detail with camera {}", camera_id))?;
-
-        Ok(())
+        .with_context(|| format!("Failed to update detail with camera {}", camera_id))
+        .map(|_| ())
     }
 }
 
@@ -65,9 +64,8 @@ impl IpcSoftware {
                 "Failed to update software version with camera {}",
                 camera_id
             )
-        })?;
-
-        Ok(())
+        })
+        .map(|_| ())
     }
 }
 

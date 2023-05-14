@@ -20,3 +20,15 @@ pub async fn new(url: &str) -> anyhow::Result<sqlx::SqlitePool> {
 pub mod camera;
 pub mod ipc;
 pub mod scan;
+
+mod utils {
+    use sqlx::sqlite::SqliteQueryResult;
+
+    pub fn sql_query_option(r: SqliteQueryResult) -> anyhow::Result<Option<()>> {
+        if r.rows_affected() == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(()))
+        }
+    }
+}

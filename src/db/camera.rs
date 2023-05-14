@@ -11,6 +11,8 @@ use crate::{
     scan::Scan,
 };
 
+use super::utils::sql_query_option;
+
 impl CreateCamera {
     pub(crate) async fn create_db(self, pool: &SqlitePool) -> Result<i64> {
         let mut pool = pool.begin().await?;
@@ -66,7 +68,7 @@ impl CreateCamera {
 }
 
 impl UpdateCamera {
-    pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<()> {
+    pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<Option<()>> {
         sqlx::query!(
             r#"
             UPDATE cameras SET
@@ -83,7 +85,7 @@ impl UpdateCamera {
         .execute(pool)
         .await
         .with_context(|| format!("Failed to update camera {}", self.id))
-        .map(|_| ())
+        .and_then(sql_query_option)
     }
 }
 
@@ -116,7 +118,7 @@ impl Camera {
         .with_context(|| format!("Failed to find camera {}", camera_id))
     }
 
-    pub(crate) async fn delete_db(pool: &SqlitePool, id: i64) -> Result<()> {
+    pub(crate) async fn delete_db(pool: &SqlitePool, id: i64) -> Result<Option<()>> {
         sqlx::query!(
             r#"
             DELETE FROM cameras
@@ -127,7 +129,7 @@ impl Camera {
         .execute(pool)
         .await
         .with_context(|| format!("Failed to delete camera {}", id))
-        .map(|_| ())
+        .and_then(sql_query_option)
     }
 
     pub(crate) async fn update_refreshed_at(pool: &SqlitePool, id: i64) -> Result<()> {

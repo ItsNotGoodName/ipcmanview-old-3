@@ -194,9 +194,8 @@ impl ScanActor {
                 "Failed to update status on active scan with camera {}",
                 self.camera_id
             )
-        })?;
-
-        Ok(())
+        })
+        .map(|_| ())
     }
 
     pub(crate) async fn end(self, pool: &SqlitePool) -> Result<()> {
@@ -300,9 +299,7 @@ impl ScanActive {
             .execute(pool)
             .await
             .context("Failed to delete active scans")
-            .ok();
-
-        Ok(())
+            .map(|_| ())
     }
 
     pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
@@ -356,9 +353,9 @@ impl ScanCompleted {
             id
         )
         .execute(pool)
-        .await?;
-
-        Ok(())
+        .await
+        .with_context(|| format!("Failed to retry completed scan {id}"))
+        .map(|_| ())
     }
 }
 
