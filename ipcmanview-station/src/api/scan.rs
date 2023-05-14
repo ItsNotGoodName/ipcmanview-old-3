@@ -10,7 +10,6 @@ use ipcmanview::{
     scan::{Scan, ScanKindPending, ScanRange},
 };
 use serde::Deserialize;
-use serde_json::json;
 
 use crate::app::AppState;
 
@@ -24,7 +23,7 @@ pub async fn full(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(json!({})))
+    Ok(StatusCode::ACCEPTED)
 }
 
 #[derive(Deserialize, Debug)]
@@ -48,7 +47,7 @@ pub async fn manual(
     .await
     .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(json!({})))
+    Ok(StatusCode::ACCEPTED)
 }
 
 pub async fn active_list(State(state): State<AppState>) -> Result<impl IntoResponse, Error> {
@@ -95,5 +94,5 @@ pub async fn completed_retry(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(json!({})))
+    Ok(StatusCode::ACCEPTED)
 }

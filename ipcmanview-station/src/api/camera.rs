@@ -28,9 +28,8 @@ pub async fn fs(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let file = state
-        .manager(id)
-        .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
+        .manager_api(id)
+        .await?
         .file(&file_path)
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -82,7 +81,7 @@ pub async fn create(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either BadRequest, Conflict, or InternalServerError
 
-    Ok(Json(json!({ "id": id })))
+    Ok((StatusCode::CREATED, Json(json!({ "id": id }))))
 }
 
 pub async fn delete(
@@ -93,7 +92,7 @@ pub async fn delete(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either NotFound or InternalServerError
 
-    Ok(Json(json!({})))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn show(
@@ -116,7 +115,7 @@ pub async fn update(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either BadRequest, Conflict, or InternalServerError
 
-    Ok(Json(json!({})))
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn refresh(
@@ -124,12 +123,53 @@ pub async fn refresh(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     state
-        .manager(id)
-        .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
+        .manager_api(id)
+        .await?
         .refresh(&state.pool)
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(json!({})))
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn refresh_detail(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    state
+        .manager_api(id)
+        .await?
+        .refresh_detail(&state.pool)
+        .await
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn refresh_licenses(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    state
+        .manager_api(id)
+        .await?
+        .refresh_licenses(&state.pool)
+        .await
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn refresh_software(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    state
+        .manager_api(id)
+        .await?
+        .refresh_software(&state.pool)
+        .await
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(StatusCode::NO_CONTENT)
 }

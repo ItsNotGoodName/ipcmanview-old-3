@@ -1,5 +1,5 @@
 @camera_id = 1
-@camera_ip = 192.168.60.13
+@camera_ip = 192.168.6.11
 @camera_username = admin
 
 # List cameras
@@ -30,6 +30,9 @@ Content-Type: application/json
 # Delete camera
 DELETE http://localhost:8000/api/cameras/{{camera_id}}
 
+# Refresh licenses
+POST http://localhost:8000/api/cameras/{{camera_id}}/ipc/licenses
+
 # Run full scan on camera
 POST http://localhost:8000/api/cameras/{{camera_id}}/scans/full
 
@@ -52,7 +55,10 @@ GET http://localhost:8000/api/scans/active
 GET http://localhost:8000/api/scans/completed
 
 # Get completed scans
-GET http://localhost:8000/api/scans/completed/1
+GET http://localhost:8000/api/scans/completed/2
+
+# Retry completed scans
+POST http://localhost:8000/api/scans/completed/2/retry
 
 # List files
 GET http://localhost:8000/api/files

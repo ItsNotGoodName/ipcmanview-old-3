@@ -53,12 +53,22 @@ impl Camera {
 
 impl IpcManager {
     pub async fn refresh(&self, pool: &SqlitePool) -> Result<()> {
-        IpcDetail::get(&self).await?.save(pool, self.id).await?;
-        IpcSoftware::get(&self).await?.save(pool, self.id).await?;
-        IpcLicenses::get(&self).await?.save(pool, self.id).await?;
-        Camera::update_refreshed_at(pool, self.id).await?;
+        self.refresh_detail(pool).await?;
+        self.refresh_licenses(pool).await?;
+        self.refresh_software(pool).await?;
+        Camera::update_refreshed_at(pool, self.id).await
+    }
 
-        Ok(())
+    pub async fn refresh_detail(&self, pool: &SqlitePool) -> Result<()> {
+        IpcDetail::get(&self).await?.save(pool, self.id).await
+    }
+
+    pub async fn refresh_licenses(&self, pool: &SqlitePool) -> Result<()> {
+        IpcLicenses::get(&self).await?.save(pool, self.id).await
+    }
+
+    pub async fn refresh_software(&self, pool: &SqlitePool) -> Result<()> {
+        IpcSoftware::get(&self).await?.save(pool, self.id).await
     }
 }
 

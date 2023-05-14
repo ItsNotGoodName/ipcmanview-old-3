@@ -5,7 +5,10 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use ipcmanview::ipc::IpcManager;
 use serde_json::json;
+
+use crate::app::AppState;
 
 pub struct Error(StatusCode, String);
 
@@ -55,6 +58,16 @@ impl<T> OptionExt<T> for Option<T> {
             Some(s) => Ok(s),
             None => Err(Error::from(StatusCode::NOT_FOUND)),
         }
+    }
+}
+
+impl AppState {
+    pub async fn manager_api(&self, id: i64) -> Result<IpcManager, Error> {
+        self.store
+            .get_optional(id)
+            .await
+            .or_error(StatusCode::NOT_FOUND)?
+            .or_option_error()
     }
 }
 

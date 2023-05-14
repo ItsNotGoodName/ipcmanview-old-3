@@ -20,6 +20,9 @@ pub fn router() -> Router<AppState> {
                 .delete(camera::delete),
         )
         .route("/cameras/:id/ipc", post(camera::refresh))
+        .route("/cameras/:id/ipc/detail", post(camera::refresh_detail))
+        .route("/cameras/:id/ipc/licenses", post(camera::refresh_licenses))
+        .route("/cameras/:id/ipc/software", post(camera::refresh_software))
         .route("/cameras/:id/fs/*file_path", get(camera::fs))
         .route("/cameras/:id/files", get(file::query_by_camera))
         .route("/cameras/:id/files/total", get(file::total_by_camera))
@@ -30,9 +33,7 @@ pub fn router() -> Router<AppState> {
         .route("/scans/pending", get(scan::pending_list))
         .route("/scans/active", get(scan::active_list))
         .route("/scans/completed", get(scan::completed_list))
-        .route(
-            "/scans/completed/:id",
-            get(scan::completed_show).post(scan::completed_retry),
-        )
+        .route("/scans/completed/:id", get(scan::completed_show))
+        .route("/scans/completed/:id/retry", post(scan::completed_retry))
         .fallback(api::fallback)
 }
