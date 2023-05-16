@@ -6,12 +6,12 @@ use crate::dto::{CreateCamera, UpdateCamera};
 use crate::{
     models::{
         Camera, CameraDetail, CameraFile, CameraLicense, CameraSoftware, ICamera, QueryCameraFile,
-        QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult, ShowCamera,
+        QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult,
     },
     scan::Scan,
 };
 
-use super::utils::sql_query_option;
+use super::NotFound;
 
 impl CreateCamera {
     pub(crate) async fn create_db(self, pool: &SqlitePool) -> Result<i64> {
@@ -32,7 +32,7 @@ impl CreateCamera {
         )
         .execute(&mut *pool)
         .await
-        .context("Failed to create camera")?
+        .context("Failed to create camera.")?
         .last_insert_rowid();
 
         sqlx::query!(
@@ -46,7 +46,7 @@ impl CreateCamera {
         )
         .execute(&mut *pool)
         .await
-        .context("Failed to create camera_details")?;
+        .context("Failed to create camera's detail.")?;
 
         sqlx::query!(
             r#"
@@ -59,7 +59,7 @@ impl CreateCamera {
         )
         .execute(&mut *pool)
         .await
-        .context("Failed to create camera_softwares")?;
+        .context("Failed to create camera's software.")?;
 
         pool.commit().await?;
 
@@ -68,7 +68,7 @@ impl CreateCamera {
 }
 
 impl UpdateCamera {
-    pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<Option<()>> {
+    pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<()> {
         sqlx::query!(
             r#"
             UPDATE cameras SET
@@ -84,8 +84,9 @@ impl UpdateCamera {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to update camera {}", self.id))
-        .and_then(sql_query_option)
+        .with_context(|| format!("Failed to update camera with id {}.", self.id))
+        .map(NotFound::check_query)?
+        .with_context(|| format!("Failed to find camera with id {}.", self.id))
     }
 }
 
@@ -100,10 +101,10 @@ impl Camera {
         )
         .fetch_all(pool)
         .await
-        .with_context(|| format!("Failed to list cameras"))
+        .with_context(|| format!("Failed to list cameras."))
     }
 
-    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Option<Self>> {
+    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
         sqlx::query_as_unchecked!(
             Self,
             r#"
@@ -115,39 +116,43 @@ impl Camera {
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find camera {}", camera_id))
+        .with_context(|| format!("Failed to find camera with id {camera_id}."))?
+        .ok_or(NotFound)
+        .with_context(|| format!("Failed to find camera with id {camera_id}."))
     }
 
-    pub(crate) async fn delete_db(pool: &SqlitePool, id: i64) -> Result<Option<()>> {
+    pub(crate) async fn delete_db(pool: &SqlitePool, camera_id: i64) -> Result<()> {
         sqlx::query!(
             r#"
             DELETE FROM cameras
             WHERE id = ?
             "#,
-            id
+            camera_id
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to delete camera {}", id))
-        .and_then(sql_query_option)
+        .with_context(|| format!("Failed to delete camera with id {camera_id}."))
+        .map(NotFound::check_query)?
+        .with_context(|| format!("Failed to find camera with id {camera_id}."))
     }
 
-    pub(crate) async fn update_refreshed_at(pool: &SqlitePool, id: i64) -> Result<()> {
+    pub(crate) async fn update_refreshed_at(pool: &SqlitePool, camera_id: i64) -> Result<()> {
         let refreshed_at = Utc::now();
         sqlx::query!(
             "UPDATE cameras SET refreshed_at = ? WHERE id = ?",
             refreshed_at,
-            id
+            camera_id
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to update refreshed_at with camera {}", id))
-        .map(|_| ())
+        .with_context(|| format!("Failed to update refreshed_at for camera with id {camera_id}."))
+        .map(NotFound::check_query)?
+        .with_context(|| format!("Failed to find camera with id {camera_id}."))
     }
 }
 
 impl ICamera {
-    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Option<Self>> {
+    pub async fn find_optional(pool: &SqlitePool, camera_id: i64) -> Result<Option<Self>> {
         sqlx::query_as!(
             Self,
             r#"
@@ -159,7 +164,7 @@ impl ICamera {
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find camera {}", camera_id))
+        .with_context(|| format!("Failed to find internal camera with id {camera_id}."))
     }
 
     pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
@@ -172,12 +177,12 @@ impl ICamera {
         )
         .fetch_all(pool)
         .await
-        .with_context(|| format!("Failed to list cameras"))
+        .with_context(|| format!("Failed to list internal cameras."))
     }
 }
 
 impl CameraDetail {
-    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Option<Self>> {
+    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
         sqlx::query_as!(
             Self,
             r#"
@@ -189,12 +194,14 @@ impl CameraDetail {
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find camera_details with camera {}", camera_id))
+        .with_context(|| format!("Failed to find camera's detail with camera id {camera_id}."))?
+        .ok_or(NotFound)
+        .with_context(|| format!("Failed to find camera's detail with camera id {camera_id}."))
     }
 }
 
 impl CameraSoftware {
-    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Option<Self>> {
+    pub async fn find(pool: &SqlitePool, camera_id: i64) -> Result<Self> {
         sqlx::query_as!(
             Self,
             r#"
@@ -206,7 +213,9 @@ impl CameraSoftware {
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find camera_softwares with camera {}", camera_id))
+        .with_context(|| format!("Failed to find camera's software with camera id {camera_id}."))?
+        .ok_or(NotFound)
+        .with_context(|| format!("Failed to find camera's software with camera id {camera_id}."))
     }
 }
 
@@ -232,49 +241,7 @@ impl CameraLicense {
         )
         .fetch_all(pool)
         .await
-        .with_context(|| format!("Failed to list camera_licenses with camera {}", camera_id))
-    }
-}
-
-impl ShowCamera {
-    // TODO: make this into a single query
-    pub async fn find(pool: &SqlitePool, id: i64) -> Result<Option<Self>> {
-        let detail = match CameraDetail::find(pool, id).await? {
-            Some(s) => s,
-            None => return Ok(None),
-        };
-
-        let software = match CameraSoftware::find(pool, id).await? {
-            Some(s) => s,
-            None => return Ok(None),
-        };
-
-        let licenses = CameraLicense::list(pool, id).await?;
-
-        let camera = match Camera::find(pool, id).await? {
-            Some(s) => s,
-            None => return Ok(None),
-        };
-
-        let file = sqlx::query!(
-            "SELECT count(*) AS total FROM camera_files WHERE camera_id = ?",
-            id
-        )
-        .fetch_one(pool)
-        .await
-        .with_context(|| format!("Failed to count camera_files with camera {id}"))?;
-
-        Ok(Some(ShowCamera {
-            id: camera.id,
-            ip: camera.ip,
-            username: camera.username,
-            refreshed_at: camera.refreshed_at,
-            created_at: camera.created_at,
-            detail,
-            software,
-            licenses,
-            file_total: file.total,
-        }))
+        .with_context(|| format!("Failed to list camera's licenses with camera id {camera_id}."))
     }
 }
 
@@ -346,7 +313,7 @@ impl CameraFile {
             .build_query_as::<CameraFileCount>()
             .fetch_one(pool)
             .await
-            .context("Failed to count camera_files")?
+            .context("Failed to count camera files.")?
             .count;
 
         Ok(count)

@@ -13,7 +13,7 @@ use serde_json::json;
 
 use crate::app::AppState;
 
-use super::api::{Error, OptionExt, ResultExt};
+use super::api::{Error, ResultExt};
 
 pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Error> {
     let cameras = Camera::list(&state.pool)
@@ -90,8 +90,7 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, Error> {
     Camera::delete(&state.pool, &state.store, id)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
-        .or_option_error()?;
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -102,8 +101,7 @@ pub async fn show(
 ) -> Result<impl IntoResponse, Error> {
     let show_camera = ShowCamera::find(&state.pool, id)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
-        .or_option_error()?;
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(show_camera))
 }
@@ -114,8 +112,7 @@ pub async fn update(
 ) -> Result<impl IntoResponse, Error> {
     json.update(&state.pool, &state.store)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
-        .or_option_error()?; // TODO: map to either Conflict
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either Conflict
 
     Ok(StatusCode::NO_CONTENT)
 }

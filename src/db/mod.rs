@@ -17,18 +17,26 @@ pub async fn new(url: &str) -> anyhow::Result<sqlx::SqlitePool> {
     Ok(pool)
 }
 
-pub mod camera;
-pub mod ipc;
-pub mod scan;
+#[derive(thiserror::Error, Default, Debug)]
+#[error("Not Found")]
+pub struct NotFound;
 
-mod utils {
-    use sqlx::sqlite::SqliteQueryResult;
-
-    pub fn sql_query_option(r: SqliteQueryResult) -> anyhow::Result<Option<()>> {
+impl NotFound {
+    fn check_query(r: sqlx::sqlite::SqliteQueryResult) -> Result<(), NotFound> {
         if r.rows_affected() == 0 {
-            Ok(None)
+            Err(Self)
         } else {
-            Ok(Some(()))
+            Ok(())
         }
     }
 }
+
+impl PartialEq<anyhow::Error> for NotFound {
+    fn eq(&self, other: &anyhow::Error) -> bool {
+        other.downcast_ref::<Self>().is_some()
+    }
+}
+
+pub mod camera;
+pub mod ipc;
+pub mod scan;

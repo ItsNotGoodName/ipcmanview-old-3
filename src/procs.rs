@@ -4,8 +4,9 @@ use sqlx::SqlitePool;
 use crate::dto::{CreateCamera, UpdateCamera};
 use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcSoftware, IpcStore};
 use crate::models::{
-    Camera, CameraFile, CameraScanResult, QueryCameraFile, QueryCameraFileCursor,
-    QueryCameraFileResult, ScanCompleted,
+    Camera, CameraDetail, CameraFile, CameraLicense, CameraScanResult, CameraSoftware,
+    QueryCameraFile, QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult,
+    ScanCompleted, ShowCamera,
 };
 use crate::scan::{Scan, ScanActor, ScanKindPending};
 
@@ -27,31 +28,52 @@ impl CreateCamera {
 }
 
 impl UpdateCamera {
-    pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<Option<()>> {
+    pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<()> {
         let id = self.id;
         // Update in database
-        if let None = self.update_db(pool).await? {
-            return Ok(None);
-        };
+        self.update_db(pool).await?;
         // Refresh in store
         store.refresh(id).await?;
         // Get from store and refresh in database
         store.get(id).await?.refresh(pool).await.ok();
 
-        Ok(Some(()))
+        Ok(())
     }
 }
 
 impl Camera {
-    pub async fn delete(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<Option<()>> {
+    pub async fn delete(pool: &SqlitePool, store: &IpcStore, id: i64) -> Result<()> {
         // Delete in database
-        if let None = Self::delete_db(pool, id).await? {
-            return Ok(None);
-        };
+        Self::delete_db(pool, id).await?;
         // Refresh in store
         store.refresh(id).await?;
 
-        Ok(Some(()))
+        Ok(())
+    }
+}
+
+impl ShowCamera {
+    // TODO: make this into a single query inside of db crate
+    pub async fn find(pool: &SqlitePool, id: i64) -> Result<Self> {
+        let detail = CameraDetail::find(pool, id).await?;
+        let software = CameraSoftware::find(pool, id).await?;
+        let licenses = CameraLicense::list(pool, id).await?;
+        let camera = Camera::find(pool, id).await?;
+
+        let file_total =
+            CameraFile::count(pool, &QueryCameraFileFilter::new().camera_ids(vec![id])).await?;
+
+        Ok(ShowCamera {
+            id: camera.id,
+            ip: camera.ip,
+            username: camera.username,
+            refreshed_at: camera.refreshed_at,
+            created_at: camera.created_at,
+            detail,
+            software,
+            licenses,
+            file_total,
+        })
     }
 }
 

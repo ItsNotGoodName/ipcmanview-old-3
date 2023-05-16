@@ -199,7 +199,7 @@ async fn camera_page(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, MpaError> {
-    let show_cameras = ShowCamera::find(&state.pool, id).await?.unwrap(); // TODO: NotFound
+    let show_cameras = ShowCamera::find(&state.pool, id).await?; // TODO: NotFound
 
     Ok(CameraPageTemplate { show_cameras })
 }

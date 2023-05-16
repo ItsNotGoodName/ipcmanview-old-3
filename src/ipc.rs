@@ -249,7 +249,7 @@ impl IpcStoreActor {
                 respond_to.send(None).ok();
             }
             IpcStoreMessage::Refresh(id) => {
-                let icam = match ICamera::find(&self.pool, id).await {
+                let icam = match ICamera::find_optional(&self.pool, id).await {
                     Ok(o) => o,
                     Err(err) => {
                         tracing::error!("{err:?}");
