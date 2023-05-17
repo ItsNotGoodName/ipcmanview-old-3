@@ -93,9 +93,9 @@ pub async fn delete(
         .await
         .map_err(|e| {
             if db::NotFound == e {
-                Error::from(e).code(StatusCode::NOT_FOUND)
+                Error::from((StatusCode::NOT_FOUND, e))
             } else {
-                Error::from(e)
+                Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
             }
         })?;
 
@@ -108,9 +108,9 @@ pub async fn show(
 ) -> Result<impl IntoResponse, Error> {
     let show_camera = ShowCamera::find(&state.pool, id).await.map_err(|e| {
         if db::NotFound == e {
-            Error::from(e).code(StatusCode::NOT_FOUND)
+            Error::from((StatusCode::NOT_FOUND, e))
         } else {
-            Error::from(e)
+            Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
         }
     })?;
 
@@ -123,9 +123,9 @@ pub async fn update(
 ) -> Result<impl IntoResponse, Error> {
     json.update(&state.pool, &state.store).await.map_err(|e| {
         if db::NotFound == e {
-            Error::from(e).code(StatusCode::NOT_FOUND)
+            Error::from((StatusCode::NOT_FOUND, e))
         } else {
-            Error::from(e)
+            Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
         }
     })?; // TODO: map to either Conflict
 
@@ -143,9 +143,9 @@ pub async fn refresh(
         .await
         .map_err(|e| {
             if db::NotFound == e {
-                Error::from(e).code(StatusCode::NOT_FOUND)
+                Error::from((StatusCode::NOT_FOUND, e))
             } else {
-                Error::from(e)
+                Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
             }
         })?;
 
@@ -163,9 +163,9 @@ pub async fn refresh_detail(
         .await
         .map_err(|e| {
             if db::NotFound == e {
-                Error::from(e).code(StatusCode::NOT_FOUND)
+                Error::from((StatusCode::NOT_FOUND, e))
             } else {
-                Error::from(e)
+                Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
             }
         })?;
 
@@ -183,9 +183,9 @@ pub async fn refresh_licenses(
         .await
         .map_err(|e| {
             if db::NotFound == e {
-                Error::from(e).code(StatusCode::NOT_FOUND)
+                Error::from((StatusCode::NOT_FOUND, e))
             } else {
-                Error::from(e)
+                Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
             }
         })?;
 
@@ -203,9 +203,9 @@ pub async fn refresh_software(
         .await
         .map_err(|e| {
             if db::NotFound == e {
-                Error::from(e).code(StatusCode::NOT_FOUND)
+                Error::from((StatusCode::NOT_FOUND, e))
             } else {
-                Error::from(e)
+                Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
             }
         })?;
 

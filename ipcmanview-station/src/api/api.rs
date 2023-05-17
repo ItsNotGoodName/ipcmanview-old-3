@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 
 use axum::{
     http::StatusCode,
@@ -26,28 +26,26 @@ impl IntoResponse for Error {
     }
 }
 
-impl Error {
-    fn new(code: StatusCode, message: String) -> Self {
-        Self(code, message, json!({}))
-    }
+impl<U> From<(StatusCode, U)> for Error
+where
+    U: Display + Debug,
+{
+    fn from(value: (StatusCode, U)) -> Self {
+        if value.0.is_server_error() {
+            tracing::error!("{:?}", value.1)
+        }
 
-    pub fn code(mut self, code: StatusCode) -> Self {
-        self.0 = code;
-        self
-    }
-
-    pub fn data(mut self, data: serde_json::Value) -> Self {
-        self.2 = data;
-        self
+        Self(value.0, value.1.to_string(), json!({}))
     }
 }
 
-impl<U> From<U> for Error
-where
-    U: Display,
-{
-    fn from(value: U) -> Self {
-        Self::new(StatusCode::INTERNAL_SERVER_ERROR, value.to_string())
+impl From<StatusCode> for Error {
+    fn from(value: StatusCode) -> Self {
+        if value.is_server_error() {
+            tracing::error!("{:?}", value)
+        }
+
+        Self(value, value.to_string(), json!({}))
     }
 }
 
@@ -57,12 +55,12 @@ pub trait ResultExt<T> {
 
 impl<T, E> ResultExt<T> for Result<T, E>
 where
-    E: Display,
+    E: Display + Debug,
 {
     fn or_error(self, code: StatusCode) -> Result<T, Error> {
         match self {
             Ok(o) => Ok(o),
-            Err(err) => Err(Error::new(code, err.to_string())),
+            Err(err) => Err(Error::from((code, err))),
         }
     }
 }
@@ -73,10 +71,10 @@ impl AppState {
             .get_optional(id)
             .await
             .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
-            .ok_or(Error::new(
+            .ok_or(Error::from((
                 StatusCode::NOT_FOUND,
-                "Failed to find camera in store.".to_string(),
-            ))
+                format!("Failed to find camera in store with camera id {id}."),
+            )))
     }
 }
 
