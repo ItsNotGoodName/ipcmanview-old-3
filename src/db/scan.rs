@@ -30,7 +30,7 @@ impl Scan {
         )
         .execute(pool)
         .await
-        .context("Failed to insert into pending_scans.")
+        .context("Failed to insert into pending scans.")
         .map(|_| ())
     }
 
@@ -60,7 +60,7 @@ impl Scan {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to insert into pending_scans with camera {camera_id}."))
+        .with_context(|| format!("Failed to insert into pending scans with camera {camera_id}."))
         .map(|_| ())
     }
 }

@@ -8,6 +8,8 @@ use crate::{
     models::{CameraScanResult, IpcEvent},
 };
 
+use super::NotFound;
+
 impl IpcDetail {
     pub async fn save(&self, pool: &SqlitePool, camera_id: i64) -> Result<()> {
         sqlx::query!(
@@ -34,7 +36,8 @@ impl IpcDetail {
         .execute(pool)
         .await
         .with_context(|| format!("Failed to update camera detail with camera id {camera_id}."))
-        .map(|_| ())
+        .map(NotFound::check_query)?
+        .with_context(|| format!("Failed to find camera detail with camera id {camera_id}."))
     }
 }
 
@@ -60,7 +63,8 @@ impl IpcSoftware {
         .execute(pool)
         .await
         .with_context(|| format!("Failed to update camera software with camera id {camera_id}."))
-        .map(|_| ())
+        .map(NotFound::check_query)?
+        .with_context(|| format!("Failed to find camera software with camera id {camera_id}."))
     }
 }
 
@@ -204,7 +208,9 @@ impl IpcManager {
         }
     }
 
-    /// This should never run concurrently.
+    /// This should never run concurrently with overlapping start and end times. But it is best to
+    /// only run it once per camera as it increases load on the camera which leads HTTP connection
+    /// resets.
     pub async fn scan_files(
         &self,
         pool: &SqlitePool,
