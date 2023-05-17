@@ -10,7 +10,7 @@ use serde_json::json;
 
 use crate::app::AppState;
 
-pub struct Error(StatusCode, String);
+pub struct Error(StatusCode, String, serde_json::Value);
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
@@ -19,16 +19,35 @@ impl IntoResponse for Error {
             Json(json!({
                 "code": self.0.as_u16(),
                 "message": self.1.to_string(),
-                "data": {}
+                "data": self.2
             })),
         )
             .into_response()
     }
 }
 
-impl From<StatusCode> for Error {
-    fn from(value: StatusCode) -> Self {
-        Error(value, value.to_string())
+impl Error {
+    fn new(code: StatusCode, message: String) -> Self {
+        Self(code, message, json!({}))
+    }
+
+    pub fn code(mut self, code: StatusCode) -> Self {
+        self.0 = code;
+        self
+    }
+
+    pub fn data(mut self, data: serde_json::Value) -> Self {
+        self.2 = data;
+        self
+    }
+}
+
+impl<U> From<U> for Error
+where
+    U: Display,
+{
+    fn from(value: U) -> Self {
+        Self::new(StatusCode::INTERNAL_SERVER_ERROR, value.to_string())
     }
 }
 
@@ -43,20 +62,7 @@ where
     fn or_error(self, code: StatusCode) -> Result<T, Error> {
         match self {
             Ok(o) => Ok(o),
-            Err(err) => Err(Error(code, err.to_string())),
-        }
-    }
-}
-
-pub trait OptionExt<T> {
-    fn or_option_error(self) -> Result<T, Error>;
-}
-
-impl<T> OptionExt<T> for Option<T> {
-    fn or_option_error(self) -> Result<T, Error> {
-        match self {
-            Some(s) => Ok(s),
-            None => Err(Error::from(StatusCode::NOT_FOUND)),
+            Err(err) => Err(Error::new(code, err.to_string())),
         }
     }
 }
@@ -66,8 +72,11 @@ impl AppState {
         self.store
             .get_optional(id)
             .await
-            .or_error(StatusCode::NOT_FOUND)?
-            .or_option_error()
+            .or_error(StatusCode::INTERNAL_SERVER_ERROR)?
+            .ok_or(Error::new(
+                StatusCode::NOT_FOUND,
+                "Failed to find camera in store.".to_string(),
+            ))
     }
 }
 

@@ -6,6 +6,8 @@ use sqlx::SqlitePool;
 use crate::models::{ScanActive, ScanCompleted, ScanPending};
 use crate::scan::{Scan, ScanActor, ScanCamera, ScanKind, ScanKindPending, ScanRange};
 
+use super::NotFound;
+
 impl Scan {
     pub(crate) async fn queue_all_db(pool: &SqlitePool, kind: ScanKindPending) -> Result<()> {
         let (range_start, range_end) = kind.range();
@@ -28,7 +30,7 @@ impl Scan {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to insert into pending_scans",))
+        .context("Failed to insert into pending_scans.")
         .map(|_| ())
     }
 
@@ -58,12 +60,7 @@ impl Scan {
         )
         .execute(pool)
         .await
-        .with_context(|| {
-            format!(
-                "Failed to insert into pending_scans with camera {}",
-                camera_id
-            )
-        })
+        .with_context(|| format!("Failed to insert into pending_scans with camera {camera_id}."))
         .map(|_| ())
     }
 }
@@ -95,7 +92,7 @@ impl ScanActor {
                     .await
                     .with_context(|| {
                         format!(
-                            "Failed to find scan_cursor with camera {}",
+                            "Failed to find scan_cursor with camera {}.",
                             pending.camera_id
                         )
                     })?;
@@ -154,7 +151,7 @@ impl ScanActor {
         .await
         .with_context(|| {
             format!(
-                "Failed to create active scan with camera {}",
+                "Failed to create active scan with camera {}.",
                 actor.camera_id
             )
         })?;
@@ -191,7 +188,7 @@ impl ScanActor {
         .await
         .with_context(|| {
             format!(
-                "Failed to update status on active scan with camera {}",
+                "Failed to update status on active scan with camera {}.",
                 self.camera_id
             )
         })
@@ -250,7 +247,7 @@ impl ScanActor {
             .await
             .with_context(|| {
                 format!(
-                    "Failed to insert into completed scans with camera {}",
+                    "Failed to insert into completed scans with camera {}.",
                     self.camera_id
                 )
             })?;
@@ -265,7 +262,7 @@ impl ScanActor {
         .await
         .with_context(|| {
             format!(
-                "Failed to delete active scan with camera {}",
+                "Failed to delete active scan with camera {}.",
                 self.camera_id
             )
         })?;
@@ -281,7 +278,7 @@ impl ScanActor {
             .await
             .with_context(|| {
                 format!(
-                    "Failed to update scan cursor with camera {}",
+                    "Failed to update scan cursor with camera {}.",
                     self.camera_id,
                 )
             })?;
@@ -298,7 +295,7 @@ impl ScanActive {
         sqlx::query!("DELETE FROM active_scans")
             .execute(pool)
             .await
-            .context("Failed to delete active scans")
+            .context("Failed to delete active scans.")
             .map(|_| ())
     }
 
@@ -311,7 +308,7 @@ impl ScanActive {
         )
         .fetch_all(pool)
         .await
-        .with_context(|| format!("Failed to list active scans"))
+        .context("Failed to list active scans.")
     }
 }
 
@@ -329,10 +326,10 @@ impl ScanCompleted {
         )
         .fetch_all(pool)
         .await
-        .with_context(|| format!("Failed to list completed scans"))
+        .context("Failed to list completed scans.")
     }
 
-    pub async fn get(pool: &SqlitePool, id: i64) -> Result<Option<Self>> {
+    pub async fn find(pool: &SqlitePool, id: i64) -> Result<Self> {
         sqlx::query_as_unchecked!(
             Self,
             r#"
@@ -344,7 +341,9 @@ impl ScanCompleted {
         )
         .fetch_optional(pool)
         .await
-        .with_context(|| format!("Failed to find completed scan {id}"))
+        .with_context(|| format!("Failed to find completed scan {id}."))?
+        .ok_or(NotFound)
+        .with_context(|| format!("Failed to find completed scan {id}."))
     }
 
     pub(crate) async fn retry_db(pool: &SqlitePool, id: i64) -> Result<()> {
@@ -354,8 +353,9 @@ impl ScanCompleted {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to retry completed scan {id}"))
-        .map(|_| ())
+        .with_context(|| format!("Failed to retry completed scan {id}."))
+        .map(NotFound::check_query)?
+        .with_context(|| format!("Failed to retry completed scan {id}."))
     }
 }
 
@@ -364,6 +364,6 @@ impl ScanPending {
         sqlx::query_as_unchecked!(Self, "SELECT * FROM pending_scans")
             .fetch_all(pool)
             .await
-            .with_context(|| format!("Failed to list pending scans"))
+            .context("Failed to list pending scans.")
     }
 }

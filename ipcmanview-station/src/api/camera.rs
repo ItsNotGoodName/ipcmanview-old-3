@@ -6,6 +6,7 @@ use axum::{
     Json,
 };
 use ipcmanview::{
+    db,
     dto::{CreateCamera, UpdateCamera},
     models::{Camera, ShowCamera},
 };
@@ -90,7 +91,13 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, Error> {
     Camera::delete(&state.pool, &state.store, id)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            if db::NotFound == e {
+                Error::from(e).code(StatusCode::NOT_FOUND)
+            } else {
+                Error::from(e)
+            }
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -99,9 +106,13 @@ pub async fn show(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let show_camera = ShowCamera::find(&state.pool, id)
-        .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let show_camera = ShowCamera::find(&state.pool, id).await.map_err(|e| {
+        if db::NotFound == e {
+            Error::from(e).code(StatusCode::NOT_FOUND)
+        } else {
+            Error::from(e)
+        }
+    })?;
 
     Ok(Json(show_camera))
 }
@@ -110,9 +121,13 @@ pub async fn update(
     State(state): State<AppState>,
     Json(json): Json<UpdateCamera>,
 ) -> Result<impl IntoResponse, Error> {
-    json.update(&state.pool, &state.store)
-        .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: map to either Conflict
+    json.update(&state.pool, &state.store).await.map_err(|e| {
+        if db::NotFound == e {
+            Error::from(e).code(StatusCode::NOT_FOUND)
+        } else {
+            Error::from(e)
+        }
+    })?; // TODO: map to either Conflict
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -126,7 +141,13 @@ pub async fn refresh(
         .await?
         .refresh(&state.pool)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            if db::NotFound == e {
+                Error::from(e).code(StatusCode::NOT_FOUND)
+            } else {
+                Error::from(e)
+            }
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -140,7 +161,13 @@ pub async fn refresh_detail(
         .await?
         .refresh_detail(&state.pool)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            if db::NotFound == e {
+                Error::from(e).code(StatusCode::NOT_FOUND)
+            } else {
+                Error::from(e)
+            }
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -154,7 +181,13 @@ pub async fn refresh_licenses(
         .await?
         .refresh_licenses(&state.pool)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            if db::NotFound == e {
+                Error::from(e).code(StatusCode::NOT_FOUND)
+            } else {
+                Error::from(e)
+            }
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -168,7 +201,13 @@ pub async fn refresh_software(
         .await?
         .refresh_software(&state.pool)
         .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            if db::NotFound == e {
+                Error::from(e).code(StatusCode::NOT_FOUND)
+            } else {
+                Error::from(e)
+            }
+        })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
