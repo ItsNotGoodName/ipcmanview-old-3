@@ -7,7 +7,7 @@ use dahua_rpc::{
 };
 use tokio::sync::{mpsc, oneshot, Mutex};
 
-/// Turns rpc::ResponseError to Ok(None), Ok(o) to Ok(Some(o)) and, any other error to Err(rpc::Error)
+/// If the error is of type ResponseError then it will return the Default::default() of type T.
 fn maybe<T>(check: Result<T, Error>) -> Result<T, Error>
 where
     T: Default,
@@ -220,7 +220,7 @@ impl IpcStoreActor {
     ) -> Result<Self> {
         let client = dahua_rpc::recommended_reqwest_client_builder()
             .build()
-            .context("Failed to build reqwest client")?;
+            .context("Failed to build reqwest client.")?;
 
         let mans = ICamera::list(&pool)
             .await?
@@ -313,13 +313,13 @@ impl IpcStore {
         let (send, recv) = oneshot::channel();
         let msg = IpcStoreMessage::Get(id, send);
         self.sender.send(msg).await.ok();
-        recv.await.context("Store is shutdown")
+        recv.await.context("Ipc store is shutdonw.")
     }
 
     pub async fn get(&self, id: i64) -> Result<IpcManager> {
         self.get_optional(id)
             .await?
-            .ok_or_else(|| anyhow!("Manager not found with id {id}"))
+            .ok_or_else(|| anyhow!("Failed to find ipc manager with camera id {id}."))
     }
 
     pub async fn refresh(&self, id: i64) -> Result<()> {
@@ -327,7 +327,7 @@ impl IpcStore {
         self.sender
             .send(msg)
             .await
-            .map_err(|_| anyhow!("Store is shutdown"))
+            .map_err(|_| anyhow!("Ipc store is shutdown."))
     }
 
     pub async fn shutdown(&self) {

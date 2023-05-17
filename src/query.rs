@@ -18,7 +18,7 @@ impl QueryCameraFileCursor {
     }
 
     pub fn from(cursor: &str) -> Result<(i64, DateTime<Utc>)> {
-        Self::from_(cursor).with_context(|| format!("invalid cursor: {cursor}"))
+        Self::from_(cursor).with_context(|| format!("Invalid cursor {cursor}."))
     }
 
     pub fn to(id: i64, time: DateTime<Utc>) -> String {

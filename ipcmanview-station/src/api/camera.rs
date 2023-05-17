@@ -29,7 +29,7 @@ pub async fn fs(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let file = state
-        .manager_api(id)
+        .manager(id)
         .await?
         .file(&file_path)
         .await
@@ -77,10 +77,14 @@ pub async fn create(
     State(state): State<AppState>,
     Json(json): Json<CreateCamera>,
 ) -> Result<impl IntoResponse, Error> {
-    let id = json
-        .create(&state.pool, &state.store)
-        .await
-        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?; // TODO: add BadRequest and Conflict
+    // TODO: validate request
+    let id = json.create(&state.pool, &state.store).await.map_err(|e| {
+        if db::Conflict == e {
+            Error::from((StatusCode::CONFLICT, e))
+        } else {
+            Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
+        }
+    })?;
 
     Ok((StatusCode::CREATED, Json(json!({ "id": id }))))
 }
@@ -121,13 +125,16 @@ pub async fn update(
     State(state): State<AppState>,
     Json(json): Json<UpdateCamera>,
 ) -> Result<impl IntoResponse, Error> {
+    // TODO: validate request
     json.update(&state.pool, &state.store).await.map_err(|e| {
         if db::NotFound == e {
             Error::from((StatusCode::NOT_FOUND, e))
+        } else if db::Conflict == e {
+            Error::from((StatusCode::CONFLICT, e))
         } else {
             Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
         }
-    })?; // TODO: map to either Conflict
+    })?;
 
     Ok(StatusCode::NO_CONTENT)
 }
@@ -137,7 +144,7 @@ pub async fn refresh(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     state
-        .manager_api(id)
+        .manager(id)
         .await?
         .refresh(&state.pool)
         .await
@@ -157,7 +164,7 @@ pub async fn refresh_detail(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     state
-        .manager_api(id)
+        .manager(id)
         .await?
         .refresh_detail(&state.pool)
         .await
@@ -177,7 +184,7 @@ pub async fn refresh_licenses(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     state
-        .manager_api(id)
+        .manager(id)
         .await?
         .refresh_licenses(&state.pool)
         .await
@@ -197,7 +204,7 @@ pub async fn refresh_software(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     state
-        .manager_api(id)
+        .manager(id)
         .await?
         .refresh_software(&state.pool)
         .await

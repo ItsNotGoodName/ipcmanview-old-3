@@ -57,6 +57,7 @@ pub async fn query_by_camera(
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     file_query.filter.camera_ids = vec![id];
+
     query(file_query, state).await
 }
 
@@ -84,6 +85,7 @@ pub async fn total_by_camera(
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     filter.camera_ids = vec![id];
+
     total(filter, state).await
 }
 

@@ -11,7 +11,7 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub async fn manager(&self, id: i64) -> anyhow::Result<IpcManager> {
+    pub async fn manager_mpa(&self, id: i64) -> anyhow::Result<IpcManager> {
         self.store.get(id).await
     }
 }

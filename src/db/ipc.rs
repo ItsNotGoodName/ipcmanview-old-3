@@ -209,8 +209,8 @@ impl IpcManager {
     }
 
     /// This should never run concurrently with overlapping start and end times. But it is best to
-    /// only run it once per camera as it increases load on the camera which leads HTTP connection
-    /// resets.
+    /// only run it once per camera as it increases load on the camera which leads to HTTP
+    /// connection resets.
     pub async fn scan_files(
         &self,
         pool: &SqlitePool,

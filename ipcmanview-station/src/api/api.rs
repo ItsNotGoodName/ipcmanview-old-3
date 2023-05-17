@@ -66,7 +66,7 @@ where
 }
 
 impl AppState {
-    pub async fn manager_api(&self, id: i64) -> Result<IpcManager, Error> {
+    pub async fn manager(&self, id: i64) -> Result<IpcManager, Error> {
         self.store
             .get_optional(id)
             .await

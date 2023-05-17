@@ -37,6 +37,23 @@ impl PartialEq<anyhow::Error> for NotFound {
     }
 }
 
+pub struct Conflict;
+
+impl PartialEq<anyhow::Error> for Conflict {
+    fn eq(&self, other: &anyhow::Error) -> bool {
+        if let Some(e) = other.downcast_ref::<sqlx::Error>() {
+            if let Some(e) = e.as_database_error() {
+                if let Some(code) = e.code() {
+                    if code == "2067" {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+}
+
 pub mod camera;
 pub mod ipc;
 pub mod scan;

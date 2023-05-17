@@ -104,7 +104,7 @@ impl CameraFile {
         store: &IpcStore,
         query: QueryCameraFile<'_>,
     ) -> Result<QueryCameraFileResult> {
-        // Cursor scan when query has no cursor
+        // Cursor scan when no cursor is supplied
         if let QueryCameraFileCursor::None = query.cursor {
             Scan::queue_all(pool, store, ScanKindPending::Cursor).await?;
         }

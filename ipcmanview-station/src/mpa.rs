@@ -157,7 +157,7 @@ async fn camera_file(
     Path((id, file_path)): Path<(i64, String)>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, MpaError> {
-    let file = state.manager(id).await?.file(&file_path).await?;
+    let file = state.manager_mpa(id).await?.file(&file_path).await?;
 
     // TODO: maybe use hyper HTTP connector
     // Make request to camera
@@ -268,7 +268,7 @@ async fn camera_refresh(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, MpaError> {
-    state.manager(id).await?.refresh(&state.pool).await?;
+    state.manager_mpa(id).await?.refresh(&state.pool).await?;
 
     Ok(Redirect::to(format!("/cameras/{id}").as_str()))
 }
