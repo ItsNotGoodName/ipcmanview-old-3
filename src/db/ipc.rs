@@ -33,7 +33,7 @@ impl IpcDetail {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to update detail with camera {}", camera_id))
+        .with_context(|| format!("Failed to update camera detail with camera id {camera_id}."))
         .map(|_| ())
     }
 }
@@ -59,12 +59,7 @@ impl IpcSoftware {
         )
         .execute(pool)
         .await
-        .with_context(|| {
-            format!(
-                "Failed to update software version with camera {}",
-                camera_id
-            )
-        })
+        .with_context(|| format!("Failed to update camera software with camera id {camera_id}."))
         .map(|_| ())
     }
 }
@@ -77,7 +72,7 @@ impl IpcLicenses {
             .execute(&mut pool)
             .await
             .with_context(|| {
-                format!("Failed to delete camera_licenses with camera {}", camera_id)
+                format!("Failed to delete camera licenses with camera id {camera_id}.")
             })?;
 
         for license in self.0.iter() {
@@ -113,7 +108,7 @@ impl IpcLicenses {
             .execute(&mut pool)
             .await
             .with_context(|| {
-                format!("Failed to insert camera_licenses with camera {}", camera_id)
+                format!("Failed to insert camera licenses with camera id {camera_id}.")
             })?;
         }
 
@@ -162,7 +157,7 @@ impl IpcManager {
             .build()
             .execute(pool)
             .await
-            .with_context(|| format!("Failed to upsert files with camera {}", camera_id))?;
+            .with_context(|| format!("Failed to upsert files with camera id {camera_id}."))?;
 
         // Upsert events
         QueryBuilder::<Sqlite>::new("INSERT OR IGNORE INTO ipc_events (name)")
@@ -172,7 +167,7 @@ impl IpcManager {
             .build()
             .execute(pool)
             .await
-            .with_context(|| format!("Failed to upsert events with camera {}", camera_id))?;
+            .with_context(|| format!("Failed to upsert ipc events with camera id {camera_id}."))?;
 
         Ok(res)
     }
@@ -184,7 +179,10 @@ impl IpcManager {
         timestamp: DateTime<Utc>,
     ) -> Result<u64> {
         let mut stream = IpcFileStream::new(self, condition).await.with_context(|| {
-            format!("Failed to create file info stream with camera {}", self.id)
+            format!(
+                "Failed to create ipc file stream with camera id {}.",
+                self.id
+            )
         })?;
 
         let mut upserted: u64 = 0;
@@ -198,7 +196,7 @@ impl IpcManager {
 
         if let Some(err) = stream.error {
             Err(err).context(format!(
-                "Error after streaming files with camera {}",
+                "Error after streaming ipc files with camera id {}.",
                 self.id
             ))
         } else {
@@ -245,7 +243,12 @@ impl IpcManager {
         )
         .execute(pool)
         .await
-        .with_context(|| format!("Failed to delete stale files with camera {}", self.id))?
+        .with_context(|| {
+            format!(
+                "Failed to delete stale camera files with camera id {}.",
+                self.id
+            )
+        })?
         .rows_affected();
 
         Ok(CameraScanResult { deleted, upserted })
@@ -257,6 +260,6 @@ impl IpcEvent {
         sqlx::query_as_unchecked!(Self, "SELECT name FROM ipc_events")
             .fetch_all(pool)
             .await
-            .context("Failed to list ipc_events")
+            .context("Failed to list ipc events.")
     }
 }
