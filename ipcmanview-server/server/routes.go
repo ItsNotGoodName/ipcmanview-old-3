@@ -8,19 +8,21 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-func Routes(app *pocketbase.PocketBase) func(e *core.ServeEvent) error {
-	return func(e *core.ServeEvent) error {
+func AddRoutes(app *pocketbase.PocketBase) {
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
 		activityLogger := apis.ActivityLogger(app)
 		a := e.Router.Group("/app")
 
 		{
 			stationProxy := stationProxy(app)
-			a.Any("/stations/:id/*", stationProxy, activityLogger)
-			a.Any("/stations/:id", stationProxy, activityLogger)
+			stationAuth := stationAuth(app)
+			loadAuthContextFromCookie := LoadAuthContextFromCookie(app)
+			a.Any("/stations/:id/*", stationProxy, activityLogger, loadAuthContextFromCookie, stationAuth)
+			a.Any("/stations/:id", stationProxy, activityLogger, loadAuthContextFromCookie, stationAuth)
 		}
 
 		e.Router.GET("/*", apis.StaticDirectoryHandler(ui.FS, true), middleware.Gzip())
 
 		return nil
-	}
+	})
 }

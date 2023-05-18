@@ -1,0 +1,14 @@
+@station_id = 8j90r7j1fv1sl7m
+@authorization = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJjb2xsZWN0aW9uSWQiOiJfcGJfdXNlcnNfYXV0aF8iLCJleHAiOjE2ODU1OTgyNjQsImlkIjoieWdja3BoODN0aGVjMjQwIiwidHlwZSI6ImF1dGhSZWNvcmQifQ.ESVHJjdx8oDZzATcaVIxz7R2WUQEootr1SZzYT7sy4k
+
+# List cameras
+GET http://localhost:8090/app/stations/{{station_id}}/cameras
+Authorization: {{authorization}}
+
+# Create camera
+POST http://localhost:8090/app/stations/{{station_id}}/cameras/1/ipc
+Authorization: {{authorization}}
+
+GET http://localhost:8090/app/stations/{{station_id}}/scans/completed
+Authorization: {{authorization}}
+

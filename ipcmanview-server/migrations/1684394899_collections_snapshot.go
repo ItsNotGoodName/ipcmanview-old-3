@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "yugkj86nauvh93p",
 				"created": "2023-05-09 00:31:36.129Z",
-				"updated": "2023-05-11 22:07:07.234Z",
+				"updated": "2023-05-18 07:20:36.612Z",
 				"name": "stations",
 				"type": "base",
 				"system": false,
@@ -50,8 +50,8 @@ func init() {
 					"CREATE UNIQUE INDEX ` + "`" + `idx_goOFdFl` + "`" + ` ON ` + "`" + `stations` + "`" + ` (` + "`" + `url` + "`" + `)",
 					"CREATE UNIQUE INDEX ` + "`" + `idx_S38EZva` + "`" + ` ON ` + "`" + `stations` + "`" + ` (` + "`" + `name` + "`" + `)"
 				],
-				"listRule": "@request.auth.id != \"\"",
-				"viewRule": "@request.auth.id != \"\"",
+				"listRule": "@request.auth.id ?= @collection.permissions.user.id && id ?= @collection.permissions.station.id",
+				"viewRule": "@request.auth.id ?= @collection.permissions.user.id && id ?= @collection.permissions.station.id",
 				"createRule": null,
 				"updateRule": null,
 				"deleteRule": null,
@@ -59,8 +59,8 @@ func init() {
 			},
 			{
 				"id": "_pb_users_auth_",
-				"created": "2023-05-09 03:56:27.282Z",
-				"updated": "2023-05-11 21:33:35.147Z",
+				"created": "2023-05-17 08:14:18.793Z",
+				"updated": "2023-05-18 04:50:29.879Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -116,6 +116,79 @@ func init() {
 					"onlyEmailDomains": null,
 					"requireEmail": false
 				}
+			},
+			{
+				"id": "i5olmj6c13jfrcn",
+				"created": "2023-05-18 05:39:39.718Z",
+				"updated": "2023-05-18 06:43:59.431Z",
+				"name": "permissions",
+				"type": "base",
+				"system": false,
+				"schema": [
+					{
+						"system": false,
+						"id": "fatyxent",
+						"name": "user",
+						"type": "relation",
+						"required": true,
+						"unique": false,
+						"options": {
+							"collectionId": "_pb_users_auth_",
+							"cascadeDelete": true,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					},
+					{
+						"system": false,
+						"id": "sxr1ljhn",
+						"name": "station",
+						"type": "relation",
+						"required": true,
+						"unique": false,
+						"options": {
+							"collectionId": "yugkj86nauvh93p",
+							"cascadeDelete": true,
+							"minSelect": null,
+							"maxSelect": 1,
+							"displayFields": []
+						}
+					},
+					{
+						"system": false,
+						"id": "deigmibk",
+						"name": "role",
+						"type": "select",
+						"required": true,
+						"unique": false,
+						"options": {
+							"maxSelect": 1,
+							"values": [
+								"viewer",
+								"manager"
+							]
+						}
+					},
+					{
+						"system": false,
+						"id": "wms8olbk",
+						"name": "cameras",
+						"type": "json",
+						"required": false,
+						"unique": false,
+						"options": {}
+					}
+				],
+				"indexes": [
+					"CREATE INDEX ` + "`" + `idx_jbtjZGB` + "`" + ` ON ` + "`" + `permissions` + "`" + ` (\n  ` + "`" + `user` + "`" + `,\n  ` + "`" + `station` + "`" + `\n)"
+				],
+				"listRule": null,
+				"viewRule": null,
+				"createRule": null,
+				"updateRule": null,
+				"deleteRule": null,
+				"options": {}
 			}
 		]`
 

@@ -5,6 +5,10 @@ const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL);
 
 export const adminPageUrl = import.meta.env.VITE_BACKEND_URL + "/_/";
 
+export const stationUrl = (stationId: string, path: string): string => {
+  return "/app/stations/" + stationId + path;
+};
+
 export type PbError = {
   code: number;
   message: string;
@@ -51,6 +55,7 @@ pb.authStore.onChange(() => {
     model: pb.authStore.model as any,
     isValid: pb.authStore.isValid,
   });
+  document.cookie = "pb_token=" + pb.authStore.token + ";Path=/app/stations";
 });
 
 try {
