@@ -122,7 +122,7 @@ async fn files_page(
     let ipc_events = IpcEvent::list(&state.pool).await?;
     let cameras = Camera::list(&state.pool).await?;
 
-    let files_total = CameraFile::count(&state.pool, &filter).await?;
+    let files_total = CameraFile::total(&state.pool, &filter).await?;
 
     current_query.after = Some(files.after.clone());
     let after_query = serde_html_form::ser::to_string(&current_query).unwrap_or_default();
@@ -147,7 +147,7 @@ async fn files_page(
 struct FilesPageTemplate {
     cameras: Vec<Camera>,
     ipc_events: Vec<IpcEvent>,
-    files_total: i64,
+    files_total: i32,
     files: QueryCameraFileResult,
     before_query: String,
     after_query: String,

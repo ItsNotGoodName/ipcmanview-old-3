@@ -61,7 +61,7 @@ impl ShowCamera {
         let camera = Camera::find(pool, id).await?;
 
         let file_total =
-            CameraFile::count(pool, &QueryCameraFileFilter::new().camera_ids(vec![id])).await?;
+            CameraFile::total(pool, &QueryCameraFileFilter::new().camera_ids(vec![id])).await?;
 
         Ok(ShowCamera {
             id: camera.id,

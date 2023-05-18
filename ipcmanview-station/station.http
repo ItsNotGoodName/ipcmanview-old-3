@@ -5,6 +5,9 @@
 # List cameras
 GET http://localhost:8000/api/cameras
 
+# List cameras
+GET http://localhost:8000/api/cameras-total
+
 # Create camera
 POST http://localhost:8000/api/cameras
 Content-Type: application/json

@@ -11,6 +11,7 @@ use crate::{
     scan::Scan,
 };
 
+use super::utils::CountRow;
 use super::NotFound;
 
 impl CreateCamera {
@@ -91,6 +92,14 @@ impl UpdateCamera {
 }
 
 impl Camera {
+    pub async fn total(pool: &SqlitePool) -> Result<i32> {
+        sqlx::query!(r#"SELECT COUNT(id) as count FROM cameras "#)
+            .fetch_one(pool)
+            .await
+            .with_context(|| format!("Failed to count cameras."))
+            .map(|c| c.count)
+    }
+
     pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
         sqlx::query_as_unchecked!(
             Self,
@@ -301,16 +310,11 @@ impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
     }
 }
 
-#[derive(sqlx::FromRow)]
-struct CameraFileCount {
-    count: i64,
-}
-
 impl CameraFile {
-    pub async fn count(pool: &SqlitePool, filter: &QueryCameraFileFilter) -> Result<i64> {
+    pub async fn total(pool: &SqlitePool, filter: &QueryCameraFileFilter) -> Result<i32> {
         let count = QueryBuilder::new("SELECT COUNT(id) AS count FROM camera_files")
             .push_camera_file_filter(&filter)
-            .build_query_as::<CameraFileCount>()
+            .build_query_as::<CountRow>()
             .fetch_one(pool)
             .await
             .context("Failed to count camera files.")?

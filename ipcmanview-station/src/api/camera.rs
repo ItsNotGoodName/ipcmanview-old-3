@@ -24,6 +24,14 @@ pub async fn list(State(state): State<AppState>) -> Result<impl IntoResponse, Er
     Ok(Json(json!(cameras)))
 }
 
+pub async fn total(State(state): State<AppState>) -> Result<impl IntoResponse, Error> {
+    let total = Camera::total(&state.pool)
+        .await
+        .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(json!({ "total": total })))
+}
+
 pub async fn fs(
     Path((id, file_path)): Path<(i64, String)>,
     State(state): State<AppState>,

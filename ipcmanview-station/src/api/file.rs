@@ -94,7 +94,7 @@ pub async fn total(
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let filter = QueryCameraFileFilter::from(filter);
-    let total = CameraFile::count(&state.pool, &filter)
+    let total = CameraFile::total(&state.pool, &filter)
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 

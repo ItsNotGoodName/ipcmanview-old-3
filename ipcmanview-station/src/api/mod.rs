@@ -13,6 +13,7 @@ mod scan;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/cameras", get(camera::list).post(camera::create))
+        .route("/cameras-total", get(camera::total))
         .route(
             "/cameras/:id",
             get(camera::show)

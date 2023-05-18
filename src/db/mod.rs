@@ -57,3 +57,9 @@ impl PartialEq<anyhow::Error> for Conflict {
 pub mod camera;
 pub mod ipc;
 pub mod scan;
+mod utils {
+    #[derive(sqlx::FromRow)]
+    pub struct CountRow {
+        pub count: i32,
+    }
+}
