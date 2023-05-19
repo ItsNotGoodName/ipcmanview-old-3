@@ -15,7 +15,7 @@ func init() {
 			{
 				"id": "yugkj86nauvh93p",
 				"created": "2023-05-09 00:31:36.129Z",
-				"updated": "2023-05-18 07:20:36.612Z",
+				"updated": "2023-05-18 07:29:31.110Z",
 				"name": "stations",
 				"type": "base",
 				"system": false,
@@ -60,7 +60,7 @@ func init() {
 			{
 				"id": "_pb_users_auth_",
 				"created": "2023-05-17 08:14:18.793Z",
-				"updated": "2023-05-18 04:50:29.879Z",
+				"updated": "2023-05-18 07:29:31.111Z",
 				"name": "users",
 				"type": "auth",
 				"system": false,
@@ -120,7 +120,7 @@ func init() {
 			{
 				"id": "i5olmj6c13jfrcn",
 				"created": "2023-05-18 05:39:39.718Z",
-				"updated": "2023-05-18 06:43:59.431Z",
+				"updated": "2023-05-19 04:28:58.065Z",
 				"name": "permissions",
 				"type": "base",
 				"system": false,
@@ -181,7 +181,7 @@ func init() {
 					}
 				],
 				"indexes": [
-					"CREATE INDEX ` + "`" + `idx_jbtjZGB` + "`" + ` ON ` + "`" + `permissions` + "`" + ` (\n  ` + "`" + `user` + "`" + `,\n  ` + "`" + `station` + "`" + `\n)"
+					"CREATE UNIQUE INDEX ` + "`" + `idx_jbtjZGB` + "`" + ` ON ` + "`" + `permissions` + "`" + ` (\n  ` + "`" + `user` + "`" + `,\n  ` + "`" + `station` + "`" + `\n)"
 				],
 				"listRule": null,
 				"viewRule": null,

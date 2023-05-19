@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { JSX, ParentComponent, Show, splitProps } from "solid-js";
-import { RiSystemLoader4Fill } from "solid-icons/ri";
+import Spinner from "./Spinner";
 
 type ButtonProps = {
   loading?: boolean;
@@ -20,9 +20,7 @@ const Button: ParentComponent<Omit<ButtonProps, "disabled">> = (props) => {
       disabled={props.loading}
     >
       <Show when={props.loading}>
-        <div class="animate-spin">
-          <RiSystemLoader4Fill class="h-6 w-6" />
-        </div>
+        <Spinner />
       </Show>
       {props.children}
     </button>

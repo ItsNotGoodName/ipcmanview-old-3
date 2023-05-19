@@ -1,40 +1,13 @@
 import PocketBase from "pocketbase";
 import { createSignal } from "solid-js";
+import { UserRecord } from "./records";
 
-const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL);
+const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL + "/");
 
 export const adminPageUrl = import.meta.env.VITE_BACKEND_URL + "/_/";
 
 export const stationUrl = (stationId: string, path: string): string => {
   return "/app/stations/" + stationId + path;
-};
-
-export type PbError = {
-  code: number;
-  message: string;
-  data: {
-    [string: string]: Omit<PbError, "data">;
-  };
-};
-
-export type UserRecord = {
-  avatar: string;
-  collectionId: string;
-  collectionName: string;
-  created: string;
-  email: string;
-  emailVisibility: boolean;
-  id: string;
-  name: string;
-  updated: string;
-  username: string;
-  verified: boolean;
-};
-
-export type StationRecord = {
-  id: string;
-  url: string;
-  name: string;
 };
 
 type Auth = {
@@ -55,7 +28,11 @@ pb.authStore.onChange(() => {
     model: pb.authStore.model as any,
     isValid: pb.authStore.isValid,
   });
-  document.cookie = "pb_token=" + pb.authStore.token + ";Path=/app/stations";
+  document.cookie =
+    "pb_token=" +
+    pb.authStore.token +
+    ";Path=/app/stations" +
+    import.meta.env.VITE_COOKIE_ATTRIBUTES;
 });
 
 try {
@@ -64,7 +41,7 @@ try {
   pb.authStore.clear();
 }
 
-export const authStoreEagerUpdate = (user: UserRecord) => {
+export const authStoreMutate = (user: UserRecord) => {
   setAuthStore((prev) => {
     prev.model = user;
     return prev;

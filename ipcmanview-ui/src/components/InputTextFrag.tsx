@@ -2,13 +2,13 @@ import clsx from "clsx";
 import { Component, JSX, mergeProps, Show, splitProps } from "solid-js";
 import InputError from "./InputError";
 
-type InputTextProps = {
+type InputTextFragProps = {
   loading?: boolean;
   error?: string;
   label?: string;
 } & JSX.InputHTMLAttributes<HTMLInputElement>;
 
-const InputText: Component<InputTextProps> = (props) => {
+const InputTextFrag: Component<InputTextFragProps> = (props) => {
   const [, other] = splitProps(mergeProps({ type: "text" }, props), [
     "loading",
     "error",
@@ -19,7 +19,7 @@ const InputText: Component<InputTextProps> = (props) => {
   return (
     <>
       <Show when={props.label}>
-        <label class="font-bold" for={props.name}>
+        <label class="mr-2 font-bold" for={props.name}>
           {props.label}{" "}
           {props.required && <span class="ml-1 text-danger">*</span>}
         </label>
@@ -39,4 +39,4 @@ const InputText: Component<InputTextProps> = (props) => {
   );
 };
 
-export default InputText;
+export default InputTextFrag;

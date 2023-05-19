@@ -1,14 +1,18 @@
+import { Component, createEffect, lazy, on, Show } from "solid-js";
 import { Route, Routes, useNavigate } from "@solidjs/router";
-import { Component, createEffect, on, Show } from "solid-js";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
+
+import { useAuthRefresh } from "./hooks";
+import pb, { authStore } from "./pb";
 import NavBar from "./components/NavBar";
 import Header from "./components/Header";
-import pb, { authStore } from "./pb";
-import Profile from "./pages/Profile";
+
+const Home = lazy(() => import("./pages/Home"));
+const Login = lazy(() => import("./pages/Login"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 const App: Component = () => {
   const navigate = useNavigate();
+  useAuthRefresh(false);
 
   // Navigate to / on logout
   createEffect(

@@ -3,24 +3,39 @@ import { JSX, ParentComponent, Show } from "solid-js";
 
 type CardProps = {
   children: JSX.Element;
-  title?: string;
+  right?: JSX.Element;
+  title?: JSX.Element;
+  sub?: JSX.Element;
   class?: string;
 };
 
 const Card: ParentComponent<CardProps> = (props) => {
   return (
     <div
-      class={clsx(
-        "flex flex-1 flex-col rounded p-2 shadow shadow-ship-300",
-        props.class
-      )}
+      class={clsx("flex flex-col rounded shadow shadow-ship-300", props.class)}
     >
-      <Show when={props.title}>
-        <h1 class="mx-auto text-xl">{props.title}</h1>
+      <Show when={props.title || props.sub || props.right}>
+        <div class="flex gap-4 rounded-t bg-ship-600 px-4 py-2 text-ship-50">
+          <div class="flex-1">
+            <Show when={props.title}>
+              <div class="text-lg font-bold">{props.title}</div>
+            </Show>
+            <Show when={props.sub}>
+              <div>{props.sub}</div>
+            </Show>
+          </div>
+          <Show when={props.right}>
+            <div>{props.right}</div>
+          </Show>
+        </div>
       </Show>
-      <div class="rounded p-2">{props.children}</div>
+      {props.children}
     </div>
   );
 };
 
 export default Card;
+
+export const CardBody: ParentComponent = (props) => {
+  return <div class="p-4">{props.children}</div>;
+};

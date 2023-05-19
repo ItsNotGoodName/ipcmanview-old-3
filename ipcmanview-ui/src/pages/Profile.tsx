@@ -7,38 +7,55 @@ import {
   SubmitHandler,
 } from "@modular-forms/solid";
 import clsx from "clsx";
-import { Accessor, batch, Component, createSignal } from "solid-js";
+import { Accessor, batch, Component, createSignal, Show } from "solid-js";
+
 import Button from "../components/Button";
-import InputText from "../components/InputText";
+import Card, { CardBody } from "../components/Card";
 import InputError from "../components/InputError";
-import pb, {
-  authStore,
-  authStoreEagerUpdate,
-  PbError,
-  UserRecord,
-} from "../pb";
+import InputTextFrag from "../components/InputTextFrag";
+import Spinner from "../components/Spinner";
+import pb, { authStore, authStoreMutate } from "../pb";
+import { PbError, UserRecord } from "../records";
 import { formatDateTime } from "../utils";
+import { useAuthRefresh } from "../hooks";
 
 const Profile: Component = () => {
   return (
     <div class="mx-auto flex max-w-4xl flex-wrap gap-4">
       <div class="flex flex-1 flex-col gap-4">
-        <div class="rounded p-4 shadow shadow-ship-300">
-          <ProfileFrag />
-        </div>
+        <Card class="sticky top-0">
+          <CardBody>
+            <ProfileFrag />
+          </CardBody>
+        </Card>
       </div>
       <div class="flex flex-1 flex-col gap-4 rounded sm:max-w-sm">
-        <ProfileForm class="rounded p-4 shadow shadow-ship-300" />
-        <PasswordForm class="rounded p-4 shadow shadow-ship-300" />
+        <Card title="Update Profile">
+          <CardBody>
+            <ProfileForm />
+          </CardBody>
+        </Card>
+        <Card title="Update Password">
+          <CardBody>
+            <PasswordForm />
+          </CardBody>
+        </Card>
       </div>
     </div>
   );
 };
 
 const ProfileFrag: Component = () => {
+  const authRefresh = useAuthRefresh(true);
+
   return (
     <>
-      <h1 class="text-2xl">{authStore().model?.username}</h1>
+      <div class="flex">
+        <h1 class="flex-1 text-2xl">{authStore().model!.username}</h1>
+        <Show when={authRefresh.isFetching}>
+          <Spinner />
+        </Show>
+      </div>
       <hr class="my-2 text-ship-300" />
       <table class="table">
         <tbody>
@@ -103,7 +120,7 @@ const useUpdateForm = (
         pb.authStore.clear();
       } else {
         // Update auth store
-        authStoreEagerUpdate(user);
+        authStoreMutate(user);
       }
 
       reset(form);
@@ -126,7 +143,7 @@ const useUpdateForm = (
 };
 
 const ProfileForm: Component<{ class?: string }> = (props) => {
-  const [form, { Form, Field }] = createForm<UpdateForm>({});
+  const [form, { Form, Field }] = createForm<UpdateForm, ResponseData>({});
   const [submit, { error, fieldErrors }] = useUpdateForm(form);
 
   return (
@@ -137,7 +154,7 @@ const ProfileForm: Component<{ class?: string }> = (props) => {
     >
       <Field name="name">
         {(field, props) => (
-          <InputText
+          <InputTextFrag
             label="New name"
             {...props}
             placeholder="New name"
@@ -149,7 +166,7 @@ const ProfileForm: Component<{ class?: string }> = (props) => {
 
       <Field name="username">
         {(field, props) => (
-          <InputText
+          <InputTextFrag
             label="New username"
             {...props}
             placeholder="New username"
@@ -168,7 +185,7 @@ const ProfileForm: Component<{ class?: string }> = (props) => {
 };
 
 const PasswordForm: Component<{ class?: string }> = (props) => {
-  const [form, { Form, Field }] = createForm<UpdateForm>();
+  const [form, { Form, Field }] = createForm<UpdateForm, ResponseData>();
   const [submit, { error, fieldErrors }] = useUpdateForm(form);
 
   return (
@@ -177,7 +194,7 @@ const PasswordForm: Component<{ class?: string }> = (props) => {
 
       <Field name="oldPassword">
         {(field, props) => (
-          <InputText
+          <InputTextFrag
             label="Old password"
             type="password"
             {...props}
@@ -191,7 +208,7 @@ const PasswordForm: Component<{ class?: string }> = (props) => {
 
       <Field name="password">
         {(field, props) => (
-          <InputText
+          <InputTextFrag
             label="New Password"
             type="password"
             {...props}
@@ -205,7 +222,7 @@ const PasswordForm: Component<{ class?: string }> = (props) => {
 
       <Field name="passwordConfirm">
         {(field, props) => (
-          <InputText
+          <InputTextFrag
             label="Confirm new password"
             type="password"
             {...props}

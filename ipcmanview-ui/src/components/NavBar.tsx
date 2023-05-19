@@ -28,7 +28,7 @@ const NavBar: Component<NavBarProps> = (props) => {
       </div>
 
       <a
-        class="flex w-fit rounded-xl text-ship-50 hover:bg-ship-50 hover:text-ship-950"
+        class="flex w-fit rounded-xl text-ship-50 hover:bg-ship-100 hover:text-ship-950"
         title="Admin"
         href={adminPageUrl}
       >

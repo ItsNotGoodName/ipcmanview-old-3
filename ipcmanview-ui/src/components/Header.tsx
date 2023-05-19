@@ -36,12 +36,12 @@ const Header: Component<HeaderProps> = (props) => {
   return (
     <header
       class={clsx(
-        "flex justify-between gap-1 bg-ship-700 p-2 shadow shadow-ship-300",
+        "flex justify-between gap-2 bg-ship-700 p-2 shadow shadow-ship-300",
         props.class
       )}
     >
-      <div class="flex gap-1 overflow-clip">
-        <h1 class="my-auto text-xl font-bold text-ship-50">IPCManView</h1>
+      <div class="flex overflow-x-auto overflow-y-hidden">
+        <h1 class="my-auto text-2xl font-bold text-ship-50">IPCManView</h1>
       </div>
 
       <div class="flex">
@@ -54,7 +54,7 @@ const Header: Component<HeaderProps> = (props) => {
           <MenuTrigger>
             <button
               title="User"
-              class="m-auto rounded-xl p-2 text-ship-50 hover:bg-ship-50 hover:text-ship-950"
+              class="m-auto rounded-xl p-2 text-ship-50 hover:bg-ship-100 hover:text-ship-950"
               classList={{
                 "bg-ship-50 text-ship-950": isOpen() || isProfileRoute(),
               }}
@@ -70,15 +70,15 @@ const Header: Component<HeaderProps> = (props) => {
                     class={clsx(
                       "flex w-full rounded p-1",
                       isProfileRoute()
-                        ? "bg-ship-500 text-ship-50"
-                        : "hover:bg-ship-500 hover:text-ship-50"
+                        ? "bg-ship-500 text-ship-50 hover:bg-ship-600"
+                        : "hover:bg-ship-600 hover:text-ship-50"
                     )}
                   >
                     Profile
                   </button>
                 </MenuItem>
                 <MenuItem id="logout">
-                  <button class="flex w-full rounded p-1 hover:bg-ship-500 hover:text-ship-50">
+                  <button class="flex w-full rounded p-1 hover:bg-ship-600 hover:text-ship-50">
                     Logout
                   </button>
                 </MenuItem>

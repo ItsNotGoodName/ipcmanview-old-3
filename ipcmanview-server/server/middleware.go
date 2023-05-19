@@ -13,10 +13,14 @@ import (
 // LoadAuthContextFromCookie middleware reads the "pb_token" cookie
 // and loads the token related record or admin instance into the
 // request's context. Does nothing if auth record is already set
-// in context.
+// in context or if request is not a GET request.
 func LoadAuthContextFromCookie(app core.App) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if c.Request().Method != "GET" {
+				return next(c)
+			}
+
 			user, _ := c.Get(apis.ContextAuthRecordKey).(*models.Record)
 			if user != nil {
 				return next(c)
