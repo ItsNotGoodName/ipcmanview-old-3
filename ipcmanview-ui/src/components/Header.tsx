@@ -40,7 +40,7 @@ const Header: Component<HeaderProps> = (props) => {
         props.class
       )}
     >
-      <div class="flex overflow-x-auto overflow-y-hidden">
+      <div class="flex overflow-auto">
         <h1 class="my-auto text-2xl font-bold text-ship-50">IPCManView</h1>
       </div>
 
@@ -59,7 +59,7 @@ const Header: Component<HeaderProps> = (props) => {
                 "bg-ship-50 text-ship-950": isOpen() || isProfileRoute(),
               }}
             >
-              <RiUserAccountCircleFill class="h-6 w-6" aria-hidden="true" />
+              <RiUserAccountCircleFill class="h-full w-6" aria-hidden="true" />
             </button>
           </MenuTrigger>
           <Portal>

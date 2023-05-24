@@ -27,6 +27,6 @@ export const Home: Story = {
   args: {
     href: "/",
     title: "Home",
-    children: <RiBuildingsHome5Line class="h-6 w-6" />,
+    children: <RiBuildingsHome5Line class="h-full w-6" />,
   },
 };

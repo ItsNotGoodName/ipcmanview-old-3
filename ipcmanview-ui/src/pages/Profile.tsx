@@ -10,7 +10,7 @@ import clsx from "clsx";
 import { Accessor, batch, Component, createSignal, Show } from "solid-js";
 
 import Button from "../components/Button";
-import Card, { CardBody } from "../components/Card";
+import Card from "../components/Card";
 import InputError from "../components/InputError";
 import InputTextFrag from "../components/InputTextFrag";
 import Spinner from "../components/Spinner";
@@ -21,25 +21,25 @@ import { useAuthRefresh } from "../hooks";
 
 const Profile: Component = () => {
   return (
-    <div class="mx-auto flex max-w-4xl flex-wrap gap-4">
+    <div class="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row">
       <div class="flex flex-1 flex-col gap-4">
-        <Card class="sticky top-0">
-          <CardBody>
+        <Card.NormalCard class="sticky top-0">
+          <Card.Body>
             <ProfileFrag />
-          </CardBody>
-        </Card>
+          </Card.Body>
+        </Card.NormalCard>
       </div>
       <div class="flex flex-1 flex-col gap-4 rounded sm:max-w-sm">
-        <Card title="Update Profile">
-          <CardBody>
+        <Card.HeaderCard title="Update Profile">
+          <Card.Body>
             <ProfileForm />
-          </CardBody>
-        </Card>
-        <Card title="Update Password">
-          <CardBody>
+          </Card.Body>
+        </Card.HeaderCard>
+        <Card.HeaderCard title="Update Password">
+          <Card.Body>
             <PasswordForm />
-          </CardBody>
-        </Card>
+          </Card.Body>
+        </Card.HeaderCard>
       </div>
     </div>
   );

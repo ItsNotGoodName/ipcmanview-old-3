@@ -19,21 +19,21 @@ const NavBar: Component<NavBarProps> = (props) => {
     >
       <div class="flex gap-1 overflow-auto" style="flex-direction: inherit;">
         <NavButton title="Home" href="/" end>
-          <RiBuildingsHome5Line class="h-6 w-6" />
+          <RiBuildingsHome5Line class="h-full w-6" />
         </NavButton>
 
         <NavButton title="Cameras" href="/cameras">
-          <BiSolidCctv class="h-6 w-6" />
+          <BiSolidCctv class="h-full w-6" />
         </NavButton>
       </div>
 
       <a
         class="flex w-fit rounded-xl text-ship-50 hover:bg-ship-100 hover:text-ship-950"
-        title="Admin"
+        title="Admin Panel"
         href={adminPageUrl}
       >
         <div class="m-2 inline-flex">
-          <RiUserAdminFill class="h-6 w-6" />
+          <RiUserAdminFill class="h-full w-6" />
         </div>
       </a>
     </nav>

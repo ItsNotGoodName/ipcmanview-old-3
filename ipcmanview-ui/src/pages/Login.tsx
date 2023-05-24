@@ -1,8 +1,9 @@
 import { createForm, required, SubmitHandler } from "@modular-forms/solid";
+import { RiSystemQuestionFill } from "solid-icons/ri";
 import { Component, createSignal } from "solid-js";
 
 import Button from "../components/Button";
-import Card, { CardBody } from "../components/Card";
+import Card from "../components/Card";
 import InputError from "../components/InputError";
 import InputTextFrag from "../components/InputTextFrag";
 import pb, { adminPageUrl } from "../pb";
@@ -27,11 +28,9 @@ const Home: Component = () => {
   return (
     <div class="px-4 py-16">
       <div class="mx-auto flex max-w-sm flex-col gap-4">
-        <Card>
-          <CardBody>
+        <Card.HeaderCard title={<div class="text-center">IPCManView</div>}>
+          <Card.Body>
             <Form class="flex flex-col gap-2" onSubmit={onSubmit}>
-              <h1 class="mx-auto text-2xl">Log in</h1>
-
               <Field
                 name="usernameOrEmail"
                 validate={[required("Please enter your username or email.")]}
@@ -63,15 +62,25 @@ const Home: Component = () => {
                 )}
               </Field>
 
+              <a
+                class="ml-auto text-sm text-link hover:underline"
+                href={adminPageUrl}
+              >
+                Forgot Password?
+              </a>
+
               <Button class="mt-2" type="submit" loading={form.submitting}>
                 <div class="mx-auto">Log in</div>
               </Button>
               <InputError error={error()} />
             </Form>
-          </CardBody>
-        </Card>
-        <a class="ml-auto mr-4 text-link hover:underline" href={adminPageUrl}>
-          Admin
+          </Card.Body>
+        </Card.HeaderCard>
+        <a
+          class="ml-auto text-sm text-link hover:underline"
+          href={adminPageUrl}
+        >
+          Admin Panel
         </a>
       </div>
     </div>

@@ -20,7 +20,9 @@ const Button: ParentComponent<Omit<ButtonProps, "disabled">> = (props) => {
       disabled={props.loading}
     >
       <Show when={props.loading}>
-        <Spinner />
+        <div class="h-full">
+          <Spinner />
+        </div>
       </Show>
       {props.children}
     </button>

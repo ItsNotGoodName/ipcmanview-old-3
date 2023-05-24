@@ -22,7 +22,10 @@ module.exports = {
         900: "#424c66",
         950: "#2b3140",
       },
-      danger: "#ef4444",
+      danger: {
+        DEFAULT: "#ef4444",
+        200: "#dc2626",
+      },
       link: "#2563eb",
     },
   },

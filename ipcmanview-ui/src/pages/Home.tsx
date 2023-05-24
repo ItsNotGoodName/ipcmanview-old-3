@@ -10,17 +10,19 @@ import {
 } from "solid-js";
 import { RiSystemAlertFill } from "solid-icons/ri";
 import { useSearchParams } from "@solidjs/router";
-
-import Card, { CardBody } from "../components/Card";
-import Spinner from "../components/Spinner";
-import { StationRecord } from "../records";
-import { Camera, useCameras, useCamerasTotal, useStations } from "../hooks";
 import {
   createColumnHelper,
   createSolidTable,
   flexRender,
   getCoreRowModel,
 } from "@tanstack/solid-table";
+
+import Card from "../components/Card";
+import Spinner from "../components/Spinner";
+import { StationRecord } from "../records";
+import { useCameras, useCamerasTotal, useStations } from "../hooks";
+import ActionButtons from "../components/ActionButtons";
+import { Camera } from "../models";
 
 const Home: Component = () => {
   return (
@@ -43,11 +45,11 @@ const StationCards: Component = () => {
   });
 
   return (
-    <div class="flex flex-wrap gap-4">
+    <div class="flex flex-col gap-4 sm:flex-row">
       <div class="w-full sm:w-48">
-        <Card
-          title="Stations"
+        <Card.HeaderCard
           class="sticky"
+          title="Stations"
           right={
             <Show when={stations.isFetching}>
               <Spinner />
@@ -57,10 +59,14 @@ const StationCards: Component = () => {
           <div class="max-h-36 overflow-y-auto sm:max-h-96">
             <Switch>
               <Match when={stations.isLoading}>
-                <Spinner />
+                <Card.Body>
+                  <Spinner />
+                </Card.Body>
               </Match>
               <Match when={stations.isError}>
-                <div class="text-danger">{stations.error!.message}</div>
+                <Card.Body>
+                  <div class="text-danger">{stations.error!.message}</div>
+                </Card.Body>
               </Match>
               <Match when={stations.data}>
                 {(stations) => (
@@ -73,7 +79,7 @@ const StationCards: Component = () => {
               </Match>
             </Switch>
           </div>
-        </Card>
+        </Card.HeaderCard>
       </div>
       <Show when={stations.data?.find((s) => s.id == selectedStation())}>
         {(s) => (
@@ -101,20 +107,20 @@ const StationsList: Component<StationsListProps> = (props) => {
 
           return (
             <li
-              class="flex cursor-pointer truncate border-b border-ship-300 p-2 last:border-b-0 hover:bg-ship-200"
+              class="flex cursor-pointer border-b border-ship-300 p-2 last:border-b-0 hover:bg-ship-200"
               classList={{
                 "bg-ship-100 font-bold": station().id == props.selected,
               }}
               onClick={() => props.onSelect(station().id)}
             >
-              <div class="flex-1">{station().name}</div>
+              <div class="flex-1 truncate">{station().name}</div>
               <div>
                 <Switch>
                   <Match when={total.isLoading}>
                     <Spinner />
                   </Match>
                   <Match when={total.isError}>
-                    <RiSystemAlertFill class="h-6 w-6 fill-danger" />
+                    <RiSystemAlertFill class="h-full w-6 fill-danger" />
                   </Match>
                   <Match when={total.isSuccess}>{total.data!.total}</Match>
                 </Switch>
@@ -137,7 +143,27 @@ const StationCard: Component<StationCardProps> = (props) => {
   const columnHelper = createColumnHelper<Camera>();
 
   const defaultColumns = [
-    columnHelper.accessor("id", {}),
+    columnHelper.display({
+      id: "actions",
+      cell: (_) => {
+        return (
+          <div class="flex">
+            <input
+              class="m-auto h-6 w-6 rounded border-ship-300"
+              type="checkbox"
+            />
+          </div>
+        );
+      },
+      header: () => (
+        <div class="flex">
+          <input
+            class="m-auto h-6 w-6 rounded border-ship-300"
+            type="checkbox"
+          />
+        </div>
+      ),
+    }),
     columnHelper.accessor("ip", {}),
     columnHelper.accessor("username", {}),
   ];
@@ -151,7 +177,7 @@ const StationCard: Component<StationCardProps> = (props) => {
   });
 
   return (
-    <Card
+    <Card.HeaderCard
       title="Cameras"
       right={
         <Show when={cameras.isFetching}>
@@ -161,13 +187,14 @@ const StationCard: Component<StationCardProps> = (props) => {
     >
       <Switch>
         <Match when={cameras.isError}>
-          <CardBody>
+          <Card.Body>
             <div class="text-danger">{cameras.error!.message}</div>
-          </CardBody>
+          </Card.Body>
         </Match>
         <Match when={cameras.isSuccess}>
-          <div class="overflow-x-auto rounded-b">
-            <table class="w-full">
+          <ActionButtons class="m-2" />
+          <div class="overflow-x-auto">
+            <table class="table w-full">
               <thead class="bg-ship-500 text-left uppercase text-ship-50">
                 <For each={table.getHeaderGroups()}>
                   {(headerGroup) => (
@@ -210,7 +237,7 @@ const StationCard: Component<StationCardProps> = (props) => {
           </div>
         </Match>
       </Switch>
-    </Card>
+    </Card.HeaderCard>
   );
 };
 
