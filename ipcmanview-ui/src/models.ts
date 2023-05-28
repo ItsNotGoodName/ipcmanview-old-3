@@ -4,6 +4,10 @@ export type Camera = {
   username: string;
 };
 
+export type CamerasTotal = {
+  total: number;
+};
+
 export type ScanPending = {
   id: number;
   camera_id: number;

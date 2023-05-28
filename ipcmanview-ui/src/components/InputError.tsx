@@ -4,12 +4,10 @@ type InputErrorProps = {
   error?: string;
 };
 
-const InputError: Component<InputErrorProps> = (props) => {
-  return (
-    <Show when={props.error}>
-      <div class="text-danger">{props.error}</div>
-    </Show>
-  );
-};
+const InputError: Component<InputErrorProps> = (props) => (
+  <Show when={props.error}>
+    <div class="text-danger-100">{props.error}</div>
+  </Show>
+);
 
 export default InputError;

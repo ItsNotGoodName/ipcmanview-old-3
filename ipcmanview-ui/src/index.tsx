@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
 import "./index.css";
 import App from "./App";
+import Login from "./pages/Login";
+import { PbProvider } from "./pb";
 
 const queryClient = new QueryClient();
 const root = document.getElementById("root");
@@ -19,7 +21,9 @@ render(
   () => (
     <Router>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <PbProvider login={<Login />}>
+          <App />
+        </PbProvider>
       </QueryClientProvider>
     </Router>
   ),

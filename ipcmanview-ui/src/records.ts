@@ -6,6 +6,12 @@ export type PbError = {
   };
 };
 
+export type PbAuth = {
+  token: string;
+  model: UserRecord | null;
+  isValid: boolean;
+};
+
 export type UserRecord = {
   avatar: string;
   collectionId: string;

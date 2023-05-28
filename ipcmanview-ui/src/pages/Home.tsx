@@ -17,23 +17,18 @@ import {
   getCoreRowModel,
 } from "@tanstack/solid-table";
 
-import Card from "../components/Card";
 import Spinner from "../components/Spinner";
 import { StationRecord } from "../records";
 import { useCameras, useCamerasTotal, useStations } from "../hooks";
 import ActionButtons from "../components/ActionButtons";
 import { Camera } from "../models";
+import { usePb } from "../pb";
+import { Card, CardBody, CardHeader } from "../components/Card";
 
 const Home: Component = () => {
-  return (
-    <div class="flex flex-col">
-      <StationCards />
-    </div>
-  );
-};
+  const pb = usePb();
+  const stations = useStations(pb);
 
-const StationCards: Component = () => {
-  const stations = useStations();
   const [searchParams, setSearchParams] = useSearchParams<{
     station: string;
   }>();
@@ -47,26 +42,26 @@ const StationCards: Component = () => {
   return (
     <div class="flex flex-col gap-4 sm:flex-row">
       <div class="w-full sm:w-48">
-        <Card.HeaderCard
-          class="sticky"
-          title="Stations"
-          right={
-            <Show when={stations.isFetching}>
-              <Spinner />
-            </Show>
-          }
-        >
+        <Card>
+          <CardHeader
+            title="Stations"
+            right={
+              <Show when={stations.isFetching}>
+                <Spinner />
+              </Show>
+            }
+          />
           <div class="max-h-36 overflow-y-auto sm:max-h-96">
             <Switch>
               <Match when={stations.isLoading}>
-                <Card.Body>
+                <CardBody>
                   <Spinner />
-                </Card.Body>
+                </CardBody>
               </Match>
               <Match when={stations.isError}>
-                <Card.Body>
-                  <div class="text-danger">{stations.error!.message}</div>
-                </Card.Body>
+                <CardBody>
+                  <div class="text-danger-100">{stations.error!.message}</div>
+                </CardBody>
               </Match>
               <Match when={stations.data}>
                 {(stations) => (
@@ -79,7 +74,7 @@ const StationCards: Component = () => {
               </Match>
             </Switch>
           </div>
-        </Card.HeaderCard>
+        </Card>
       </div>
       <Show when={stations.data?.find((s) => s.id == selectedStation())}>
         {(s) => (
@@ -103,7 +98,8 @@ const StationsList: Component<StationsListProps> = (props) => {
     <ul class="flex flex-col">
       <Index each={props.stations}>
         {(station) => {
-          const total = useCamerasTotal(() => station().id);
+          const pb = usePb();
+          const total = useCamerasTotal(pb, () => station().id);
 
           return (
             <li
@@ -120,7 +116,7 @@ const StationsList: Component<StationsListProps> = (props) => {
                     <Spinner />
                   </Match>
                   <Match when={total.isError}>
-                    <RiSystemAlertFill class="h-full w-6 fill-danger" />
+                    <RiSystemAlertFill class="h-full w-6 fill-danger-100" />
                   </Match>
                   <Match when={total.isSuccess}>{total.data!.total}</Match>
                 </Switch>
@@ -138,7 +134,8 @@ type StationCardProps = {
 };
 
 const StationCard: Component<StationCardProps> = (props) => {
-  const cameras = useCameras(() => props.station.id);
+  const pb = usePb();
+  const cameras = useCameras(pb, () => props.station.id);
 
   const columnHelper = createColumnHelper<Camera>();
 
@@ -177,19 +174,20 @@ const StationCard: Component<StationCardProps> = (props) => {
   });
 
   return (
-    <Card.HeaderCard
-      title="Cameras"
-      right={
-        <Show when={cameras.isFetching}>
-          <Spinner />
-        </Show>
-      }
-    >
+    <Card>
+      <CardHeader
+        title="Cameras"
+        right={
+          <Show when={cameras.isFetching}>
+            <Spinner />
+          </Show>
+        }
+      />
       <Switch>
         <Match when={cameras.isError}>
-          <Card.Body>
-            <div class="text-danger">{cameras.error!.message}</div>
-          </Card.Body>
+          <CardBody>
+            <div class="text-danger-100">{cameras.error!.message}</div>
+          </CardBody>
         </Match>
         <Match when={cameras.isSuccess}>
           <ActionButtons class="m-2" />
@@ -237,7 +235,7 @@ const StationCard: Component<StationCardProps> = (props) => {
           </div>
         </Match>
       </Switch>
-    </Card.HeaderCard>
+    </Card>
   );
 };
 

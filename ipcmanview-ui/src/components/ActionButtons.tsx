@@ -21,7 +21,7 @@ const ActionButtons: Component<ActionButtonsProps> = (props) => {
   return (
     <div class={clsx("flex gap-2", props.class)}>
       <button
-        class="rounded bg-danger p-2 text-ship-50 hover:bg-danger-200"
+        class="rounded bg-danger-100 p-2 text-ship-50 hover:bg-danger-200"
         title="Delete"
         disabled={props.isDeleteLoading}
         onClick={props.onDelete}
