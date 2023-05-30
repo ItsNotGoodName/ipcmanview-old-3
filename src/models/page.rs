@@ -27,7 +27,7 @@ impl Page {
         PageResult {
             page: self.page,
             per_page: self.per_page,
-            total_pages: (total_items / self.per_page) + 1,
+            total_pages: (total_items as f64 / self.per_page as f64).ceil() as i32,
             total_items,
             items,
         }
