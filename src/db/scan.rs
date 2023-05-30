@@ -3,7 +3,7 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
 
-use crate::models::{ScanActive, ScanCompleted, ScanPending};
+use crate::models::{Page, PageResult, ScanActive, ScanCompleted, ScanPending};
 use crate::scan::{Scan, ScanActor, ScanCamera, ScanKind, ScanKindPending, ScanRange};
 
 use super::NotFound;
@@ -314,19 +314,31 @@ impl ScanActive {
 
 impl ScanCompleted {
     // TODO: add filters
-    pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
-        sqlx::query_as_unchecked!(
+    pub async fn list(pool: &SqlitePool, page: Page) -> Result<PageResult<Self>> {
+        let offset = page.offset();
+        let limit = page.limit();
+        let items = sqlx::query_as_unchecked!(
             Self,
             r#"
             SELECT *
             FROM completed_scans
             ORDER BY started_at DESC
-            LIMIT 5
-            "#
+            LIMIT ?
+            OFFSET ?
+            "#,
+            limit,
+            offset,
         )
         .fetch_all(pool)
         .await
-        .context("Failed to list completed scans.")
+        .context("Failed to list completed scans.")?;
+        let total_items = sqlx::query!(r#"SELECT COUNT(id) AS count FROM completed_scans"#)
+            .fetch_one(pool)
+            .await
+            .with_context(|| format!("Failed to count completed scans."))
+            .map(|c| c.count)?;
+
+        Ok(page.new_result(items, total_items))
     }
 
     pub async fn find(pool: &SqlitePool, id: i64) -> Result<Self> {

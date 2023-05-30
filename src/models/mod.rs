@@ -5,6 +5,9 @@ use serde::Serialize;
 
 use crate::scan::ScanKind;
 
+pub mod page;
+pub mod query;
+
 #[derive(Serialize, Debug)]
 pub struct Camera {
     pub id: i64,
@@ -76,6 +79,20 @@ pub struct CameraFile {
 #[derive(Serialize, Debug)]
 pub struct IpcEvent {
     pub name: String,
+}
+
+pub struct Page {
+    pub page: i32,
+    pub per_page: i32,
+}
+
+#[derive(Serialize, Debug)]
+pub struct PageResult<T> {
+    pub page: i32,
+    pub per_page: i32,
+    pub total_pages: i32,
+    pub total_items: i32,
+    pub items: Vec<T>,
 }
 
 #[derive(Debug)]

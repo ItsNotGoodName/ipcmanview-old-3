@@ -91,8 +91,8 @@ import { ADMIN_PANEL_URL } from "./utils";
 
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
-import Stations from "./pages/Stations";
-import StationsShow from "./pages/StationsShow";
+import StationList from "./pages/StationList";
+import StationShow from "./pages/StationShow";
 
 export const App: Component = () => {
   const pb = usePb();
@@ -149,8 +149,8 @@ export const App: Component = () => {
           <Routes>
             <Route path="/" component={Home} />
             <Route path="/profile" component={Profile} />
-            <Route path="/stations" component={Stations} />
-            <Route path="/stations/:id" component={StationsShow} />
+            <Route path="/stations" component={StationList} />
+            <Route path="/stations/:id" component={StationShow} />
           </Routes>
         </ContentBody>
       </Content>

@@ -14,7 +14,7 @@ import {
 } from "solid-js";
 
 import { PbAuth, UserRecord } from "./records";
-import { STATIONS_URL } from "./utils";
+import { STATIONS_URI } from "./utils";
 
 type PbContextType = {
   pb: PocketBase;
@@ -48,7 +48,7 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
       document.cookie =
         "pb_token=" +
         pb.authStore.token +
-        `;Path=${STATIONS_URL}` +
+        `;Path=${STATIONS_URI}` +
         import.meta.env.VITE_COOKIE_ATTRIBUTES;
     });
   });

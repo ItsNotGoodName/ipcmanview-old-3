@@ -20,6 +20,9 @@ pub fn router() -> Router<AppState> {
                 .post(camera::update)
                 .delete(camera::delete),
         )
+        .route("/cameras/:id/detail", get(camera::detail))
+        .route("/cameras/:id/software", get(camera::software))
+        .route("/cameras/:id/licenses", get(camera::licenses))
         .route("/cameras/:id/ipc", post(camera::refresh))
         .route("/cameras/:id/ipc/detail", post(camera::refresh_detail))
         .route("/cameras/:id/ipc/licenses", post(camera::refresh_licenses))

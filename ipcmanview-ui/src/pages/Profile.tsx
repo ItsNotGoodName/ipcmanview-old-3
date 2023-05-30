@@ -25,20 +25,20 @@ import { PbError, UserRecord } from "../records";
 import { formatDateTime } from "../utils";
 import { useAuthRefresh } from "../hooks";
 
-const CommanderLayout: ParentComponent = (props) => (
+const DualLayout: ParentComponent = (props) => (
   <div class="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row">
     {props.children}
   </div>
 );
 
-const CommanderLayoutChild: ParentComponent = (props) => (
+const DualLayoutChild: ParentComponent = (props) => (
   <div class="flex flex-1 flex-col gap-4">{props.children}</div>
 );
 
 const Profile: Component = () => {
   return (
-    <CommanderLayout>
-      <CommanderLayoutChild>
+    <DualLayout>
+      <DualLayoutChild>
         <div class="sticky top-0">
           <Card>
             <CardBody>
@@ -46,8 +46,8 @@ const Profile: Component = () => {
             </CardBody>
           </Card>
         </div>
-      </CommanderLayoutChild>
-      <CommanderLayoutChild>
+      </DualLayoutChild>
+      <DualLayoutChild>
         <Card>
           <CardHeader title="Update Profile" />
           <CardBody>
@@ -60,8 +60,8 @@ const Profile: Component = () => {
             <PasswordForm />
           </CardBody>
         </Card>
-      </CommanderLayoutChild>
-    </CommanderLayout>
+      </DualLayoutChild>
+    </DualLayout>
   );
 };
 

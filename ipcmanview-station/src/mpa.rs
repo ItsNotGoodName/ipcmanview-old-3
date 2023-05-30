@@ -10,6 +10,7 @@ use axum::{
 };
 use axum_extra::extract::Query;
 use chrono::{DateTime, Utc};
+use ipcmanview::models::Page;
 use serde::{Deserialize, Serialize};
 
 use crate::{app::AppState, utils};
@@ -275,12 +276,12 @@ async fn camera_refresh(
 
 async fn scans_page(State(state): State<AppState>) -> Result<impl IntoResponse, MpaError> {
     let active_scans = ScanActive::list(&state.pool).await?;
-    let completed_scans = ScanCompleted::list(&state.pool).await?;
+    let completed_scans = ScanCompleted::list(&state.pool, Page::default()).await?;
     let pending_scans = ScanPending::list(&state.pool).await?;
 
     Ok(ScansPageTemplate {
         active_scans,
-        completed_scans,
+        completed_scans: completed_scans.items,
         pending_scans,
     })
 }

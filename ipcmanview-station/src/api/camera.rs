@@ -8,7 +8,7 @@ use axum::{
 use ipcmanview::{
     db,
     dto::{CreateCamera, UpdateCamera},
-    models::{Camera, ShowCamera},
+    models::{Camera, CameraDetail, CameraLicense, CameraSoftware, ShowCamera},
 };
 use serde_json::json;
 
@@ -145,6 +145,51 @@ pub async fn update(
     })?;
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn detail(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    let detail = CameraDetail::find(&state.pool, id).await.map_err(|e| {
+        if db::NotFound == e {
+            Error::from((StatusCode::NOT_FOUND, e))
+        } else {
+            Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
+        }
+    })?;
+
+    Ok(Json(json!(detail)))
+}
+
+pub async fn software(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    let software = CameraSoftware::find(&state.pool, id).await.map_err(|e| {
+        if db::NotFound == e {
+            Error::from((StatusCode::NOT_FOUND, e))
+        } else {
+            Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
+        }
+    })?;
+
+    Ok(Json(json!(software)))
+}
+
+pub async fn licenses(
+    Path(id): Path<i64>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    let licenses = CameraLicense::list(&state.pool, id).await.map_err(|e| {
+        if db::NotFound == e {
+            Error::from((StatusCode::NOT_FOUND, e))
+        } else {
+            Error::from((StatusCode::INTERNAL_SERVER_ERROR, e))
+        }
+    })?;
+
+    Ok(Json(json!(licenses)))
 }
 
 pub async fn refresh(

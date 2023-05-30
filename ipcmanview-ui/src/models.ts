@@ -1,3 +1,11 @@
+export type PageResult<T> = {
+  page: number;
+  per_page: number;
+  total_pages: number;
+  total_items: number;
+  items: T;
+};
+
 export type Camera = {
   id: number;
   ip: string;
@@ -44,6 +52,13 @@ export type ScanCompleted = {
   success: boolean;
   retry_pending: boolean;
   can_retry: boolean;
+};
+
+export type ShowCamera = Camera & {
+  file_total: number;
+  detail: CameraDetail;
+  software: CameraSoftware;
+  licenses: Array<CameraLicense>;
 };
 
 export type CameraDetail = {

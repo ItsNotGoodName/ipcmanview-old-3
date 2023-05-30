@@ -14,7 +14,7 @@ import { Card } from "../components/Card";
 import Spinner from "../components/Spinner";
 import { StationRecord } from "../records";
 
-const Stations: Component = () => {
+const StationList: Component = () => {
   const navigate = useNavigate();
   const pb = usePb();
   const stations = useStations(pb);
@@ -99,4 +99,4 @@ const Stations: Component = () => {
   );
 };
 
-export default Stations;
+export default StationList;

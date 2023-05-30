@@ -4,16 +4,17 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_extra::extract::Query;
 use chrono::{DateTime, Utc};
 use ipcmanview::{
-    models::{ScanActive, ScanCompleted, ScanPending},
+    models::{Page, ScanActive, ScanCompleted, ScanPending},
     scan::{Scan, ScanKindPending, ScanRange},
 };
 use serde::Deserialize;
 
 use crate::app::AppState;
 
-use super::api::{Error, ResultExt};
+use super::api::{Error, PageQuery, ResultExt};
 
 pub async fn full(
     Path(id): Path<i64>,
@@ -28,8 +29,8 @@ pub async fn full(
 
 #[derive(Deserialize, Debug)]
 pub struct Range {
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
 }
 
 pub async fn manual(
@@ -66,8 +67,12 @@ pub async fn pending_list(State(state): State<AppState>) -> Result<impl IntoResp
     Ok(Json(pending_scans))
 }
 
-pub async fn completed_list(State(state): State<AppState>) -> Result<impl IntoResponse, Error> {
-    let completed_scans = ScanCompleted::list(&state.pool)
+pub async fn completed_list(
+    Query(query): Query<PageQuery>,
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, Error> {
+    let page = Page::from(query);
+    let completed_scans = ScanCompleted::list(&state.pool, page)
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
