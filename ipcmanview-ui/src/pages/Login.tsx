@@ -1,12 +1,12 @@
 import { createForm, required, SubmitHandler } from "@modular-forms/solid";
 import { Component, createSignal, ParentComponent } from "solid-js";
 
-import Button from "../components/Button";
-import { Card, CardBody, CardHeader } from "../components/Card";
-import InputError from "../components/InputError";
-import InputTextFrag from "../components/InputTextFrag";
-import { usePb } from "../pb";
-import { ADMIN_PANEL_URL } from "../utils";
+import Button from "~/ui/Button";
+import { Card, CardBody, CardHeader } from "~/ui/Card";
+import InputError from "~/ui/InputError";
+import InputTextFrag from "~/ui/InputTextFrag";
+import { usePb } from "~/data/pb";
+import { ADMIN_PANEL_URL } from "~/data/utils";
 
 type LoginForm = {
   usernameOrEmail: string;

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "storybook-solidjs";
 
-import "../index.css";
+import "~/index.css";
 
 import Spinner from "./Spinner";
 

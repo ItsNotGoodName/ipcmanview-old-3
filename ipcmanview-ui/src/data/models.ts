@@ -6,6 +6,12 @@ export type PageResult<T> = {
   items: T;
 };
 
+export type CreateCameraMutation = {
+  ip: string;
+  username: string;
+  password: string;
+};
+
 export type Camera = {
   id: number;
   ip: string;
@@ -89,4 +95,31 @@ export type CameraLicense = {
   product_type: string;
   status: number;
   username: string;
+};
+
+export type File = {
+  id: number;
+  camera_id: number;
+  file_path: string;
+  kind: string;
+  start_time: string;
+  end_time: string;
+  update_at: string;
+  events: Array<string>;
+};
+
+export type FileFilter = {
+  start?: Date;
+  end?: Date;
+  kinds?: Array<string>;
+  events?: Array<string>;
+  camera_ids?: Array<number>;
+};
+
+export type FileResult = {
+  has_before: boolean;
+  before: string;
+  has_after: boolean;
+  after: string;
+  files: Array<File>;
 };

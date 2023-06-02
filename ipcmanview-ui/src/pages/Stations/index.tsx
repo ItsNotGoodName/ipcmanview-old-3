@@ -8,11 +8,11 @@ import {
 } from "@tanstack/solid-table";
 import { RiSystemAlertFill } from "solid-icons/ri";
 
-import { useCamerasTotal, useStations } from "../hooks";
-import { usePb } from "../pb";
-import { Card } from "../components/Card";
-import Spinner from "../components/Spinner";
-import { StationRecord } from "../records";
+import { useCamerasTotal, useStations } from "~/data/hooks";
+import { usePb } from "~/data/pb";
+import { Card } from "~/ui/Card";
+import Spinner from "~/ui/Spinner";
+import { StationRecord } from "~/data/records";
 
 const StationList: Component = () => {
   const navigate = useNavigate();
@@ -59,7 +59,7 @@ const StationList: Component = () => {
               <tr class="bg-ship-600 text-ship-50">
                 <For each={headerGroup.headers}>
                   {(header) => (
-                    <th class="p-2 uppercase">
+                    <th class="p-2 text-left uppercase">
                       {header.isPlaceholder
                         ? null
                         : flexRender(

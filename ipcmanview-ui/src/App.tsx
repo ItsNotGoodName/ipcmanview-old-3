@@ -1,8 +1,8 @@
 import { JSX, ParentComponent, Component } from "solid-js";
 import { A, AnchorProps, Route, Routes, useNavigate } from "@solidjs/router";
-import { BiSolidLandmark } from "solid-icons/bi";
 import {
   RiBuildingsHome5Line,
+  RiDesignFocus2Line,
   RiSystemLogoutBoxRLine,
   RiUserAccountCircleFill,
   RiUserAdminFill,
@@ -85,18 +85,16 @@ const ContentBody: ParentComponent = (props) => (
   <div class="h-full w-full overflow-auto p-4">{props.children}</div>
 );
 
-import { useAuthRefresh } from "./hooks";
-import { usePb } from "./pb";
-import { ADMIN_PANEL_URL } from "./utils";
+import { usePb } from "~/data/pb";
+import { ADMIN_PANEL_URL } from "~/data/utils";
 
-import Home from "./pages/Home";
-import Profile from "./pages/Profile";
-import StationList from "./pages/StationList";
-import StationShow from "./pages/StationShow";
+import Home from "~/pages/Home";
+import Profile from "~/pages/Profile";
+import Stations from "~/pages/Stations";
+import StationsShow from "~/pages/Stations/Show";
 
 export const App: Component = () => {
   const pb = usePb();
-  useAuthRefresh(pb, { refetchOnWindowFocus: false });
 
   const navigate = useNavigate();
   const logout = () => {
@@ -133,7 +131,7 @@ export const App: Component = () => {
             </LinkChip>
             <LinkChip href="/stations" title="Stations">
               <ChipIcon>
-                <BiSolidLandmark />
+                <RiDesignFocus2Line />
               </ChipIcon>
             </LinkChip>
           </ContentNavStart>
@@ -149,8 +147,8 @@ export const App: Component = () => {
           <Routes>
             <Route path="/" component={Home} />
             <Route path="/profile" component={Profile} />
-            <Route path="/stations" component={StationList} />
-            <Route path="/stations/:id" component={StationShow} />
+            <Route path="/stations" component={Stations} />
+            <Route path="/stations/:stationId" component={StationsShow} />
           </Routes>
         </ContentBody>
       </Content>

@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from "storybook-solidjs";
 
-import "../index.css";
+import "~/index.css";
 
-import Button from "./Button";
+import InputTextFrag from "./InputTextFrag";
 
 // More on how to set up stories at: https://storybook.js.org/docs/7.0/solid/writing-stories/introduction
 const meta = {
-  component: Button,
-} satisfies Meta<typeof Button>;
+  component: InputTextFrag,
+} satisfies Meta<typeof InputTextFrag>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -17,6 +17,9 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = {
   args: {
     loading: false,
-    children: "Hello World",
+    error: "",
+    placeholder: "",
+    required: false,
+    label: "",
   },
 };

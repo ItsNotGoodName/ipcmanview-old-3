@@ -15,15 +15,14 @@ import {
   Show,
 } from "solid-js";
 
-import Button from "../components/Button";
-import { Card, CardBody, CardHeader } from "../components/Card";
-import InputError from "../components/InputError";
-import InputTextFrag from "../components/InputTextFrag";
-import Spinner from "../components/Spinner";
-import { usePb, useUser } from "../pb";
-import { PbError, UserRecord } from "../records";
-import { formatDateTime } from "../utils";
-import { useAuthRefresh } from "../hooks";
+import Button from "~/ui/Button";
+import { Card, CardBody, CardHeader } from "~/ui/Card";
+import InputError from "~/ui/InputError";
+import InputTextFrag from "~/ui/InputTextFrag";
+import Spinner from "~/ui/Spinner";
+import { usePb, usePbUser } from "~/data/pb";
+import { PbError, UserRecord } from "~/data/records";
+import { formatDateTime } from "~/data/utils";
 
 const DualLayout: ParentComponent = (props) => (
   <div class="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row">
@@ -66,9 +65,7 @@ const Profile: Component = () => {
 };
 
 const ProfileFrag: Component = () => {
-  const pb = usePb();
-  const { user } = useUser();
-  const authRefresh = useAuthRefresh(pb, { refetchOnWindowFocus: true });
+  const [{ user }, authRefresh] = usePbUser();
 
   return (
     <>
@@ -124,7 +121,7 @@ const useUpdateForm = (
   form: FormStore<FieldValues, ResponseData>
 ): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
   const pb = usePb();
-  const { user, updateUser } = useUser();
+  const [{ user, updateUser }] = usePbUser();
   const [error, setError] = createSignal("");
   const [fieldErrors, setFieldErrors] = createSignal<UpdateForm>({});
 

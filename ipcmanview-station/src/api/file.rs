@@ -15,57 +15,59 @@ use crate::{app::AppState, utils};
 use super::api::{Error, ResultExt};
 
 #[derive(Deserialize, Debug)]
-pub struct Filter {
+pub struct FilterQuery {
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    pub start: Option<DateTime<Utc>>,
+    start: Option<DateTime<Utc>>,
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    pub end: Option<DateTime<Utc>>,
+    end: Option<DateTime<Utc>>,
     #[serde(default)]
-    pub kinds: Vec<String>,
+    kinds: Vec<String>,
     #[serde(default)]
-    pub events: Vec<String>,
+    events: Vec<String>,
     #[serde(default)]
-    pub camera_ids: Vec<i64>,
+    camera_ids: Vec<i64>,
 }
 
 #[derive(Deserialize, Debug)]
-pub struct FileQuery {
+pub struct FileFilterQuery {
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    pub before: Option<String>,
+    before: Option<String>,
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    pub after: Option<String>,
+    after: Option<String>,
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    pub limit: Option<i32>,
-    #[serde(flatten)]
-    pub filter: Filter,
-}
-
-impl From<Filter> for QueryCameraFileFilter {
-    fn from(value: Filter) -> Self {
-        QueryCameraFileFilter::new()
-            .start(value.start)
-            .end(value.end)
-            .kinds(value.kinds)
-            .events(value.events)
-            .camera_ids(value.camera_ids)
-    }
+    limit: Option<i32>,
+    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
+    start: Option<DateTime<Utc>>,
+    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
+    end: Option<DateTime<Utc>>,
+    #[serde(default)]
+    kinds: Vec<String>,
+    #[serde(default)]
+    events: Vec<String>,
+    #[serde(default)]
+    camera_ids: Vec<i64>,
 }
 
 pub async fn query_by_camera(
     Path(id): Path<i64>,
-    mut file_query: Query<FileQuery>,
+    mut file_filter_query: Query<FileFilterQuery>,
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    file_query.filter.camera_ids = vec![id];
+    file_filter_query.camera_ids = vec![id];
 
-    query(file_query, state).await
+    query(file_filter_query, state).await
 }
 
 pub async fn query(
-    Query(query): Query<FileQuery>,
+    Query(query): Query<FileFilterQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let filter = QueryCameraFileFilter::from(query.filter);
+    let filter = QueryCameraFileFilter::new()
+        .start(query.start)
+        .end(query.end)
+        .kinds(query.kinds)
+        .events(query.events)
+        .camera_ids(query.camera_ids);
     let query = QueryCameraFile::new(&filter)
         .maybe_before(query.before)
         .or_error(StatusCode::BAD_REQUEST)?
@@ -81,19 +83,24 @@ pub async fn query(
 
 pub async fn total_by_camera(
     Path(id): Path<i64>,
-    mut filter: Query<Filter>,
+    mut filter_query: Query<FilterQuery>,
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    filter.camera_ids = vec![id];
+    filter_query.camera_ids = vec![id];
 
-    total(filter, state).await
+    total(filter_query, state).await
 }
 
 pub async fn total(
-    Query(filter): Query<Filter>,
+    Query(query): Query<FilterQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let filter = QueryCameraFileFilter::from(filter);
+    let filter = QueryCameraFileFilter::new()
+        .start(query.start)
+        .end(query.end)
+        .kinds(query.kinds)
+        .events(query.events)
+        .camera_ids(query.camera_ids);
     let total = CameraFile::total(&state.pool, &filter)
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;

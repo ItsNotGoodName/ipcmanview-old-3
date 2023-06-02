@@ -17,13 +17,13 @@ import {
   getCoreRowModel,
 } from "@tanstack/solid-table";
 
-import Spinner from "../components/Spinner";
-import { StationRecord } from "../records";
-import { useCameras, useCamerasTotal, useStations } from "../hooks";
-import ActionButtons from "../components/ActionButtons";
-import { Camera } from "../models";
-import { usePb } from "../pb";
-import { Card, CardBody, CardHeader } from "../components/Card";
+import Spinner from "~/ui/Spinner";
+import { StationRecord } from "~/data/records";
+import { useCameras, useCamerasTotal, useStations } from "~/data/hooks";
+import ActionButtons from "~/ui/ActionButtons";
+import { Camera } from "~/data/models";
+import { usePb } from "~/data/pb";
+import { Card, CardBody, CardHeader } from "~/ui/Card";
 
 const Home: Component = () => {
   const pb = usePb();
