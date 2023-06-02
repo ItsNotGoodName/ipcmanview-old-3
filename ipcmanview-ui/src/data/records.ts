@@ -1,11 +1,3 @@
-export type PbError = {
-  code: number;
-  message: string;
-  data: {
-    [string: string]: Omit<PbError, "data">;
-  };
-};
-
 export type PbAuth = {
   token: string;
   model: UserRecord | null;

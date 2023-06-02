@@ -31,6 +31,23 @@ type PbContextProps = {
 
 export const PbProvider: ParentComponent<PbContextProps> = (props) => {
   const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL + "/");
+  pb.autoCancellation(false);
+  pb.afterSend = (response, data) => {
+    if (response.status != 200) {
+      if (response.status == 401 && auth().isValid) {
+        console.log("No longer authenticated.");
+        pb.authStore.clear();
+      }
+      throw new ClientResponseError({
+        url: response.url,
+        status: response.status,
+        data: data,
+      });
+    }
+
+    return data;
+  };
+
   const [auth, setAuth] = createSignal<PbAuth>({
     token: pb.authStore.token,
     model: pb.authStore.model as any,
@@ -58,15 +75,7 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
       if (!pb.authStore.isValid) {
         return null;
       }
-      return pb
-        .collection("users")
-        .authRefresh()
-        .catch((e: ClientResponseError) => {
-          if (e.status == 401) {
-            pb.authStore.clear();
-            return null;
-          } else throw e;
-        });
+      return pb.collection("users").authRefresh();
     },
     {
       refetchInterval: 10 * (60 * 1000),

@@ -117,8 +117,7 @@ const useUpdateUser = () => {
 
 const ProfileForm: Component = () => {
   const [form, { Form, Field }] = createForm<UpdateForm, ResponseData>({});
-  const updateUser = useUpdateUser();
-  const [formSubmit, formErrors] = createMutationForm(updateUser, form);
+  const [formSubmit, formErrors] = createMutationForm(useUpdateUser(), form);
 
   return (
     <Form class="flex flex-col gap-2" onSubmit={formSubmit} shouldDirty={true}>

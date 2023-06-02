@@ -23,7 +23,7 @@ import {
   ScanPending,
   ShowCamera,
 } from "./models";
-import { PbError, StationRecord } from "./records";
+import { StationRecord } from "./records";
 import { paramsFromObject, STATIONS_URI } from "./utils";
 
 export type BackAndNext = { has_previous: boolean; has_next: boolean };
@@ -56,7 +56,7 @@ function stationUrl(stationId: string): string {
 
 export const useStations = (
   pb: PocketBase
-): CreateQueryResult<Array<StationRecord>, PbError> =>
+): CreateQueryResult<Array<StationRecord>, ClientResponseError> =>
   createQuery(
     () => ["stations"],
     () => pb.collection("stations").getFullList()
@@ -65,7 +65,7 @@ export const useStations = (
 export const useCameras = (
   pb: PocketBase,
   stationId: Accessor<string>
-): CreateQueryResult<Array<Camera>, PbError> =>
+): CreateQueryResult<Array<Camera>, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/cameras"],
     () => pb.send(stationUrl(stationId()) + "/cameras", {})
@@ -74,7 +74,7 @@ export const useCameras = (
 export const useCamerasTotal = (
   pb: PocketBase,
   stationId: Accessor<string>
-): CreateQueryResult<CamerasTotal, PbError> =>
+): CreateQueryResult<CamerasTotal, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/cameras-total"],
     () => pb.send(stationUrl(stationId()) + "/cameras-total", {})
@@ -123,7 +123,7 @@ export const useShowCamera = (
   pb: PocketBase,
   stationId: Accessor<string>,
   cameraId: Accessor<number>
-): CreateQueryResult<ShowCamera, PbError> =>
+): CreateQueryResult<ShowCamera, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/cameras/", cameraId()],
     () => pb.send(stationUrl(stationId()) + "/cameras/" + cameraId(), {})
@@ -133,7 +133,7 @@ export const useCameraDetail = (
   pb: PocketBase,
   stationId: Accessor<string>,
   cameraId: Accessor<number>
-): CreateQueryResult<CameraDetail, PbError> =>
+): CreateQueryResult<CameraDetail, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/cameras/", cameraId(), "/detail"],
     () =>
@@ -147,7 +147,7 @@ export const useCameraSoftware = (
   pb: PocketBase,
   stationId: Accessor<string>,
   cameraId: Accessor<number>
-): CreateQueryResult<CameraSoftware, PbError> =>
+): CreateQueryResult<CameraSoftware, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/cameras/", cameraId(), "/software"],
     () =>
@@ -161,7 +161,7 @@ export const useCameraLicenses = (
   pb: PocketBase,
   stationId: Accessor<string>,
   cameraId: Accessor<number>
-): CreateQueryResult<Array<CameraLicense>, PbError> =>
+): CreateQueryResult<Array<CameraLicense>, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/cameras/", cameraId(), "/licenses"],
     () =>
@@ -174,7 +174,7 @@ export const useCameraLicenses = (
 export const useScansPending = (
   pb: PocketBase,
   stationId: Accessor<string>
-): CreateQueryResult<Array<ScanPending>, PbError> =>
+): CreateQueryResult<Array<ScanPending>, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/scans/pending"],
     () => pb.send(stationUrl(stationId()) + "/scans/pending", {})
@@ -183,7 +183,7 @@ export const useScansPending = (
 export const useScansActive = (
   pb: PocketBase,
   stationId: Accessor<string>
-): CreateQueryResult<Array<ScanActive>, PbError> =>
+): CreateQueryResult<Array<ScanActive>, ClientResponseError> =>
   createQuery(
     () => [stationId(), "/scans/active"],
     () => pb.send(stationUrl(stationId()) + "/scans/active", {})
@@ -216,7 +216,7 @@ export const useFiles = (
   filter: Accessor<FileFilter>
 ) => {
   const params = () => paramsFromObject(filter());
-  return createInfiniteQuery<FileResult, PbError>({
+  return createInfiniteQuery<FileResult, ClientResponseError>({
     queryKey: () => [stationId(), "/files", params().toString()],
     queryFn: ({ pageParam }) => {
       let p = params();

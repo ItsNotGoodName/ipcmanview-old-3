@@ -46,12 +46,16 @@ export function createMutationForm<
   formStore: FormStore<TFieldValues, ResponseData>
 ): [(data: TVariables) => void, Accessor<FormError<TFieldValues> | null>] {
   return [
-    (d) => {
-      mutationResult.mutate(d, {
-        onSuccess: () => {
-          reset(formStore);
-        },
-      });
+    async (d) => {
+      try {
+        return await mutationResult.mutateAsync(d, {
+          onSuccess: () => {
+            reset(formStore);
+          },
+        });
+      } catch (e) {
+        console.log(e);
+      }
     },
     createMemo(() => {
       return parseErrors<TFieldValues>(mutationResult.error);
