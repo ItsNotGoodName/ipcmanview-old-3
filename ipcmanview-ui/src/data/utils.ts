@@ -1,3 +1,15 @@
+import {
+  FieldValues,
+  FormError,
+  FormErrors,
+  FormStore,
+  reset,
+  ResponseData,
+} from "@modular-forms/solid";
+import { CreateMutationResult } from "@tanstack/solid-query";
+import { ClientResponseError } from "pocketbase";
+import { Accessor, createMemo } from "solid-js";
+
 export function formatDateTime(date: string): string {
   let d = new Date(date);
   return d.toLocaleDateString() + " " + d.toLocaleTimeString();
@@ -20,4 +32,49 @@ export function paramsFromObject(obj: Record<string, any>): URLSearchParams {
     }
   }
   return s;
+}
+
+export function createMutationForm<
+  TFieldValues extends FieldValues,
+  TVariables
+>(
+  mutationResult: CreateMutationResult<
+    unknown,
+    ClientResponseError,
+    TVariables
+  >,
+  formStore: FormStore<TFieldValues, ResponseData>
+): [(data: TVariables) => void, Accessor<FormError<TFieldValues> | null>] {
+  return [
+    (d) => {
+      mutationResult.mutate(d, {
+        onSuccess: () => {
+          reset(formStore);
+        },
+      });
+    },
+    createMemo(() => {
+      return parseErrors<TFieldValues>(mutationResult.error);
+    }),
+  ];
+}
+
+function parseErrors<T extends FieldValues>(
+  err: ClientResponseError | null
+): FormError<T> | null {
+  if (!err) {
+    return null;
+  }
+
+  let keys = Object.keys(err.response.data) as Array<keyof T>;
+  if (keys.length > 0) {
+    let newFieldErrors: FormErrors<T> = {};
+    for (const key of keys) {
+      //@ts-ignore
+      newFieldErrors[key] = err.response.data[key].message;
+    }
+    return new FormError("", newFieldErrors);
+  }
+
+  return new FormError(err.message || "");
 }

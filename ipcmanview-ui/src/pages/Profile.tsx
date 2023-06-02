@@ -1,19 +1,7 @@
-import {
-  createForm,
-  FieldValues,
-  FormStore,
-  reset,
-  ResponseData,
-  SubmitHandler,
-} from "@modular-forms/solid";
-import {
-  Accessor,
-  batch,
-  Component,
-  createSignal,
-  ParentComponent,
-  Show,
-} from "solid-js";
+import { createForm, Maybe, ResponseData } from "@modular-forms/solid";
+import { Component, ParentComponent, Show } from "solid-js";
+import { createMutation } from "@tanstack/solid-query";
+import { ClientResponseError } from "pocketbase";
 
 import Button from "~/ui/Button";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
@@ -21,8 +9,8 @@ import InputError from "~/ui/InputError";
 import InputTextFrag from "~/ui/InputTextFrag";
 import Spinner from "~/ui/Spinner";
 import { usePb, usePbUser } from "~/data/pb";
-import { PbError, UserRecord } from "~/data/records";
-import { formatDateTime } from "~/data/utils";
+import { UserRecord } from "~/data/records";
+import { createMutationForm, formatDateTime } from "~/data/utils";
 
 const DualLayout: ParentComponent = (props) => (
   <div class="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row">
@@ -105,70 +93,35 @@ const ProfileFrag: Component = () => {
 };
 
 type UpdateForm = {
-  name?: string;
-  username?: string;
-  oldPassword?: string;
-  password?: string;
-  passwordConfirm?: string;
+  name: Maybe<string>;
+  username: Maybe<string>;
+  oldPassword: Maybe<string>;
+  password: Maybe<string>;
+  passwordConfirm: Maybe<string>;
 };
 
-type UpdateFormReturn = {
-  error: Accessor<string>;
-  fieldErrors: Accessor<UpdateForm>;
-};
-
-const useUpdateForm = (
-  form: FormStore<FieldValues, ResponseData>
-): [SubmitHandler<UpdateForm>, UpdateFormReturn] => {
+const useUpdateUser = () => {
   const pb = usePb();
   const [{ user, updateUser }] = usePbUser();
-  const [error, setError] = createSignal("");
-  const [fieldErrors, setFieldErrors] = createSignal<UpdateForm>({});
-
-  const submit: SubmitHandler<UpdateForm> = async (values) => {
-    batch(() => {
-      setError("");
-      setFieldErrors({});
-    });
-
-    try {
-      const updatedUser = await pb
-        .collection("users")
-        .update<UserRecord>(user().id, values);
-
-      if (values.password) {
-        // Logout on password change
+  return createMutation<UserRecord, ClientResponseError, UpdateForm>({
+    onSuccess: (data, variables) => {
+      updateUser(data);
+      if (variables.password) {
         pb.authStore.clear();
-      } else {
-        // Update auth store
-        updateUser(updatedUser);
       }
-
-      reset(form);
-    } catch (err: any) {
-      const pbErr = err.data as PbError;
-      let keys = Object.keys(pbErr.data) as Array<keyof UpdateForm>;
-      if (keys.length > 0) {
-        let newFieldErrors: UpdateForm = {};
-        for (const key of keys) {
-          newFieldErrors[key] = pbErr.data[key].message;
-        }
-        setFieldErrors(newFieldErrors);
-      } else {
-        setError(err.message);
-      }
-    }
-  };
-
-  return [submit, { error, fieldErrors }];
+    },
+    mutationFn: (data: UpdateForm) =>
+      pb.collection("users").update<UserRecord>(user().id, data),
+  });
 };
 
 const ProfileForm: Component = () => {
   const [form, { Form, Field }] = createForm<UpdateForm, ResponseData>({});
-  const [submit, { error, fieldErrors }] = useUpdateForm(form);
+  const updateUser = useUpdateUser();
+  const [formSubmit, formErrors] = createMutationForm(updateUser, form);
 
   return (
-    <Form class="flex flex-col gap-2" onSubmit={submit} shouldDirty={true}>
+    <Form class="flex flex-col gap-2" onSubmit={formSubmit} shouldDirty={true}>
       <Field name="name">
         {(field, props) => (
           <InputTextFrag
@@ -176,7 +129,7 @@ const ProfileForm: Component = () => {
             {...props}
             placeholder="New name"
             value={field.value || ""}
-            error={field.error || fieldErrors()["name"]}
+            error={field.error || formErrors()?.errors.name}
           />
         )}
       </Field>
@@ -188,7 +141,7 @@ const ProfileForm: Component = () => {
             {...props}
             placeholder="New username"
             value={field.value || ""}
-            error={field.error || fieldErrors()["username"]}
+            error={field.error || formErrors()?.errors.username}
           />
         )}
       </Field>
@@ -196,14 +149,14 @@ const ProfileForm: Component = () => {
       <Button type="submit" loading={form.submitting}>
         <div class="mx-auto">Update profile</div>
       </Button>
-      <InputError error={error()} />
+      <InputError error={formErrors()?.message} />
     </Form>
   );
 };
 
 const PasswordForm: Component = () => {
   const [form, { Form, Field }] = createForm<UpdateForm, ResponseData>();
-  const [submit, { error, fieldErrors }] = useUpdateForm(form);
+  const [submit, formErrors] = createMutationForm(useUpdateUser(), form);
 
   return (
     <Form class="flex flex-col gap-2" onSubmit={submit}>
@@ -217,7 +170,7 @@ const PasswordForm: Component = () => {
             {...props}
             placeholder="Old password"
             value={field.value || ""}
-            error={field.error || fieldErrors()["oldPassword"]}
+            error={field.error || formErrors()?.errors.oldPassword}
             autocomplete="current-password"
           />
         )}
@@ -231,7 +184,7 @@ const PasswordForm: Component = () => {
             {...props}
             placeholder="New password"
             value={field.value || ""}
-            error={field.error || fieldErrors()["password"]}
+            error={field.error || formErrors()?.errors.password}
             autocomplete="new-password"
           />
         )}
@@ -245,7 +198,7 @@ const PasswordForm: Component = () => {
             {...props}
             placeholder="Confirm new password"
             value={field.value || ""}
-            error={field.error || fieldErrors()["passwordConfirm"]}
+            error={field.error || formErrors()?.errors.passwordConfirm}
             autocomplete="new-password"
           />
         )}
@@ -254,7 +207,7 @@ const PasswordForm: Component = () => {
       <Button type="submit" loading={form.submitting}>
         <div class="mx-auto">Update password</div>
       </Button>
-      <InputError error={error()} />
+      <InputError error={formErrors()?.message} />
     </Form>
   );
 };

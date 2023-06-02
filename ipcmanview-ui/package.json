@@ -34,7 +34,7 @@
     "vite-plugin-solid": "^2.7.0"
   },
   "dependencies": {
-    "@modular-forms/solid": "^0.14.0",
+    "@modular-forms/solid": "^0.17.0",
     "@solidjs/router": "^0.8.2",
     "@tanstack/solid-query": "^4.29.7",
     "@tanstack/solid-table": "^8.9.1",
