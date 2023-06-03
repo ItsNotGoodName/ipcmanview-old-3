@@ -75,14 +75,16 @@ function formErrorsFromMutation<T extends FieldValues>(
     return null;
   }
 
-  let keys = Object.keys(err.response.data) as Array<keyof T>;
-  if (keys.length > 0) {
-    let newFieldErrors: FormErrors<T> = {};
-    for (const key of keys) {
-      //@ts-ignore
-      newFieldErrors[key] = err.response.data[key].message;
+  if (err.response.data) {
+    let keys = Object.keys(err.response.data) as Array<keyof T>;
+    if (keys.length > 0) {
+      let newFieldErrors: FormErrors<T> = {};
+      for (const key of keys) {
+        //@ts-ignore
+        newFieldErrors[key] = err.response.data[key].message;
+      }
+      return new FormError("", newFieldErrors);
     }
-    return new FormError("", newFieldErrors);
   }
 
   return new FormError(err.message || "");
