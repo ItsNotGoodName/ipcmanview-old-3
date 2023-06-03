@@ -24,7 +24,7 @@ import {
   ShowCamera,
 } from "./models";
 import { StationRecord } from "./records";
-import { paramsFromObject, STATIONS_URI } from "./utils";
+import { searchParamsFromObject, STATIONS_URI } from "./utils";
 
 export type BackAndNext = { has_previous: boolean; has_next: boolean };
 
@@ -215,7 +215,7 @@ export const useFiles = (
   stationId: Accessor<string>,
   filter: Accessor<FileFilter>
 ) => {
-  const params = () => paramsFromObject(filter());
+  const params = () => searchParamsFromObject(filter());
   return createInfiniteQuery<FileResult, ClientResponseError>({
     queryKey: () => [stationId(), "/files", params().toString()],
     queryFn: ({ pageParam }) => {
@@ -243,7 +243,7 @@ export const useFilesTotal = (
   stationId: Accessor<string>,
   filter: Accessor<FileFilter>
 ) => {
-  const params = () => paramsFromObject(filter());
+  const params = () => searchParamsFromObject(filter());
   return createQuery(
     () => [stationId(), "/files-total", params.toString()],
     () => pb.send(stationUrl(stationId()) + "/files-total?" + params(), {})

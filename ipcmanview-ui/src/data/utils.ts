@@ -18,7 +18,9 @@ export function formatDateTime(date: string): string {
 export const STATIONS_URI = "/app/stations";
 export const ADMIN_PANEL_URL = import.meta.env.VITE_BACKEND_URL + "/_/";
 
-export function paramsFromObject(obj: Record<string, any>): URLSearchParams {
+export function searchParamsFromObject(
+  obj: Record<string, any>
+): URLSearchParams {
   const s = new URLSearchParams();
   for (let k of Object.keys(obj)) {
     if (Array.isArray(obj[k])) {
@@ -44,7 +46,10 @@ export function createMutationForm<
     TVariables
   >,
   formStore: FormStore<TFieldValues, ResponseData>
-): [(data: TVariables) => void, Accessor<FormError<TFieldValues> | null>] {
+): [
+  (data: TVariables) => Promise<unknown>,
+  Accessor<FormError<TFieldValues> | null>
+] {
   return [
     async (d) => {
       try {
@@ -57,13 +62,13 @@ export function createMutationForm<
         console.log(e);
       }
     },
-    createMemo(() => {
-      return parseErrors<TFieldValues>(mutationResult.error);
-    }),
+    createMemo(() =>
+      formErrorsFromMutation<TFieldValues>(mutationResult.error)
+    ),
   ];
 }
 
-function parseErrors<T extends FieldValues>(
+function formErrorsFromMutation<T extends FieldValues>(
   err: ClientResponseError | null
 ): FormError<T> | null {
   if (!err) {

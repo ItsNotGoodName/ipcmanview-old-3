@@ -38,7 +38,6 @@
     "@solidjs/router": "^0.8.2",
     "@tanstack/solid-query": "^4.29.7",
     "@tanstack/solid-table": "^8.9.1",
-    "clsx": "^1.2.1",
     "pocketbase": "^0.14.4",
     "solid-icons": "^1.0.4",
     "solid-js": "^1.7.5"

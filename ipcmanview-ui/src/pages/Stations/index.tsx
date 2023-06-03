@@ -1,5 +1,5 @@
-import { Component, For, Match, Switch } from "solid-js";
-import { useNavigate } from "@solidjs/router";
+import { Component, For, Match, Show, Switch } from "solid-js";
+import { A } from "@solidjs/router";
 import {
   createColumnHelper,
   createSolidTable,
@@ -10,12 +10,11 @@ import { RiSystemAlertFill } from "solid-icons/ri";
 
 import { useCamerasTotal, useStations } from "~/data/hooks";
 import { usePb } from "~/data/pb";
-import { Card } from "~/ui/Card";
+import { Card, CardHeader } from "~/ui/Card";
 import Spinner from "~/ui/Spinner";
 import { StationRecord } from "~/data/records";
 
 const StationList: Component = () => {
-  const navigate = useNavigate();
   const pb = usePb();
   const stations = useStations(pb);
 
@@ -41,6 +40,15 @@ const StationList: Component = () => {
         );
       },
     }),
+
+    columnHelper.display({
+      id: "action",
+      cell: (info) => (
+        <A class="text-link" href={"/stations/" + info.row.original.id}>
+          Open
+        </A>
+      ),
+    }),
   ];
   const table = createSolidTable({
     get data() {
@@ -52,49 +60,56 @@ const StationList: Component = () => {
 
   return (
     <Card>
-      <table class="w-full table-auto">
-        <thead>
-          <For each={table.getHeaderGroups()}>
-            {(headerGroup) => (
-              <tr class="bg-ship-600 text-ship-50">
-                <For each={headerGroup.headers}>
-                  {(header) => (
-                    <th class="p-2 text-left uppercase">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </th>
-                  )}
-                </For>
-              </tr>
-            )}
-          </For>
-        </thead>
-        <tbody>
-          <For each={table.getRowModel().rows}>
-            {(row) => (
-              <tr
-                class="cursor-pointer even:bg-ship-50 hover:bg-ship-100"
-                onClick={[navigate, `/stations/${row.original.id}`]}
-              >
-                <For each={row.getVisibleCells()}>
-                  {(cell) => (
-                    <td class="p-1">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
-                    </td>
-                  )}
-                </For>
-              </tr>
-            )}
-          </For>
-        </tbody>
-      </table>
+      <CardHeader
+        title="Stations"
+        right={
+          <Show when={stations.isFetching}>
+            <Spinner />
+          </Show>
+        }
+      />
+      <div class="overflow-x-auto">
+        <table class="w-full table-auto">
+          <thead>
+            <For each={table.getHeaderGroups()}>
+              {(headerGroup) => (
+                <tr class="bg-ship-600 text-ship-50">
+                  <For each={headerGroup.headers}>
+                    {(header) => (
+                      <th class="p-2 text-left uppercase">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </th>
+                    )}
+                  </For>
+                </tr>
+              )}
+            </For>
+          </thead>
+          <tbody>
+            <For each={table.getRowModel().rows}>
+              {(row) => (
+                <tr class="cursor-pointer even:bg-ship-50">
+                  <For each={row.getVisibleCells()}>
+                    {(cell) => (
+                      <td class="p-1">
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    )}
+                  </For>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 };
