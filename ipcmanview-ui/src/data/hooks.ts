@@ -1,5 +1,5 @@
 import PocketBase, { ClientResponseError } from "pocketbase";
-import { Accessor, createMemo } from "solid-js";
+import { Accessor } from "solid-js";
 import {
   createInfiniteQuery,
   createMutation,
@@ -24,35 +24,7 @@ import {
   ShowCamera,
 } from "./models";
 import { StationRecord } from "./records";
-import { searchParamsFromObject, STATIONS_URI } from "./utils";
-
-export type BackAndNext = { has_previous: boolean; has_next: boolean };
-
-export function withBackAndNext<T, U = unknown>(
-  query: CreateQueryResult<PageResult<T>, U>
-): [CreateQueryResult<PageResult<T>, U>, Accessor<BackAndNext>] {
-  return [
-    query,
-    createMemo(() => {
-      let has_previous = false;
-      let has_next = false;
-      if (query.data && !query.isPreviousData) {
-        if (query.data.page > 1) {
-          has_previous = true;
-        }
-
-        if (query.data.page < query.data.total_pages) {
-          has_next = true;
-        }
-      }
-      return { has_previous, has_next };
-    }),
-  ];
-}
-
-function stationUrl(stationId: string): string {
-  return STATIONS_URI + "/" + stationId;
-}
+import { searchParamsFromObject, stationUrl } from "./utils";
 
 export const useStations = (
   pb: PocketBase

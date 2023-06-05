@@ -1,53 +1,54 @@
-import { createForm, required, SubmitHandler } from "@modular-forms/solid";
-import { Component, createSignal, ParentComponent } from "solid-js";
+import PocketBase, { ClientResponseError } from "pocketbase";
+import { Component } from "solid-js";
+import { createForm, required, ResponseData } from "@modular-forms/solid";
+import { createMutation } from "@tanstack/solid-query";
 
 import Button from "~/ui/Button";
-import { Card, CardBody, CardHeader } from "~/ui/Card";
 import InputError from "~/ui/InputError";
-import InputTextFrag from "~/ui/InputTextFrag";
+import InputText from "~/ui/InputText";
+import { ADMIN_PANEL_URL, createMutationForm } from "~/data/utils";
+import { Card, CardBody, CardHeader } from "~/ui/Card";
+import { CenterLayout } from "~/ui/Layouts";
 import { usePb } from "~/data/pb";
-import { ADMIN_PANEL_URL } from "~/data/utils";
+import ThemeSwitcher from "~/ui/ThemeSwitcher";
 
-type LoginForm = {
+type LoginMutation = {
   usernameOrEmail: string;
   password: string;
 };
 
-const CenterLayout: ParentComponent = (props) => (
-  <div class="px-4 py-16">
-    <div class="mx-auto flex max-w-sm flex-col gap-4">{props.children}</div>
-  </div>
-);
+const useLoginMutation = (pb: PocketBase) =>
+  createMutation<unknown, ClientResponseError, LoginMutation>({
+    mutationFn: (data: LoginMutation) =>
+      pb
+        .collection("users")
+        .authWithPassword(data.usernameOrEmail, data.password),
+  });
 
-const Home: Component = () => {
-  const [form, { Form, Field }] = createForm<LoginForm>({});
-  const [error, setError] = createSignal("");
-
-  const pb = usePb();
-  const onSubmit: SubmitHandler<LoginForm> = (values) =>
-    pb
-      .collection("users")
-      .authWithPassword(values.usernameOrEmail, values.password)
-      .catch((err) => {
-        setError(err.message);
-      });
+const Login: Component = () => {
+  const [form, { Form, Field }] = createForm<LoginMutation, ResponseData>({});
+  const [formSubmit, formErrors] = createMutationForm(
+    useLoginMutation(usePb()),
+    form
+  );
 
   return (
     <CenterLayout>
       <Card>
-        <CardHeader title={<div class="text-center">IPCManView</div>} />
+        <CardHeader right={<ThemeSwitcher />}>Login</CardHeader>
         <CardBody>
-          <Form class="flex flex-col gap-2" onSubmit={onSubmit}>
+          <Form class="flex flex-col gap-2" onSubmit={formSubmit}>
             <Field
               name="usernameOrEmail"
               validate={[required("Please enter your username or email.")]}
             >
               {(field, props) => (
-                <InputTextFrag
+                <InputText
                   {...props}
                   label="Username or Email"
                   placeholder="Username or Email"
                   autocomplete="username"
+                  loading={form.submitting}
                   error={field.error}
                 />
               )}
@@ -58,33 +59,34 @@ const Home: Component = () => {
               validate={[required("Please enter your password.")]}
             >
               {(field, props) => (
-                <InputTextFrag
+                <InputText
                   {...props}
                   label="Password"
                   type="password"
                   placeholder="Password"
                   autocomplete="current-password"
+                  loading={form.submitting}
                   error={field.error}
                 />
               )}
             </Field>
 
             <a
-              class="ml-auto text-sm text-link hover:underline"
+              class="link-hover link-info link ml-auto text-sm"
               href={ADMIN_PANEL_URL}
             >
               Forgot Password?
             </a>
 
             <Button type="submit" loading={form.submitting}>
-              <div class="mx-auto">Log in</div>
+              Log in
             </Button>
-            <InputError error={error()} />
+            <InputError error={formErrors()?.message} />
           </Form>
         </CardBody>
       </Card>
       <a
-        class="ml-auto text-sm text-link hover:underline"
+        class="link-hover link-info link mx-auto text-sm"
         href={ADMIN_PANEL_URL}
       >
         Admin Panel
@@ -93,4 +95,4 @@ const Home: Component = () => {
   );
 };
 
-export default Home;
+export default Login;

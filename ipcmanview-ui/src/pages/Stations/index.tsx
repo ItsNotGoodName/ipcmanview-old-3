@@ -1,18 +1,18 @@
-import { Component, For, Match, Show, Switch } from "solid-js";
 import { A } from "@solidjs/router";
+import { Component, For, Match, Show, Switch } from "solid-js";
+import { RiSystemAlertFill } from "solid-icons/ri";
 import {
   createColumnHelper,
   createSolidTable,
   flexRender,
   getCoreRowModel,
 } from "@tanstack/solid-table";
-import { RiSystemAlertFill } from "solid-icons/ri";
 
+import Spinner from "~/ui/Spinner";
+import { Card, CardHeader } from "~/ui/Card";
+import { StationRecord } from "~/data/records";
 import { useCamerasTotal, useStations } from "~/data/hooks";
 import { usePb } from "~/data/pb";
-import { Card, CardHeader } from "~/ui/Card";
-import Spinner from "~/ui/Spinner";
-import { StationRecord } from "~/data/records";
 
 const StationList: Component = () => {
   const pb = usePb();
@@ -33,19 +33,21 @@ const StationList: Component = () => {
               <Spinner />
             </Match>
             <Match when={total.isError}>
-              <RiSystemAlertFill class="h-full w-6 fill-danger-100" />
+              <RiSystemAlertFill class="h-full w-6 fill-error" />
             </Match>
             <Match when={total.isSuccess}>{total.data!.total}</Match>
           </Switch>
         );
       },
     }),
-
     columnHelper.display({
       id: "action",
       cell: (info) => (
-        <A class="text-link" href={"/stations/" + info.row.original.id}>
-          Open
+        <A
+          class="no-animation btn-xs btn"
+          href={"/stations/" + info.row.original.id}
+        >
+          details
         </A>
       ),
     }),
@@ -61,19 +63,20 @@ const StationList: Component = () => {
   return (
     <Card>
       <CardHeader
-        title="Stations"
         right={
           <Show when={stations.isFetching}>
             <Spinner />
           </Show>
         }
-      />
-      <div class="overflow-x-auto">
-        <table class="w-full table-auto">
+      >
+        Stations
+      </CardHeader>
+      <div class="overflow-x-auto pb-2">
+        <table class="table w-full">
           <thead>
             <For each={table.getHeaderGroups()}>
               {(headerGroup) => (
-                <tr class="bg-ship-600 text-ship-50">
+                <tr>
                   <For each={headerGroup.headers}>
                     {(header) => (
                       <th class="p-2 text-left uppercase">
@@ -93,7 +96,7 @@ const StationList: Component = () => {
           <tbody>
             <For each={table.getRowModel().rows}>
               {(row) => (
-                <tr class="cursor-pointer even:bg-ship-50">
+                <tr>
                   <For each={row.getVisibleCells()}>
                     {(cell) => (
                       <td class="p-1">

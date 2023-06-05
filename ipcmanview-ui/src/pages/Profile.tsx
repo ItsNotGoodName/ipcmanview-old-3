@@ -1,31 +1,31 @@
-import { createForm, Maybe, ResponseData } from "@modular-forms/solid";
-import { Component, ParentComponent, Show } from "solid-js";
-import { createMutation } from "@tanstack/solid-query";
 import { ClientResponseError } from "pocketbase";
+import { Component, ParentComponent, Show } from "solid-js";
+import { createForm, Maybe, ResponseData } from "@modular-forms/solid";
+import { createMutation } from "@tanstack/solid-query";
 
 import Button from "~/ui/Button";
-import { Card, CardBody, CardHeader } from "~/ui/Card";
 import InputError from "~/ui/InputError";
-import InputTextFrag from "~/ui/InputTextFrag";
+import InputText from "~/ui/InputText";
 import Spinner from "~/ui/Spinner";
-import { usePb, usePbUser } from "~/data/pb";
+import { Card, CardBody, CardHeader } from "~/ui/Card";
 import { UserRecord } from "~/data/records";
 import { createMutationForm, formatDateTime } from "~/data/utils";
+import { usePb, usePbUser } from "~/data/pb";
 
-const DualLayout: ParentComponent = (props) => (
+const Layout: ParentComponent = (props) => (
   <div class="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row">
     {props.children}
   </div>
 );
 
-const DualLayoutChild: ParentComponent = (props) => (
+const LayoutChild: ParentComponent = (props) => (
   <div class="flex flex-1 flex-col gap-4">{props.children}</div>
 );
 
 const Profile: Component = () => {
   return (
-    <DualLayout>
-      <DualLayoutChild>
+    <Layout>
+      <LayoutChild>
         <div class="sticky top-0">
           <Card>
             <CardBody>
@@ -33,22 +33,22 @@ const Profile: Component = () => {
             </CardBody>
           </Card>
         </div>
-      </DualLayoutChild>
-      <DualLayoutChild>
+      </LayoutChild>
+      <LayoutChild>
         <Card>
-          <CardHeader title="Update Profile" />
+          <CardHeader>Update Profile</CardHeader>
           <CardBody>
             <ProfileForm />
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Update Password" />
+          <CardHeader>Update Password</CardHeader>
           <CardBody>
             <PasswordForm />
           </CardBody>
         </Card>
-      </DualLayoutChild>
-    </DualLayout>
+      </LayoutChild>
+    </Layout>
   );
 };
 
@@ -58,13 +58,13 @@ const ProfileFrag: Component = () => {
   return (
     <>
       <div class="flex">
-        <h1 class="flex-1 text-2xl">{user().username}</h1>
+        <div class="flex-1 text-2xl">{user().username}</div>
         <Show when={authRefresh.isFetching}>
           <Spinner />
         </Show>
       </div>
-      <hr class="my-2 text-ship-600" />
-      <table class="table">
+      <hr class="my-2 border-base-300" />
+      <table>
         <tbody>
           <tr>
             <th class="pr-2 text-right">Name</th>
@@ -123,10 +123,11 @@ const ProfileForm: Component = () => {
     <Form class="flex flex-col gap-2" onSubmit={formSubmit} shouldDirty={true}>
       <Field name="name">
         {(field, props) => (
-          <InputTextFrag
-            label="New name"
+          <InputText
             {...props}
+            label="New name"
             placeholder="New name"
+            loading={form.submitting}
             value={field.value || ""}
             error={field.error || formErrors()?.errors.name}
           />
@@ -135,10 +136,11 @@ const ProfileForm: Component = () => {
 
       <Field name="username">
         {(field, props) => (
-          <InputTextFrag
-            label="New username"
+          <InputText
             {...props}
+            label="New username"
             placeholder="New username"
+            loading={form.submitting}
             value={field.value || ""}
             error={field.error || formErrors()?.errors.username}
           />
@@ -146,7 +148,7 @@ const ProfileForm: Component = () => {
       </Field>
 
       <Button type="submit" loading={form.submitting}>
-        <div class="mx-auto">Update profile</div>
+        Update profile
       </Button>
       <InputError error={formErrors()?.message} />
     </Form>
@@ -163,48 +165,51 @@ const PasswordForm: Component = () => {
 
       <Field name="oldPassword">
         {(field, props) => (
-          <InputTextFrag
+          <InputText
+            {...props}
             label="Old password"
             type="password"
-            {...props}
             placeholder="Old password"
+            autocomplete="current-password"
+            loading={form.submitting}
             value={field.value || ""}
             error={field.error || formErrors()?.errors.oldPassword}
-            autocomplete="current-password"
           />
         )}
       </Field>
 
       <Field name="password">
         {(field, props) => (
-          <InputTextFrag
+          <InputText
+            {...props}
             label="New Password"
             type="password"
-            {...props}
             placeholder="New password"
+            autocomplete="new-password"
+            loading={form.submitting}
             value={field.value || ""}
             error={field.error || formErrors()?.errors.password}
-            autocomplete="new-password"
           />
         )}
       </Field>
 
       <Field name="passwordConfirm">
         {(field, props) => (
-          <InputTextFrag
+          <InputText
+            {...props}
             label="Confirm new password"
             type="password"
-            {...props}
             placeholder="Confirm new password"
+            autocomplete="new-password"
+            loading={form.submitting}
             value={field.value || ""}
             error={field.error || formErrors()?.errors.passwordConfirm}
-            autocomplete="new-password"
           />
         )}
       </Field>
 
       <Button type="submit" loading={form.submitting}>
-        <div class="mx-auto">Update password</div>
+        Update password
       </Button>
       <InputError error={formErrors()?.message} />
     </Form>

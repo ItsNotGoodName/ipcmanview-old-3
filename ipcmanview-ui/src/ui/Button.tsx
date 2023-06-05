@@ -1,24 +1,27 @@
-import { JSX, ParentComponent, Show, splitProps } from "solid-js";
-import Spinner from "./Spinner";
+import clsx from "clsx";
+import { Component, JSX, Show, splitProps } from "solid-js";
 
 type ButtonProps = {
   loading?: boolean;
   children: JSX.Element;
-} & Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, "class">;
+} & JSX.ButtonHTMLAttributes<HTMLButtonElement>;
 
-const Button: ParentComponent<Omit<ButtonProps, "disabled">> = (props) => {
-  const [, other] = splitProps(props, ["loading", "children"]);
+const Button: Component<ButtonProps> = (props) => {
+  const [, other] = splitProps(props, [
+    "loading",
+    "children",
+    "class",
+    "disabled",
+  ]);
 
   return (
     <button
       {...other}
-      class="flex w-full gap-1 truncate rounded bg-ship-500 p-2 text-ship-50 hover:bg-ship-600"
-      disabled={props.loading}
+      class={clsx("no-animation btn", props.class)}
+      disabled={props.loading || props.disabled}
     >
       <Show when={props.loading}>
-        <div class="h-full">
-          <Spinner />
-        </div>
+        <span class="loading loading-spinner"></span>
       </Show>
       {props.children}
     </button>

@@ -1,5 +1,5 @@
 import { createQuery, CreateQueryResult } from "@tanstack/solid-query";
-import PocketBase, { ClientResponseError } from "pocketbase";
+import PocketBase from "pocketbase";
 import {
   Accessor,
   createContext,
@@ -33,16 +33,9 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
   const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL + "/");
   pb.autoCancellation(false);
   pb.afterSend = (response, data) => {
-    if (response.status != 200) {
-      if (response.status == 401 && auth().isValid) {
-        console.log("No longer authenticated.");
-        pb.authStore.clear();
-      }
-      throw new ClientResponseError({
-        url: response.url,
-        status: response.status,
-        data: data,
-      });
+    if (response.status == 401 && auth().isValid) {
+      console.log("No longer authenticated.");
+      pb.authStore.clear();
     }
 
     return data;

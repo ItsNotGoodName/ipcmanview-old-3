@@ -6,9 +6,10 @@ import {
   reset,
   ResponseData,
 } from "@modular-forms/solid";
-import { CreateMutationResult } from "@tanstack/solid-query";
+import { CreateMutationResult, CreateQueryResult } from "@tanstack/solid-query";
 import { ClientResponseError } from "pocketbase";
 import { Accessor, createMemo } from "solid-js";
+import { PageResult } from "./models";
 
 export function formatDateTime(date: string): string {
   let d = new Date(date);
@@ -17,6 +18,10 @@ export function formatDateTime(date: string): string {
 
 export const STATIONS_URI = "/app/stations";
 export const ADMIN_PANEL_URL = import.meta.env.VITE_BACKEND_URL + "/_/";
+
+export function stationUrl(stationId: string): string {
+  return STATIONS_URI + "/" + stationId;
+}
 
 export function searchParamsFromObject(
   obj: Record<string, any>
@@ -88,4 +93,25 @@ function formErrorsFromMutation<T extends FieldValues>(
   }
 
   return new FormError(err.message || "");
+}
+
+export type Paging = { has_previous: boolean; has_next: boolean };
+
+export function createPaging<T, U = unknown>(
+  query: CreateQueryResult<PageResult<T>, U>
+): Accessor<Paging> {
+  return createMemo(() => {
+    let has_previous = false;
+    let has_next = false;
+    if (query.data && !query.isPreviousData) {
+      if (query.data.page > 1) {
+        has_previous = true;
+      }
+
+      if (query.data.page < query.data.total_pages) {
+        has_next = true;
+      }
+    }
+    return { has_previous, has_next };
+  });
 }

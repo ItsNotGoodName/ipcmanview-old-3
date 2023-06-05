@@ -12,9 +12,10 @@ const Root: ParentComponent = (props) => (
   <div class="flex h-screen w-screen flex-col">{props.children}</div>
 );
 
-const CHIP_CLASS = "flex rounded-xl hover:bg-ship-50 hover:text-ship-950";
-const CHIP_ACTIVE_CLASS = "bg-ship-50 text-ship-950";
-const CHIP_INACTIVE_CLASS = "text-ship-50";
+const CHIP_CLASS =
+  "flex rounded-xl text-primary-content hover:bg-primary-content hover:text-primary-focus";
+const CHIP_ACTIVE_CLASS = "bg-primary-content text-primary-focus";
+const CHIP_INACTIVE_CLASS = "text-primary-content";
 
 const Chip: ParentComponent<{ active?: boolean }> = (props) => (
   <div
@@ -41,18 +42,18 @@ const LinkChip: ParentComponent<
   </A>
 );
 
-const ChipIcon: ParentComponent = (props) => (
+const Icon: ParentComponent = (props) => (
   <div class="[&>*]:h-6 [&>*]:w-6">{props.children}</div>
 );
 
 const Header: ParentComponent = (props) => (
-  <header class="flex h-12 justify-between gap-2 bg-ship-800 p-2 shadow shadow-ship-300">
+  <header class="flex h-12 justify-between gap-2 bg-primary-focus p-2">
     {props.children}
   </header>
 );
 
 const HeaderTextLogo: ParentComponent = (props) => (
-  <div class="overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-bold text-ship-50">
+  <div class="overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-bold text-primary-content">
     {props.children}
   </div>
 );
@@ -69,7 +70,7 @@ const Content: ParentComponent = (props) => (
 
 const ContentNav: ParentComponent = (props) => (
   <div>
-    <nav class="flex h-12 w-full flex-row justify-between gap-1 bg-ship-700 p-2 shadow shadow-ship-300 sm:h-full sm:w-12 sm:flex-col">
+    <nav class="flex h-12 w-full flex-row justify-between gap-1 bg-primary p-2 sm:h-full sm:w-12 sm:flex-col">
       {props.children}
     </nav>
   </div>
@@ -92,6 +93,7 @@ import Home from "~/pages/Home";
 import Profile from "~/pages/Profile";
 import Stations from "~/pages/Stations";
 import StationsShow from "~/pages/Stations/Show";
+import ThemeSwitcher from "~/ui/ThemeSwitcher";
 
 export const App: Component = () => {
   const pb = usePb();
@@ -108,16 +110,19 @@ export const App: Component = () => {
         <HeaderTextLogo>IPCManView</HeaderTextLogo>
         <HeaderEnd>
           <LinkChip href="/profile">
-            <ChipIcon>
+            <Icon>
               <RiUserAccountCircleFill />
-            </ChipIcon>
+            </Icon>
           </LinkChip>
           <Chip>
             <button onClick={logout} title="Logout">
-              <ChipIcon>
+              <Icon>
                 <RiSystemLogoutBoxRLine />
-              </ChipIcon>
+              </Icon>
             </button>
+          </Chip>
+          <Chip>
+            <ThemeSwitcher />
           </Chip>
         </HeaderEnd>
       </Header>
@@ -125,21 +130,21 @@ export const App: Component = () => {
         <ContentNav>
           <ContentNavStart>
             <LinkChip href="/" title="Home" end>
-              <ChipIcon>
+              <Icon>
                 <RiBuildingsHome5Line />
-              </ChipIcon>
+              </Icon>
             </LinkChip>
             <LinkChip href="/stations" title="Stations">
-              <ChipIcon>
+              <Icon>
                 <RiDesignFocus2Line />
-              </ChipIcon>
+              </Icon>
             </LinkChip>
           </ContentNavStart>
           <Chip>
             <a href={ADMIN_PANEL_URL} title="Admin Panel">
-              <ChipIcon>
+              <Icon>
                 <RiUserAdminFill />
-              </ChipIcon>
+              </Icon>
             </a>
           </Chip>
         </ContentNav>

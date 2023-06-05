@@ -6,7 +6,7 @@ type InputErrorProps = {
 
 const InputError: Component<InputErrorProps> = (props) => (
   <Show when={props.error}>
-    <div class="text-danger-100">{props.error}</div>
+    <div class="text-error">{props.error}</div>
   </Show>
 );
 

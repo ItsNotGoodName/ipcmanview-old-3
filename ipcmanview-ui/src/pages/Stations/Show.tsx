@@ -18,10 +18,11 @@ import {
   useScansCompleted,
   useScansPending,
   useShowCamera,
-  withBackAndNext,
 } from "~/data/hooks";
 import { FileFilter } from "~/data/models";
 import { usePb } from "~/data/pb";
+import InputError from "~/ui/InputError";
+import { createPaging } from "~/data/utils";
 
 const StationShow: Component = () => {
   const pb = usePb();
@@ -42,9 +43,13 @@ const StationShow: Component = () => {
 
   const [scansCompletedPage, setScansCompletedPage] = createSignal(1);
   const [scansCompletedPerPage, setScansCompletedPerPage] = createSignal(5);
-  const [scansCompleted, scansCompletedPaging] = withBackAndNext(
-    useScansCompleted(pb, stationId, scansCompletedPage, scansCompletedPerPage)
+  const scansCompleted = useScansCompleted(
+    pb,
+    stationId,
+    scansCompletedPage,
+    scansCompletedPerPage
   );
+  const scansCompletedPaging = createPaging(scansCompleted);
 
   return (
     <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
@@ -54,65 +59,50 @@ const StationShow: Component = () => {
       <JsonCard title="Pending Scans" query={scansPending} />
       <JsonCard title="Active Scans" query={scansActive} />
       <JsonCard title="Completed Scans" query={scansCompleted}>
-        <div class="flex gap-2 border-b border-ship-600 p-2">
+        <div class="flex gap-2 p-2">
           <input
-            class="flex-1 rounded"
+            class="input-bordered input flex-1"
             type="number"
             onChange={(e) => setScansCompletedPerPage(parseInt(e.target.value))}
             value={scansCompletedPerPage()}
           />
-          <div class="flex w-40 justify-between gap-2">
-            <button
-              class="rounded bg-ship-500 p-2 text-ship-50"
-              classList={{
-                "opacity-80": !scansCompletedPaging().has_previous,
-                "hover:bg-ship-600": scansCompletedPaging().has_previous,
-              }}
+          <div class="join">
+            <Button
+              class="join-item"
               onClick={() => setScansCompletedPage((prev) => prev - 1)}
               disabled={!scansCompletedPaging().has_previous}
             >
-              Back {scansCompletedPaging().has_previous ? 1 : 0}
-            </button>
-            <div class="my-auto text-xl">{scansCompletedPage()}</div>
-            <button
-              class="rounded bg-ship-500 p-2 text-ship-50"
-              classList={{
-                "opacity-80": !scansCompletedPaging().has_next,
-                "hover:bg-ship-600": scansCompletedPaging().has_next,
-              }}
+              Back
+            </Button>
+            <Button class="join-item">{scansCompletedPage()}</Button>
+            <Button
+              class="join-item"
               onClick={() => setScansCompletedPage((prev) => prev + 1)}
               disabled={!scansCompletedPaging().has_next}
             >
-              Next {scansCompletedPaging().has_next ? 1 : 0}
-            </button>
+              Next
+            </Button>
           </div>
         </div>
       </JsonCard>
       <JsonCard title="Files Total" query={filesTotal} />
       <JsonCard title="Files" query={files}>
-        <div class="flex justify-between gap-2 border-b border-ship-600 p-2">
-          <button
-            class="rounded bg-ship-500 p-2 text-ship-50"
-            classList={{
-              "opacity-80": !files.hasPreviousPage,
-              "hover:bg-ship-600": files.hasPreviousPage,
-            }}
+        <div class="join p-2">
+          <Button
+            class="join-item"
             onClick={() => files.fetchPreviousPage()}
             disabled={!files.hasPreviousPage}
           >
             Back
-          </button>
-          <button
-            class="rounded bg-ship-500 p-2 text-ship-50"
-            classList={{
-              "opacity-80": !files.hasNextPage,
-              "hover:bg-ship-600": files.hasNextPage,
-            }}
+          </Button>
+          <Button class="join-item">{files.data?.pages.length}</Button>
+          <Button
+            class="join-item"
             onClick={() => files.fetchNextPage()}
             disabled={!files.hasNextPage}
           >
             Next
-          </button>
+          </Button>
         </div>
       </JsonCard>
 
@@ -129,16 +119,15 @@ const StationShow: Component = () => {
           return (
             <>
               <JsonCard title={"Camera Actions " + camera.id}>
-                <Show when={deleteCamera.isError}>
-                  {deleteCamera.error!.message}
-                </Show>
-                <div class="p-2">
+                <div class="flex flex-col">
                   <Button
+                    class="w-full"
                     loading={deleteCamera.isLoading}
                     onClick={() => deleteCamera.mutate(cameraId())}
                   >
                     Delete Camera
                   </Button>
+                  <InputError error={deleteCamera.error?.message} />
                 </div>
               </JsonCard>
               <JsonCard title={"Show Camera " + camera.id} query={showCamera} />
@@ -168,13 +157,9 @@ const JsonCard: ParentComponent<{
 }> = (props) => (
   <Card>
     <CardHeader
-      title={props.title}
       right={
         <Show when={props.query}>
-          <button
-            class="rounded hover:bg-ship-700"
-            onClick={() => props.query!.refetch()}
-          >
+          <button class="rounded" onClick={() => props.query!.refetch()}>
             <RiSystemRefreshFill
               class="inline-flex h-full w-6"
               classList={{
@@ -184,9 +169,14 @@ const JsonCard: ParentComponent<{
           </button>
         </Show>
       }
-    />
+    >
+      {props.title}
+    </CardHeader>
     <div class="flex max-h-96 flex-col">
       <div>{props.children}</div>
+      <Show when={props.children && props.query}>
+        <hr class="border-base-300" />
+      </Show>
       <Show when={props.query}>
         <div class="overflow-auto">
           <pre>{JSON.stringify(props.query!.data, null, 2)}</pre>
