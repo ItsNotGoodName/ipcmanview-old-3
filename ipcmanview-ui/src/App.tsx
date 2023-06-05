@@ -1,5 +1,19 @@
-import { JSX, ParentComponent, Component } from "solid-js";
-import { A, AnchorProps, Route, Routes, useNavigate } from "@solidjs/router";
+import {
+  JSX,
+  ParentComponent,
+  Component,
+  createSignal,
+  Accessor,
+  splitProps,
+} from "solid-js";
+import {
+  A,
+  AnchorProps,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "@solidjs/router";
 import {
   RiBuildingsHome5Line,
   RiDesignFocus2Line,
@@ -12,12 +26,16 @@ const Root: ParentComponent = (props) => (
   <div class="flex h-screen w-screen flex-col">{props.children}</div>
 );
 
+// --------------------- Chip
+
 const CHIP_CLASS =
   "flex rounded-xl text-primary-content hover:bg-primary-content hover:text-primary-focus";
 const CHIP_ACTIVE_CLASS = "bg-primary-content text-primary-focus";
 const CHIP_INACTIVE_CLASS = "text-primary-content";
 
-const Chip: ParentComponent<{ active?: boolean }> = (props) => (
+type ChipProps = { active?: boolean };
+
+const Chip: ParentComponent<ChipProps> = (props) => (
   <div
     class={
       CHIP_CLASS +
@@ -41,6 +59,53 @@ const LinkChip: ParentComponent<
     {props.children}
   </A>
 );
+
+const DropdownChip: ParentComponent<ChipProps> = (props) => (
+  <summary
+    class={
+      CHIP_CLASS +
+      " " +
+      (props.active ? CHIP_ACTIVE_CLASS : CHIP_INACTIVE_CLASS) +
+      " cursor-pointer p-1"
+    }
+  >
+    {props.children}
+  </summary>
+);
+
+// --------------------- Component
+
+const Dropdown: Component<
+  {
+    children: (open: Accessor<boolean>) => JSX.Element;
+  } & Omit<
+    JSX.HTMLAttributes<HTMLDetailsElement>,
+    "children" | "ref" | "onToggle" | "onFocusOut" | "onClick"
+  >
+> = (props) => {
+  const [, other] = splitProps(props, ["children"]);
+  const [open, setOpen] = createSignal(false);
+  let det: HTMLDetailsElement;
+
+  return (
+    <details
+      {...other}
+      ref={det!}
+      onToggle={() => {
+        setOpen(det.open);
+      }}
+      onClick={(e) => {
+        if ((e.target as HTMLElement).dataset?.close) det.open = false;
+      }}
+      onFocusOut={(e) => {
+        if (!e.relatedTarget || !det.contains(e.relatedTarget as Node))
+          det.open = false;
+      }}
+    >
+      {props.children(open)}
+    </details>
+  );
+};
 
 const Icon: ParentComponent = (props) => (
   <div class="[&>*]:h-6 [&>*]:w-6">{props.children}</div>
@@ -97,8 +162,8 @@ import ThemeSwitcher from "~/ui/ThemeSwitcher";
 
 export const App: Component = () => {
   const pb = usePb();
-
   const navigate = useNavigate();
+
   const logout = () => {
     pb.authStore.clear();
     navigate("/", { replace: true });
@@ -109,18 +174,41 @@ export const App: Component = () => {
       <Header>
         <HeaderTextLogo>IPCManView</HeaderTextLogo>
         <HeaderEnd>
-          <LinkChip href="/profile">
-            <Icon>
-              <RiUserAccountCircleFill />
-            </Icon>
-          </LinkChip>
-          <Chip>
-            <button onClick={logout} title="Logout">
-              <Icon>
-                <RiSystemLogoutBoxRLine />
-              </Icon>
-            </button>
-          </Chip>
+          <Dropdown class="dropdown-end dropdown z-10 mb-32">
+            {(open) => {
+              const location = useLocation();
+
+              return (
+                <>
+                  <DropdownChip
+                    active={open() || location.pathname == "/profile"}
+                  >
+                    <Icon>
+                      <RiUserAccountCircleFill />
+                    </Icon>
+                  </DropdownChip>
+                  <ul class="dropdown-content menu rounded-box mt-1 w-32 bg-base-100 p-2 shadow">
+                    <li>
+                      <A href="/profile" data-close="true">
+                        <Icon>
+                          <RiUserAccountCircleFill />
+                        </Icon>
+                        Profile
+                      </A>
+                    </li>
+                    <li>
+                      <button onClick={logout}>
+                        <Icon>
+                          <RiSystemLogoutBoxRLine />
+                        </Icon>
+                        Logout
+                      </button>
+                    </li>
+                  </ul>
+                </>
+              );
+            }}
+          </Dropdown>
           <Chip>
             <ThemeSwitcher />
           </Chip>
