@@ -108,7 +108,7 @@ export type File = {
   events: Array<string>;
 };
 
-export type FileFilter = {
+export type FilesFilter = {
   start?: Date;
   end?: Date;
   kinds?: Array<string>;
@@ -116,7 +116,17 @@ export type FileFilter = {
   camera_ids?: Array<number>;
 };
 
-export type FileResult = {
+export type InfiniteFilesQuery = {
+  limit?: number;
+};
+
+export type FilesQuery = {
+  limit?: number;
+  before?: string;
+  after?: string;
+};
+
+export type FilesResult = {
   has_before: boolean;
   before: string;
   has_after: boolean;

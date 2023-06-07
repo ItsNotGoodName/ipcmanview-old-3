@@ -15,8 +15,10 @@ import {
   CameraSoftware,
   CamerasTotal,
   CreateCameraMutation,
-  FileFilter,
-  FileResult,
+  FilesQuery,
+  FilesResult,
+  FilesFilter,
+  InfiniteFilesQuery,
   PageResult,
   ScanActive,
   ScanCompleted,
@@ -181,17 +183,38 @@ export const useScansCompleted = (
     { keepPreviousData: true }
   );
 
-// TODO: do not cache previous pages and also implement going backwards
 export const useFiles = (
   pb: PocketBase,
   stationId: Accessor<string>,
-  filter: Accessor<FileFilter>
-) => {
-  const params = () => searchParamsFromObject(filter());
-  return createInfiniteQuery<FileResult, ClientResponseError>({
-    queryKey: () => [stationId(), "/files", params().toString()],
+  filter: Accessor<FilesFilter>,
+  query: Accessor<FilesQuery>
+) =>
+  createQuery<FilesResult, ClientResponseError>(
+    () => [stationId(), "/files", filter(), query()],
+    () => {
+      return pb.send(
+        stationUrl(
+          stationId() +
+            "/files?" +
+            searchParamsFromObject({ ...filter(), ...query() })
+        ),
+        {}
+      );
+    },
+    { keepPreviousData: true }
+  );
+
+// TODO: do not cache previous pages and also implement going backwards
+export const useInfiniteFiles = (
+  pb: PocketBase,
+  stationId: Accessor<string>,
+  filter: Accessor<FilesFilter>,
+  query: Accessor<InfiniteFilesQuery>
+) =>
+  createInfiniteQuery<FilesResult, ClientResponseError>({
+    queryKey: () => [stationId(), "/files", filter(), query(), "infinite"],
     queryFn: ({ pageParam }) => {
-      let p = params();
+      let p = searchParamsFromObject({ ...filter(), ...query() });
       if (pageParam) {
         if (pageParam.isAfter) {
           p.set("after", pageParam.cursor);
@@ -208,16 +231,19 @@ export const useFiles = (
     getPreviousPageParam: (first) =>
       first.has_before ? { isAfter: false, cursor: first.before } : undefined,
   });
-};
 
 export const useFilesTotal = (
   pb: PocketBase,
   stationId: Accessor<string>,
-  filter: Accessor<FileFilter>
-) => {
-  const params = () => searchParamsFromObject(filter());
-  return createQuery(
-    () => [stationId(), "/files-total", params.toString()],
-    () => pb.send(stationUrl(stationId()) + "/files-total?" + params(), {})
+  filter: Accessor<FilesFilter>
+) =>
+  createQuery<{ total: number }, ClientResponseError>(
+    () => [stationId(), "/files-total", filter()],
+    () =>
+      pb.send(
+        stationUrl(stationId()) +
+          "/files-total?" +
+          searchParamsFromObject(filter()),
+        {}
+      )
   );
-};

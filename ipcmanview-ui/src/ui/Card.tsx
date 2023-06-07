@@ -1,7 +1,7 @@
 import { JSX, ParentComponent, Show } from "solid-js";
 
 export const Card: ParentComponent = (props) => (
-  <div class="overflow-x-auto rounded-lg border border-base-300 shadow">
+  <div class="overflow-x-auto rounded-lg border border-base-300 bg-base-200 shadow">
     {props.children}
   </div>
 );

@@ -1,5 +1,5 @@
 import { Component, JSX, mergeProps, Show, splitProps } from "solid-js";
-import InputError from "./InputError";
+import ErrorText from "./ErrorText";
 
 type InputTextProps = {
   loading?: boolean;
@@ -28,7 +28,7 @@ const InputText: Component<InputTextProps> = (props) => {
         classList={{ "input-error": !!props.error }}
         disabled={props.loading}
       />
-      <InputError error={props.error} />
+      <ErrorText error={props.error} />
     </div>
   );
 };

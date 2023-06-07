@@ -1,11 +1,4 @@
-import {
-  JSX,
-  ParentComponent,
-  Component,
-  createSignal,
-  Accessor,
-  splitProps,
-} from "solid-js";
+import { JSX, ParentComponent, Component } from "solid-js";
 import {
   A,
   AnchorProps,
@@ -60,52 +53,7 @@ const LinkChip: ParentComponent<
   </A>
 );
 
-const DropdownChip: ParentComponent<ChipProps> = (props) => (
-  <summary
-    class={
-      CHIP_CLASS +
-      " " +
-      (props.active ? CHIP_ACTIVE_CLASS : CHIP_INACTIVE_CLASS) +
-      " cursor-pointer p-1"
-    }
-  >
-    {props.children}
-  </summary>
-);
-
 // --------------------- Component
-
-const Dropdown: Component<
-  {
-    children: (open: Accessor<boolean>) => JSX.Element;
-  } & Omit<
-    JSX.HTMLAttributes<HTMLDetailsElement>,
-    "children" | "ref" | "onToggle" | "onFocusOut" | "onClick"
-  >
-> = (props) => {
-  const [, other] = splitProps(props, ["children"]);
-  const [open, setOpen] = createSignal(false);
-  let det: HTMLDetailsElement;
-
-  return (
-    <details
-      {...other}
-      ref={det!}
-      onToggle={() => {
-        setOpen(det.open);
-      }}
-      onClick={(e) => {
-        if ((e.target as HTMLElement).dataset?.close) det.open = false;
-      }}
-      onFocusOut={(e) => {
-        if (!e.relatedTarget || !det.contains(e.relatedTarget as Node))
-          det.open = false;
-      }}
-    >
-      {props.children(open)}
-    </details>
-  );
-};
 
 const Icon: ParentComponent = (props) => (
   <div class="[&>*]:h-6 [&>*]:w-6">{props.children}</div>
@@ -124,7 +72,7 @@ const HeaderTextLogo: ParentComponent = (props) => (
 );
 
 const HeaderEnd: ParentComponent = (props) => (
-  <div class="flex gap-2">{props.children}</div>
+  <div class="flex gap-1">{props.children}</div>
 );
 
 const Content: ParentComponent = (props) => (
@@ -151,14 +99,15 @@ const ContentBody: ParentComponent = (props) => (
   <div class="h-full w-full overflow-auto p-4">{props.children}</div>
 );
 
-import { usePb } from "~/data/pb";
-import { ADMIN_PANEL_URL } from "~/data/utils";
+import { usePb, usePbUser } from "~/data/pb";
+import { ADMIN_PANEL_URL, nameToInitials } from "~/data/utils";
 
 import Home from "~/pages/Home";
 import Profile from "~/pages/Profile";
 import Stations from "~/pages/Stations";
 import StationsShow from "~/pages/Stations/Show";
 import ThemeSwitcher from "~/ui/ThemeSwitcher";
+import Dropdown from "./ui/Dropdown";
 
 export const App: Component = () => {
   const pb = usePb();
@@ -174,19 +123,28 @@ export const App: Component = () => {
       <Header>
         <HeaderTextLogo>IPCManView</HeaderTextLogo>
         <HeaderEnd>
-          <Dropdown class="dropdown-end dropdown z-10 mb-32">
-            {(open) => {
+          <Chip>
+            <ThemeSwitcher />
+          </Chip>
+          <Dropdown class="dropdown-end z-10 mb-32">
+            {(props) => {
+              const { user } = usePbUser();
               const location = useLocation();
+              const active = () =>
+                props.open() || location.pathname == "/profile";
 
               return (
                 <>
-                  <DropdownChip
-                    active={open() || location.pathname == "/profile"}
-                  >
-                    <Icon>
-                      <RiUserAccountCircleFill />
-                    </Icon>
-                  </DropdownChip>
+                  <summary class="placeholder avatar flex">
+                    <div
+                      class="w-8 cursor-pointer rounded-full border-2 border-primary-content bg-primary text-primary-content hover:bg-primary-content hover:text-primary-focus"
+                      classList={{
+                        "bg-primary-content text-primary-focus": active(),
+                      }}
+                    >
+                      <span>{nameToInitials(user().name)}</span>
+                    </div>
+                  </summary>
                   <ul class="dropdown-content menu rounded-box mt-1 w-32 bg-base-100 p-2 shadow">
                     <li>
                       <A href="/profile" data-close="true">
@@ -209,9 +167,6 @@ export const App: Component = () => {
               );
             }}
           </Dropdown>
-          <Chip>
-            <ThemeSwitcher />
-          </Chip>
         </HeaderEnd>
       </Header>
       <Content>

@@ -3,10 +3,10 @@ import PocketBase from "pocketbase";
 import {
   Accessor,
   createContext,
-  createEffect,
   createSignal,
   JSX,
   Match,
+  onCleanup,
   ParentComponent,
   Switch,
   untrack,
@@ -31,7 +31,9 @@ type PbContextProps = {
 
 export const PbProvider: ParentComponent<PbContextProps> = (props) => {
   const pb = new PocketBase(import.meta.env.VITE_BACKEND_URL + "/");
+
   pb.autoCancellation(false);
+
   pb.afterSend = (response, data) => {
     if (response.status == 401 && auth().isValid) {
       console.log("No longer authenticated.");
@@ -47,8 +49,8 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
     isValid: pb.authStore.isValid,
   });
 
-  createEffect(() => {
-    return pb.authStore.onChange(() => {
+  onCleanup(
+    pb.authStore.onChange(() => {
       setAuth({
         token: pb.authStore.token,
         model: pb.authStore.model as any,
@@ -59,8 +61,8 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
         pb.authStore.token +
         `;Path=${STATIONS_URI}` +
         import.meta.env.VITE_COOKIE_ATTRIBUTES;
-    });
-  });
+    })
+  );
 
   const authRefresh = createQuery(
     () => ["authRefresh"],
@@ -70,22 +72,20 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
       }
       return pb.collection("users").authRefresh();
     },
-    {
-      refetchInterval: 10 * (60 * 1000),
-      refetchOnWindowFocus: false,
-    }
+    { refetchInterval: 10 * (60 * 1000) }
   );
 
   const store: PbContextType = {
     pb,
     pbUser: {
       user: () => auth().model as UserRecord,
-      updateUser: (user: UserRecord) => {
+      set: (user: UserRecord) => {
         setAuth((prev) => {
           prev.model = user;
           return prev;
         });
       },
+      query: authRefresh,
     },
     pbUserValid: () => auth().isValid,
   };
@@ -102,7 +102,8 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
 
 type PbUser = {
   user: Accessor<UserRecord>;
-  updateUser: (user: UserRecord) => void;
+  set: (user: UserRecord) => void;
+  query: CreateQueryResult<unknown, unknown>;
 };
 
 export function usePb(): PocketBase {
@@ -112,16 +113,10 @@ export function usePb(): PocketBase {
   return result.pb;
 }
 
-export function usePbUser(): [PbUser, CreateQueryResult<unknown>] {
+export function usePbUser(): PbUser {
   const result = useContext(PbContext);
   if (!result || !untrack(result.pbUserValid))
     throw new Error("useUser must be child of a PbProvider");
 
-  return [
-    result.pbUser,
-    createQuery(
-      () => ["authRefresh"],
-      () => result.pb.collection("users").authRefresh()
-    ),
-  ];
+  return result.pbUser;
 }

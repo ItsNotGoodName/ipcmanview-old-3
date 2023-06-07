@@ -4,7 +4,7 @@ import { createForm, required, ResponseData } from "@modular-forms/solid";
 import { createMutation } from "@tanstack/solid-query";
 
 import Button from "~/ui/Button";
-import InputError from "~/ui/InputError";
+import ErrorText from "~/ui/ErrorText";
 import InputText from "~/ui/InputText";
 import { ADMIN_PANEL_URL, createMutationForm } from "~/data/utils";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
@@ -81,7 +81,7 @@ const Login: Component = () => {
             <Button type="submit" loading={form.submitting}>
               Log in
             </Button>
-            <InputError error={formErrors()?.message} />
+            <ErrorText error={formErrors()?.message} />
           </Form>
         </CardBody>
       </Card>

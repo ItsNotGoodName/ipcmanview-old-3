@@ -1,12 +1,11 @@
 import { ClientResponseError } from "pocketbase";
-import { Component, ParentComponent, Show } from "solid-js";
+import { Component, ParentComponent } from "solid-js";
 import { createForm, Maybe, ResponseData } from "@modular-forms/solid";
 import { createMutation } from "@tanstack/solid-query";
 
 import Button from "~/ui/Button";
-import InputError from "~/ui/InputError";
+import ErrorText from "~/ui/ErrorText";
 import InputText from "~/ui/InputText";
-import Spinner from "~/ui/Spinner";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
 import { UserRecord } from "~/data/records";
 import { createMutationForm, formatDateTime } from "~/data/utils";
@@ -53,16 +52,11 @@ const Profile: Component = () => {
 };
 
 const ProfileFrag: Component = () => {
-  const [{ user }, authRefresh] = usePbUser();
+  const { user } = usePbUser();
 
   return (
     <>
-      <div class="flex">
-        <div class="flex-1 text-2xl">{user().username}</div>
-        <Show when={authRefresh.isFetching}>
-          <Spinner />
-        </Show>
-      </div>
+      <div class="text-2xl">{user().username}</div>
       <hr class="my-2 border-base-300" />
       <table>
         <tbody>
@@ -102,10 +96,11 @@ type UpdateForm = {
 
 const useUpdateUser = () => {
   const pb = usePb();
-  const [{ user, updateUser }] = usePbUser();
+  const { user, set: setUser } = usePbUser();
+
   return createMutation<UserRecord, ClientResponseError, UpdateForm>({
     onSuccess: (data, variables) => {
-      updateUser(data);
+      setUser(data);
       if (variables.password) {
         pb.authStore.clear();
       }
@@ -150,7 +145,7 @@ const ProfileForm: Component = () => {
       <Button type="submit" loading={form.submitting}>
         Update profile
       </Button>
-      <InputError error={formErrors()?.message} />
+      <ErrorText error={formErrors()?.message} />
     </Form>
   );
 };
@@ -211,7 +206,7 @@ const PasswordForm: Component = () => {
       <Button type="submit" loading={form.submitting}>
         Update password
       </Button>
-      <InputError error={formErrors()?.message} />
+      <ErrorText error={formErrors()?.message} />
     </Form>
   );
 };

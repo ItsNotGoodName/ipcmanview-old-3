@@ -9,6 +9,7 @@ import {
 import { CreateMutationResult, CreateQueryResult } from "@tanstack/solid-query";
 import { ClientResponseError } from "pocketbase";
 import { Accessor, createMemo } from "solid-js";
+
 import { PageResult } from "./models";
 
 export function formatDateTime(date: string): string {
@@ -16,11 +17,35 @@ export function formatDateTime(date: string): string {
   return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }
 
+export function nameToInitials(name: string): string {
+  const words = name.split(" ");
+  if (words.length < 1) return "?";
+
+  if (words.length < 2) return words[0][0] ?? "?";
+
+  return (words[0][0] ?? "?") + (words[1][0] ?? "");
+}
+
 export const STATIONS_URI = "/app/stations";
 export const ADMIN_PANEL_URL = import.meta.env.VITE_BACKEND_URL + "/_/";
 
 export function stationUrl(stationId: string): string {
   return STATIONS_URI + "/" + stationId;
+}
+
+export function fileUrl(
+  stationId: string,
+  cameraId: number,
+  filePath: string
+): string {
+  return (
+    import.meta.env.VITE_BACKEND_URL +
+    stationUrl(stationId) +
+    "/cameras/" +
+    cameraId +
+    "/fs/" +
+    filePath
+  );
 }
 
 export function searchParamsFromObject(
@@ -34,7 +59,7 @@ export function searchParamsFromObject(
       }
     } else if (obj[k] instanceof Date) {
       s.append(k, (obj[k] as Date).toISOString());
-    } else {
+    } else if (typeof obj[k] !== "undefined") {
       s.append(k, obj[k].toString());
     }
   }

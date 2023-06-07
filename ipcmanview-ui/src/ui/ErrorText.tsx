@@ -1,13 +1,13 @@
 import { Component, Show } from "solid-js";
 
-type InputErrorProps = {
+type ErrorTextProps = {
   error?: string;
 };
 
-const InputError: Component<InputErrorProps> = (props) => (
+const ErrorText: Component<ErrorTextProps> = (props) => (
   <Show when={props.error}>
     <div class="text-error">{props.error}</div>
   </Show>
 );
 
-export default InputError;
+export default ErrorText;
