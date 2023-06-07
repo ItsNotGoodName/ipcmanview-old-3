@@ -67,3 +67,5 @@ POST http://localhost:8000/api/scans/completed/2/retry
 GET http://localhost:8000/api/files
 GET http://localhost:8000/api/files?limit=10
 
+# List file events
+GET http://localhost:8000/api/events

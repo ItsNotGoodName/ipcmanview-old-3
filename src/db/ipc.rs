@@ -1,3 +1,5 @@
+use std::vec;
+
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use dahua_rpc::modules::mediafilefind;
@@ -262,10 +264,13 @@ impl IpcManager {
 }
 
 impl IpcEvent {
-    pub async fn list(pool: &SqlitePool) -> Result<Vec<Self>> {
-        sqlx::query_as_unchecked!(Self, "SELECT name FROM ipc_events")
+    pub async fn list(pool: &SqlitePool) -> Result<Vec<String>> {
+        Ok(sqlx::query!("SELECT name FROM ipc_events")
             .fetch_all(pool)
             .await
-            .context("Failed to list ipc events.")
+            .context("Failed to list ipc events.")?
+            .into_iter()
+            .map(|e| e.name)
+            .collect())
     }
 }

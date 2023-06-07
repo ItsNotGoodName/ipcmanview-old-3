@@ -76,10 +76,7 @@ pub struct CameraFile {
     pub events: sqlx::types::Json<Vec<String>>,
 }
 
-#[derive(Serialize, Debug)]
-pub struct IpcEvent {
-    pub name: String,
-}
+pub struct IpcEvent {}
 
 pub struct Page {
     pub page: i32,

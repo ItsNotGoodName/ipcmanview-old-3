@@ -7,6 +7,7 @@ use crate::app::AppState;
 
 mod api;
 mod camera;
+mod events;
 mod file;
 mod scan;
 
@@ -34,6 +35,7 @@ pub fn router() -> Router<AppState> {
         .route("/cameras/:id/scans/manual", post(scan::manual))
         .route("/files", get(file::query))
         .route("/files-total", get(file::total))
+        .route("/events", get(events::list))
         .route("/scans/pending", get(scan::pending_list))
         .route("/scans/active", get(scan::active_list))
         .route("/scans/completed", get(scan::completed_list))

@@ -147,7 +147,7 @@ async fn files_page(
 #[template(path = "files.jinja.html")]
 struct FilesPageTemplate {
     cameras: Vec<Camera>,
-    ipc_events: Vec<IpcEvent>,
+    ipc_events: Vec<String>,
     files_total: i32,
     files: QueryCameraFileResult,
     before_query: String,
