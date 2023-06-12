@@ -1,31 +1,54 @@
-import clsx from "clsx";
-import { Component, JSX, Show, splitProps } from "solid-js";
+import { styled } from "@macaron-css/solid";
 
-type ButtonProps = {
-  loading?: boolean;
-  children: JSX.Element;
-} & JSX.ButtonHTMLAttributes<HTMLButtonElement>;
+import { theme } from "./theme";
 
-const Button: Component<ButtonProps> = (props) => {
-  const [, other] = splitProps(props, [
-    "loading",
-    "children",
-    "class",
-    "disabled",
-  ]);
-
-  return (
-    <button
-      {...other}
-      class={clsx("no-animation btn", props.class)}
-      disabled={props.loading || props.disabled}
-    >
-      <Show when={props.loading}>
-        <span class="loading loading-spinner"></span>
-      </Show>
-      {props.children}
-    </button>
-  );
-};
+const Button = styled("button", {
+  base: {
+    appearance: "none",
+    border: "none",
+    borderRadius: theme.borderRadius,
+    cursor: "pointer",
+    ":disabled": {
+      cursor: "not-allowed",
+      opacity: theme.opacity.disabled,
+    },
+    selectors: {
+      ["&:active:enabled"]: {
+        opacity: theme.opacity.active,
+      },
+    },
+  },
+  variants: {
+    size: {
+      small: {
+        padding: theme.space["0.5"],
+      },
+      medium: {
+        padding: theme.space[2],
+      },
+      large: {
+        padding: theme.space[4],
+      },
+    },
+    color: {
+      primary: {
+        background: theme.color.Mauve,
+        color: theme.color.Crust,
+      },
+      success: {
+        background: theme.color.Green,
+        color: theme.color.Crust,
+      },
+      danger: {
+        background: theme.color.Red,
+        color: theme.color.Crust,
+      },
+    },
+  },
+  defaultVariants: {
+    size: "medium",
+    color: "primary",
+  },
+});
 
 export default Button;

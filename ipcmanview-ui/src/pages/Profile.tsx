@@ -1,7 +1,8 @@
 import { ClientResponseError } from "pocketbase";
-import { Component, ParentComponent } from "solid-js";
+import { Component, Show } from "solid-js";
 import { createForm, Maybe, ResponseData } from "@modular-forms/solid";
 import { createMutation } from "@tanstack/solid-query";
+import { styled } from "@macaron-css/solid";
 
 import Button from "~/ui/Button";
 import ErrorText from "~/ui/ErrorText";
@@ -10,28 +11,52 @@ import { Card, CardBody, CardHeader } from "~/ui/Card";
 import { UserRecord } from "~/data/records";
 import { createMutationForm, formatDateTime } from "~/data/utils";
 import { usePb, usePbUser } from "~/data/pb";
+import { minScreen, theme } from "~/ui/theme";
+import { Stack, utility } from "~/ui/utility";
+import Stations from "./Stations";
 
-const Layout: ParentComponent = (props) => (
-  <div class="mx-auto flex max-w-4xl flex-col gap-4 sm:flex-row">
-    {props.children}
-  </div>
-);
+const Layout = styled("div", {
+  base: {
+    margin: "0 auto 0 auto",
+    display: "flex",
+    gap: theme.space[4],
+    flexDirection: "column",
+    maxWidth: theme.size["lg"],
+    "@media": {
+      [minScreen.md]: {
+        flexDirection: "row",
+      },
+    },
+  },
+});
 
-const LayoutChild: ParentComponent = (props) => (
-  <div class="flex flex-1 flex-col gap-4">{props.children}</div>
-);
+const LayoutChild = styled("div", {
+  base: {
+    display: "flex",
+    flex: "1",
+    gap: theme.space[4],
+    flexDirection: "column",
+  },
+});
+
+const Sticky = styled("div", {
+  base: {
+    top: "1",
+    position: "sticky",
+  },
+});
 
 const Profile: Component = () => {
   return (
     <Layout>
       <LayoutChild>
-        <div class="sticky top-0">
+        <Sticky>
           <Card>
             <CardBody>
               <ProfileFrag />
             </CardBody>
           </Card>
-        </div>
+        </Sticky>
       </LayoutChild>
       <LayoutChild>
         <Card>
@@ -51,33 +76,48 @@ const Profile: Component = () => {
   );
 };
 
+const Title = styled("div", {
+  base: {
+    fontSize: "x-large",
+    paddingBottom: theme.space[2],
+    marginBottom: theme.space[2],
+    borderBottom: `${theme.space.px} solid ${theme.color.Overlay0}`,
+  },
+});
+
+const Th = styled("th", {
+  base: {
+    textAlign: "right",
+    paddingRight: theme.space[2],
+  },
+});
+
 const ProfileFrag: Component = () => {
   const { user } = usePbUser();
 
   return (
     <>
-      <div class="text-2xl">{user().username}</div>
-      <hr class="my-2 border-base-300" />
+      <Title>{user().username}</Title>
       <table>
         <tbody>
           <tr>
-            <th class="pr-2 text-right">Name</th>
+            <Th>Name</Th>
             <td>{user().name}</td>
           </tr>
           <tr>
-            <th class="pr-2 text-right">Username</th>
+            <Th>Username</Th>
             <td>{user().username}</td>
           </tr>
           <tr>
-            <th class="pr-2 text-right">Email</th>
+            <Th>Email</Th>
             <td>{user().email}</td>
           </tr>
           <tr>
-            <th class="pr-2 text-right">Created</th>
+            <Th>Created</Th>
             <td>{formatDateTime(user().created)}</td>
           </tr>
           <tr>
-            <th class="pr-2 text-right">Updated</th>
+            <Th>Updated</Th>
             <td>{formatDateTime(user().updated)}</td>
           </tr>
         </tbody>
@@ -115,37 +155,41 @@ const ProfileForm: Component = () => {
   const [formSubmit, formErrors] = createMutationForm(useUpdateUser(), form);
 
   return (
-    <Form class="flex flex-col gap-2" onSubmit={formSubmit} shouldDirty={true}>
-      <Field name="name">
-        {(field, props) => (
-          <InputText
-            {...props}
-            label="New name"
-            placeholder="New name"
-            loading={form.submitting}
-            value={field.value || ""}
-            error={field.error || formErrors()?.errors.name}
-          />
-        )}
-      </Field>
+    <Form onSubmit={formSubmit} shouldDirty={true}>
+      <Stack gap={4}>
+        <Field name="name">
+          {(field, props) => (
+            <InputText
+              {...props}
+              label="New name"
+              placeholder="New name"
+              disabled={form.submitting}
+              value={field.value || ""}
+              error={field.error || formErrors()?.errors.name}
+            />
+          )}
+        </Field>
 
-      <Field name="username">
-        {(field, props) => (
-          <InputText
-            {...props}
-            label="New username"
-            placeholder="New username"
-            loading={form.submitting}
-            value={field.value || ""}
-            error={field.error || formErrors()?.errors.username}
-          />
-        )}
-      </Field>
+        <Field name="username">
+          {(field, props) => (
+            <InputText
+              {...props}
+              label="New username"
+              placeholder="New username"
+              disabled={form.submitting}
+              value={field.value || ""}
+              error={field.error || formErrors()?.errors.username}
+            />
+          )}
+        </Field>
 
-      <Button type="submit" loading={form.submitting}>
-        Update profile
-      </Button>
-      <ErrorText error={formErrors()?.message} />
+        <Button type="submit" disabled={form.submitting}>
+          Update profile
+        </Button>
+        <Show when={formErrors()}>
+          {(e) => <ErrorText>{e().message}</ErrorText>}
+        </Show>
+      </Stack>
     </Form>
   );
 };
@@ -155,58 +199,62 @@ const PasswordForm: Component = () => {
   const [submit, formErrors] = createMutationForm(useUpdateUser(), form);
 
   return (
-    <Form class="flex flex-col gap-2" onSubmit={submit}>
-      <input autocomplete="username" hidden />
+    <Form onSubmit={submit}>
+      <Stack gap={4}>
+        <input autocomplete="username" hidden />
 
-      <Field name="oldPassword">
-        {(field, props) => (
-          <InputText
-            {...props}
-            label="Old password"
-            type="password"
-            placeholder="Old password"
-            autocomplete="current-password"
-            loading={form.submitting}
-            value={field.value || ""}
-            error={field.error || formErrors()?.errors.oldPassword}
-          />
-        )}
-      </Field>
+        <Field name="oldPassword">
+          {(field, props) => (
+            <InputText
+              {...props}
+              label="Old password"
+              type="password"
+              placeholder="Old password"
+              autocomplete="current-password"
+              disabled={form.submitting}
+              value={field.value || ""}
+              error={field.error || formErrors()?.errors.oldPassword}
+            />
+          )}
+        </Field>
 
-      <Field name="password">
-        {(field, props) => (
-          <InputText
-            {...props}
-            label="New Password"
-            type="password"
-            placeholder="New password"
-            autocomplete="new-password"
-            loading={form.submitting}
-            value={field.value || ""}
-            error={field.error || formErrors()?.errors.password}
-          />
-        )}
-      </Field>
+        <Field name="password">
+          {(field, props) => (
+            <InputText
+              {...props}
+              label="New Password"
+              type="password"
+              placeholder="New password"
+              autocomplete="new-password"
+              disabled={form.submitting}
+              value={field.value || ""}
+              error={field.error || formErrors()?.errors.password}
+            />
+          )}
+        </Field>
 
-      <Field name="passwordConfirm">
-        {(field, props) => (
-          <InputText
-            {...props}
-            label="Confirm new password"
-            type="password"
-            placeholder="Confirm new password"
-            autocomplete="new-password"
-            loading={form.submitting}
-            value={field.value || ""}
-            error={field.error || formErrors()?.errors.passwordConfirm}
-          />
-        )}
-      </Field>
+        <Field name="passwordConfirm">
+          {(field, props) => (
+            <InputText
+              {...props}
+              label="Confirm new password"
+              type="password"
+              placeholder="Confirm new password"
+              autocomplete="new-password"
+              disabled={form.submitting}
+              value={field.value || ""}
+              error={field.error || formErrors()?.errors.passwordConfirm}
+            />
+          )}
+        </Field>
 
-      <Button type="submit" loading={form.submitting}>
-        Update password
-      </Button>
-      <ErrorText error={formErrors()?.message} />
+        <Button type="submit" disabled={form.submitting}>
+          Update password
+        </Button>
+        <Show when={formErrors()}>
+          {(e) => <ErrorText>{e().message}</ErrorText>}
+        </Show>
+      </Stack>
     </Form>
   );
 };

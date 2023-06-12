@@ -1,35 +1,81 @@
+import { styled } from "@macaron-css/solid";
 import { Component, JSX, mergeProps, Show, splitProps } from "solid-js";
+
 import ErrorText from "./ErrorText";
+import { theme } from "./theme";
+
+const Control = styled("div", {
+  base: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.space[2],
+  },
+});
+
+const Label = styled("label", {
+  base: {
+    fontWeight: "bold",
+  },
+});
+
+const Input = styled("input", {
+  base: {
+    borderRadius: theme.borderRadius,
+    border: "none",
+  },
+  variants: {
+    size: {
+      small: {
+        padding: theme.space["0.5"],
+      },
+      medium: {
+        padding: theme.space[2],
+      },
+      large: {
+        padding: theme.space[4],
+      },
+    },
+    error: {
+      true: {
+        borderColor: theme.color.Red,
+      },
+    },
+  },
+  defaultVariants: {
+    size: "medium",
+  },
+});
+
+const Required = styled("span", {
+  base: {
+    color: theme.color.Red,
+  },
+});
 
 type InputTextProps = {
-  loading?: boolean;
   error?: string;
   label?: string;
-} & Omit<JSX.InputHTMLAttributes<HTMLInputElement>, "class">;
+  size?: "small" | "medium" | "large";
+} & JSX.InputHTMLAttributes<HTMLInputElement>;
 
 const InputText: Component<InputTextProps> = (props) => {
   const [, other] = splitProps(mergeProps({ type: "text" }, props), [
-    "loading",
     "error",
     "label",
   ]);
 
   return (
-    <div class="form-control gap-2">
+    <Control>
       <Show when={props.label}>
-        <label class="text mr-2 font-bold" for={props.name}>
-          {props.label}{" "}
-          {props.required && <span class="ml-1 text-error">*</span>}
-        </label>
+        <Label for={props.name}>
+          {props.label} {props.required && <Required>*</Required>}
+        </Label>
       </Show>
-      <input
-        {...other}
-        class="input-bordered input w-full"
-        classList={{ "input-error": !!props.error }}
-        disabled={props.loading}
-      />
-      <ErrorText error={props.error} />
-    </div>
+      <Input {...other} error={!!props.error} />
+      <Show when={props.error}>
+        <ErrorText>{props.error}</ErrorText>
+      </Show>
+    </Control>
   );
 };
 

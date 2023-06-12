@@ -426,7 +426,9 @@ const StationShow: Component = () => {
                     >
                       Delete Camera
                     </Button>
-                    <ErrorText error={deleteCamera.error?.message} />
+                    <Show when={deleteCamera.error}>
+                      {(e) => <ErrorText>{e().message}</ErrorText>}
+                    </Show>
                   </div>
                 </JsonCard>
                 <JsonCard

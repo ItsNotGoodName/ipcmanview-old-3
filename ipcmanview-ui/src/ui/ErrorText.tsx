@@ -1,13 +1,11 @@
-import { Component, Show } from "solid-js";
+import { styled } from "@macaron-css/solid";
 
-type ErrorTextProps = {
-  error?: string;
-};
+import { theme } from "./theme";
 
-const ErrorText: Component<ErrorTextProps> = (props) => (
-  <Show when={props.error}>
-    <div class="text-error">{props.error}</div>
-  </Show>
-);
+const ErrorText = styled("div", {
+  base: {
+    color: theme.color.Red,
+  },
+});
 
 export default ErrorText;

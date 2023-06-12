@@ -1,20 +1,43 @@
 import { A } from "@solidjs/router";
 import { Component, For, Match, Show, Switch } from "solid-js";
-import { RiSystemAlertFill } from "solid-icons/ri";
 import {
   createColumnHelper,
   createSolidTable,
   flexRender,
   getCoreRowModel,
 } from "@tanstack/solid-table";
+import { styled } from "@macaron-css/solid";
 
-import Spinner from "~/ui/Spinner";
 import { Card, CardHeader } from "~/ui/Card";
 import { StationRecord } from "~/data/records";
 import { useCamerasTotal, useStations } from "~/data/hooks";
 import { usePb } from "~/data/pb";
+import { theme } from "~/ui/theme";
+import { Row } from "~/ui/utility";
+import { IconAlert, IconSpinner } from "~/ui/Icon";
 
-const StationList: Component = () => {
+const Overflow = styled("div", {
+  base: {
+    overflowX: "auto",
+  },
+});
+
+const Table = styled("table", {
+  base: {
+    display: "table",
+    width: "100%",
+    padding: theme.space[2],
+  },
+});
+
+const Th = styled("th", {
+  base: {
+    textAlign: "left",
+    textTransform: "uppercase",
+  },
+});
+
+const Stations: Component = () => {
   const pb = usePb();
   const stations = useStations(pb);
 
@@ -28,28 +51,23 @@ const StationList: Component = () => {
       cell: (info) => {
         const total = useCamerasTotal(pb, () => info.row.original.id);
         return (
-          <Switch>
-            <Match when={total.isLoading}>
-              <Spinner />
-            </Match>
-            <Match when={total.isError}>
-              <RiSystemAlertFill class="h-full w-6 fill-error" />
-            </Match>
-            <Match when={total.isSuccess}>{total.data!.total}</Match>
-          </Switch>
+          <Row>
+            <Switch>
+              <Match when={total.isLoading}>
+                <IconSpinner />
+              </Match>
+              <Match when={total.isError}>
+                <IconAlert />
+              </Match>
+              <Match when={total.isSuccess}>{total.data!.total}</Match>
+            </Switch>
+          </Row>
         );
       },
     }),
     columnHelper.display({
       id: "action",
-      cell: (info) => (
-        <A
-          class="no-animation btn-xs btn"
-          href={"/stations/" + info.row.original.id}
-        >
-          details
-        </A>
-      ),
+      cell: (info) => <A href={"/stations/" + info.row.original.id}>details</A>,
     }),
   ];
   const table = createSolidTable({
@@ -62,31 +80,28 @@ const StationList: Component = () => {
 
   return (
     <Card>
-      <CardHeader
-        right={
-          <Show when={stations.isFetching}>
-            <Spinner />
-          </Show>
-        }
-      >
+      <CardHeader>
         Stations
+        <Show when={stations.isFetching}>
+          <IconSpinner />
+        </Show>
       </CardHeader>
-      <div class="overflow-x-auto pb-2">
-        <table class="table w-full">
+      <Overflow>
+        <Table>
           <thead>
             <For each={table.getHeaderGroups()}>
               {(headerGroup) => (
                 <tr>
                   <For each={headerGroup.headers}>
                     {(header) => (
-                      <th class="p-2 text-left uppercase">
+                      <Th>
                         {header.isPlaceholder
                           ? null
                           : flexRender(
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                      </th>
+                      </Th>
                     )}
                   </For>
                 </tr>
@@ -99,7 +114,7 @@ const StationList: Component = () => {
                 <tr>
                   <For each={row.getVisibleCells()}>
                     {(cell) => (
-                      <td class="p-1">
+                      <td>
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -111,10 +126,10 @@ const StationList: Component = () => {
               )}
             </For>
           </tbody>
-        </table>
-      </div>
+        </Table>
+      </Overflow>
     </Card>
   );
 };
 
-export default StationList;
+export default Stations;

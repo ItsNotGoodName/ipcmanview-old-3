@@ -3,11 +3,9 @@ import { render } from "solid-js/web";
 import { Router } from "@solidjs/router";
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
-import "./index.css";
+import "modern-normalize/modern-normalize.css";
+
 import App from "./App";
-import Login from "./pages/Login";
-import { PbProvider } from "./data/pb";
-import Loading from "./pages/Loading";
 
 const queryClient = new QueryClient();
 const root = document.getElementById("root");
@@ -22,9 +20,7 @@ render(
   () => (
     <Router>
       <QueryClientProvider client={queryClient}>
-        <PbProvider login={<Login />} loading={<Loading />}>
-          <App />
-        </PbProvider>
+        <App />
       </QueryClientProvider>
     </Router>
   ),

@@ -6,6 +6,3 @@ server:
 
 ui:
 	cd ipcmanview-ui && npm run dev
-
-storybook:
-	cd ipcmanview-ui && npm run storybook
