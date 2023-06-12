@@ -10,108 +10,6 @@
     },
     "query": "UPDATE completed_scans SET retry_pending = false, can_retry = false WHERE id = ?"
   },
-  "07bccee452e81cd13d2ee4f48fcaf39a95d83f27be28ff0648b9aae755ff2173": {
-    "describe": {
-      "columns": [
-        {
-          "name": "id",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "camera_id",
-          "ordinal": 1,
-          "type_info": "Int64"
-        },
-        {
-          "name": "kind",
-          "ordinal": 2,
-          "type_info": "Text"
-        },
-        {
-          "name": "range_start",
-          "ordinal": 3,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "range_end",
-          "ordinal": 4,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "started_at",
-          "ordinal": 5,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "range_cursor",
-          "ordinal": 6,
-          "type_info": "Datetime"
-        },
-        {
-          "name": "deleted",
-          "ordinal": 7,
-          "type_info": "Int64"
-        },
-        {
-          "name": "upserted",
-          "ordinal": 8,
-          "type_info": "Int64"
-        },
-        {
-          "name": "percent",
-          "ordinal": 9,
-          "type_info": "Float"
-        },
-        {
-          "name": "duration",
-          "ordinal": 10,
-          "type_info": "Int64"
-        },
-        {
-          "name": "success",
-          "ordinal": 11,
-          "type_info": "Bool"
-        },
-        {
-          "name": "error",
-          "ordinal": 12,
-          "type_info": "Text"
-        },
-        {
-          "name": "retry_pending",
-          "ordinal": 13,
-          "type_info": "Bool"
-        },
-        {
-          "name": "can_retry",
-          "ordinal": 14,
-          "type_info": "Bool"
-        }
-      ],
-      "nullable": [
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true,
-        true
-      ],
-      "parameters": {
-        "Right": 0
-      }
-    },
-    "query": "\n            SELECT *\n            FROM completed_scans\n            ORDER BY started_at DESC\n            LIMIT 5\n            "
-  },
   "0888bb93b892a66bdca0854716cb41d6116465ee0f3439e811f2aee3fef134dd": {
     "describe": {
       "columns": [],
@@ -334,6 +232,108 @@
     },
     "query": "\n            SELECT id, ip, username, password\n            FROM cameras\n            "
   },
+  "412f1ebd75b293914e81f156fcde07810da40598e5ad1546c783ad4f67a6acb8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "kind",
+          "ordinal": 2,
+          "type_info": "Null"
+        },
+        {
+          "name": "range_start",
+          "ordinal": 3,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "range_end",
+          "ordinal": 4,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "started_at",
+          "ordinal": 5,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "range_cursor",
+          "ordinal": 6,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "deleted",
+          "ordinal": 7,
+          "type_info": "Int64"
+        },
+        {
+          "name": "upserted",
+          "ordinal": 8,
+          "type_info": "Int64"
+        },
+        {
+          "name": "percent",
+          "ordinal": 9,
+          "type_info": "Float"
+        },
+        {
+          "name": "duration",
+          "ordinal": 10,
+          "type_info": "Int64"
+        },
+        {
+          "name": "success",
+          "ordinal": 11,
+          "type_info": "Bool"
+        },
+        {
+          "name": "error",
+          "ordinal": 12,
+          "type_info": "Null"
+        },
+        {
+          "name": "retry_pending",
+          "ordinal": 13,
+          "type_info": "Bool"
+        },
+        {
+          "name": "can_retry",
+          "ordinal": 14,
+          "type_info": "Bool"
+        }
+      ],
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "\n            SELECT *\n            FROM completed_scans\n            WHERE id = ?\n            "
+  },
   "4ce453ecd2ccbbf16cf3ebf834f067045a7bdcf3ab45de1e4de58535610c7875": {
     "describe": {
       "columns": [
@@ -442,17 +442,7 @@
     },
     "query": "\n            DELETE FROM cameras\n            WHERE id = ?\n            "
   },
-  "61a5edd3cecd3b4698b1683812e7ac3b551e4f2b86e286f5e43ac53d261386a4": {
-    "describe": {
-      "columns": [],
-      "nullable": [],
-      "parameters": {
-        "Right": 4
-      }
-    },
-    "query": "\n            DELETE FROM camera_files \n            WHERE updated_at < ? AND camera_id = ? AND start_time >= ? AND start_time <= ?\n            "
-  },
-  "70584507bd7c434dd48bfdc1deaf253a12ec4bf3c86705b66f1b58c348cf13fc": {
+  "5da4ec0ae617942e242577abd863d2238432e902d3f63a24ad363502bafee896": {
     "describe": {
       "columns": [
         {
@@ -465,10 +455,20 @@
         false
       ],
       "parameters": {
-        "Right": 1
+        "Right": 0
       }
     },
-    "query": "SELECT count(*) AS count FROM camera_files WHERE camera_id = ?"
+    "query": "SELECT COUNT(id) AS count FROM completed_scans"
+  },
+  "61a5edd3cecd3b4698b1683812e7ac3b551e4f2b86e286f5e43ac53d261386a4": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 4
+      }
+    },
+    "query": "\n            DELETE FROM camera_files \n            WHERE updated_at < ? AND camera_id = ? AND start_time >= ? AND start_time <= ?\n            "
   },
   "7dbc866bf8ae349ef46fb01068c0d7241f057d3a9a19871b409cf9ff08443061": {
     "describe": {
@@ -720,6 +720,24 @@
     },
     "query": "\n            INSERT INTO cameras\n            (ip, username, password, scan_cursor)\n            VALUES\n            (?, ?, ?, ?)\n            "
   },
+  "a55b08c0ccbf53cca45ecc531464f12a36a097504bc422ef55df7bd194130a9e": {
+    "describe": {
+      "columns": [
+        {
+          "name": "count",
+          "ordinal": 0,
+          "type_info": "Int"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "SELECT COUNT(id) as count FROM cameras "
+  },
   "ac7b8ee1c92ce25b802c4b66904d88466e8a9a2472886b3b359bd7bda7394493": {
     "describe": {
       "columns": [],
@@ -897,6 +915,108 @@
       }
     },
     "query": "UPDATE completed_scans SET retry_pending = true WHERE id = ? AND can_retry = true"
+  },
+  "efce0c0503d746942f1b2d896256d843b7dd8399fc58cc99a9d4cd0de4ae4181": {
+    "describe": {
+      "columns": [
+        {
+          "name": "id",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "camera_id",
+          "ordinal": 1,
+          "type_info": "Int64"
+        },
+        {
+          "name": "kind",
+          "ordinal": 2,
+          "type_info": "Null"
+        },
+        {
+          "name": "range_start",
+          "ordinal": 3,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "range_end",
+          "ordinal": 4,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "started_at",
+          "ordinal": 5,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "range_cursor",
+          "ordinal": 6,
+          "type_info": "Datetime"
+        },
+        {
+          "name": "deleted",
+          "ordinal": 7,
+          "type_info": "Int64"
+        },
+        {
+          "name": "upserted",
+          "ordinal": 8,
+          "type_info": "Int64"
+        },
+        {
+          "name": "percent",
+          "ordinal": 9,
+          "type_info": "Float"
+        },
+        {
+          "name": "duration",
+          "ordinal": 10,
+          "type_info": "Int64"
+        },
+        {
+          "name": "success",
+          "ordinal": 11,
+          "type_info": "Bool"
+        },
+        {
+          "name": "error",
+          "ordinal": 12,
+          "type_info": "Null"
+        },
+        {
+          "name": "retry_pending",
+          "ordinal": 13,
+          "type_info": "Bool"
+        },
+        {
+          "name": "can_retry",
+          "ordinal": 14,
+          "type_info": "Bool"
+        }
+      ],
+      "nullable": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "\n            SELECT *\n            FROM completed_scans\n            ORDER BY started_at DESC\n            LIMIT ?\n            OFFSET ?\n            "
   },
   "fa2d86d2c5249ea4b7ee1df4356dcc60a458582de35db0945a6a5cb3cdc95561": {
     "describe": {
