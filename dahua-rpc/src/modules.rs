@@ -1,3 +1,4 @@
+pub mod configmanager;
 pub mod global;
 pub mod license;
 pub mod magicbox;
