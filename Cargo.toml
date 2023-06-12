@@ -1,7 +1,8 @@
 [workspace]
 members = [
   "dahua-rpc",
-  "ipcmanview-station"
+  "ipcmanview-station",
+  "ipcmanview-cli"
 ]
 default-members = ["ipcmanview-station"]
 
