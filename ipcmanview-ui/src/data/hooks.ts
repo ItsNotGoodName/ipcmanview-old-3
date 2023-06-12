@@ -6,6 +6,7 @@ import {
   useQueryClient,
   createQuery,
   CreateQueryResult,
+  Query,
 } from "@tanstack/solid-query";
 
 import {
@@ -24,15 +25,61 @@ import {
   ScanCompleted,
   ScanPending,
   ShowCamera,
+  UpdateCameraMutation,
 } from "./models";
 import { StationRecord } from "./records";
 import { searchParamsFromObject, stationUrl } from "./utils";
+
+const q = {
+  stations: ["stations"],
+  cameras: (stationId: string) => [stationId, "cameras"],
+  camerasTotal: (stationId: string) => [stationId, "camerasTotal"],
+  showCameras: (stationId: string, cameraId: number) => [
+    stationId,
+    "cameras",
+    cameraId,
+    "showCameras",
+  ],
+  cameraDetail: (stationId: string, cameraId: number) => [
+    stationId,
+    "cameras",
+    cameraId,
+    "cameraDetail",
+  ],
+  cameraSoftware: (stationId: string, cameraId: number) => [
+    stationId,
+    "cameras",
+    cameraId,
+    "cameraSoftware",
+  ],
+  cameraLicenses: (stationId: string, cameraId: number) => [
+    stationId,
+    "cameras",
+    cameraId,
+    "cameraLicenses",
+  ],
+  scansPending: (stationId: string) => [stationId, "scansPending"],
+  scansActive: (stationId: string) => [stationId, "scansActive"],
+  scansCompleted: (stationId: string) => [stationId, "scansCompleted"],
+  files: (stationId: string) => [stationId, "files"],
+  filesTotal: (stationId: string) => [stationId, "filesTotal"],
+};
+
+const p = {
+  camera: (stationId: string, cameraId: number) => (query: Query) =>
+    query.queryKey[0] == stationId &&
+    query.queryKey[1] == "cameras" &&
+    query.queryKey[2] == cameraId,
+  files: (stationId: string) => (query: Query) =>
+    query.queryKey[0] == stationId &&
+    (query.queryKey[1] == "files" || query.queryKey[1] == "filesTotal"),
+};
 
 export const useStations = (
   pb: PocketBase
 ): CreateQueryResult<Array<StationRecord>, ClientResponseError> =>
   createQuery(
-    () => ["stations"],
+    () => q.stations,
     () => pb.collection("stations").getFullList()
   );
 
@@ -41,7 +88,7 @@ export const useCameras = (
   stationId: Accessor<string>
 ): CreateQueryResult<Array<Camera>, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/cameras"],
+    () => q.cameras(stationId()),
     () => pb.send(stationUrl(stationId()) + "/cameras", {})
   );
 
@@ -50,7 +97,7 @@ export const useCamerasTotal = (
   stationId: Accessor<string>
 ): CreateQueryResult<CamerasTotal, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/cameras-total"],
+    () => q.camerasTotal(stationId()),
     () => pb.send(stationUrl(stationId()) + "/cameras-total", {})
   );
 
@@ -61,13 +108,32 @@ export const useCreateCamera = (
   const queryClient = useQueryClient();
   return createMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [stationId(), "/cameras"] });
-      queryClient.invalidateQueries({
-        queryKey: [stationId(), "/cameras-total"],
-      });
+      queryClient.invalidateQueries({ queryKey: q.cameras(stationId()) });
+      queryClient.invalidateQueries({ queryKey: q.camerasTotal(stationId()) });
     },
     mutationFn: (data: CreateCameraMutation) =>
       pb.send(stationUrl(stationId()) + "/cameras", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+  });
+};
+
+export const useUpdateCamera = (
+  pb: PocketBase,
+  stationId: Accessor<string>
+) => {
+  const queryClient = useQueryClient();
+  return createMutation({
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: q.cameras(stationId()) });
+      queryClient.invalidateQueries({ queryKey: q.camerasTotal(stationId()) });
+      queryClient.invalidateQueries({
+        predicate: p.camera(stationId(), variables.id),
+      });
+    },
+    mutationFn: (data: UpdateCameraMutation) =>
+      pb.send(stationUrl(stationId()) + "/cameras" + data.id, {
         method: "POST",
         body: JSON.stringify(data),
       }),
@@ -80,10 +146,14 @@ export const useDeleteCamera = (
 ) => {
   const queryClient = useQueryClient();
   return createMutation<unknown, ClientResponseError, number>({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [stationId(), "/cameras"] });
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: q.cameras(stationId()) });
+      queryClient.invalidateQueries({ queryKey: q.camerasTotal(stationId()) });
       queryClient.invalidateQueries({
-        queryKey: [stationId(), "/cameras-total"],
+        predicate: p.camera(stationId(), id),
+      });
+      queryClient.invalidateQueries({
+        predicate: p.files(stationId()),
       });
     },
     mutationFn: (cameraId: number) =>
@@ -99,7 +169,7 @@ export const useShowCamera = (
   cameraId: Accessor<number>
 ): CreateQueryResult<ShowCamera, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/cameras/", cameraId()],
+    () => q.showCameras(stationId(), cameraId()),
     () => pb.send(stationUrl(stationId()) + "/cameras/" + cameraId(), {})
   );
 
@@ -109,7 +179,7 @@ export const useCameraDetail = (
   cameraId: Accessor<number>
 ): CreateQueryResult<CameraDetail, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/cameras/", cameraId(), "/detail"],
+    () => q.cameraDetail(stationId(), cameraId()),
     () =>
       pb.send(
         stationUrl(stationId()) + "/cameras/" + cameraId() + "/detail",
@@ -123,7 +193,7 @@ export const useCameraSoftware = (
   cameraId: Accessor<number>
 ): CreateQueryResult<CameraSoftware, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/cameras/", cameraId(), "/software"],
+    () => q.cameraSoftware(stationId(), cameraId()),
     () =>
       pb.send(
         stationUrl(stationId()) + "/cameras/" + cameraId() + "/software",
@@ -137,7 +207,7 @@ export const useCameraLicenses = (
   cameraId: Accessor<number>
 ): CreateQueryResult<Array<CameraLicense>, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/cameras/", cameraId(), "/licenses"],
+    () => q.cameraLicenses(stationId(), cameraId()),
     () =>
       pb.send(
         stationUrl(stationId()) + "/cameras/" + cameraId() + "/licenses",
@@ -150,7 +220,7 @@ export const useScansPending = (
   stationId: Accessor<string>
 ): CreateQueryResult<Array<ScanPending>, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/scans/pending"],
+    () => q.scansPending(stationId()),
     () => pb.send(stationUrl(stationId()) + "/scans/pending", {})
   );
 
@@ -159,7 +229,7 @@ export const useScansActive = (
   stationId: Accessor<string>
 ): CreateQueryResult<Array<ScanActive>, ClientResponseError> =>
   createQuery(
-    () => [stationId(), "/scans/active"],
+    () => q.scansActive(stationId()),
     () => pb.send(stationUrl(stationId()) + "/scans/active", {})
   );
 
@@ -170,7 +240,7 @@ export const useScansCompleted = (
   perPage: Accessor<number>
 ): CreateQueryResult<PageResult<ScanCompleted>> =>
   createQuery(
-    () => [stationId(), "/scans/completed", page(), perPage()],
+    () => [...q.scansCompleted(stationId()), page(), perPage()],
     () =>
       pb.send(
         stationUrl(stationId()) +
@@ -190,7 +260,7 @@ export const useFiles = (
   query: Accessor<FilesQuery>
 ) =>
   createQuery<FilesResult, ClientResponseError>(
-    () => [stationId(), "/files", filter(), query()],
+    () => [...q.files(stationId()), filter(), query()],
     () => {
       return pb.send(
         stationUrl(
@@ -212,7 +282,7 @@ export const useInfiniteFiles = (
   query: Accessor<InfiniteFilesQuery>
 ) =>
   createInfiniteQuery<FilesResult, ClientResponseError>({
-    queryKey: () => [stationId(), "/files", filter(), query(), "infinite"],
+    queryKey: () => [...q.files(stationId()), filter(), query(), "infinite"],
     queryFn: ({ pageParam }) => {
       let p = searchParamsFromObject({ ...filter(), ...query() });
       if (pageParam) {
@@ -238,7 +308,7 @@ export const useFilesTotal = (
   filter: Accessor<FilesFilter>
 ) =>
   createQuery<{ total: number }, ClientResponseError>(
-    () => [stationId(), "/files-total", filter()],
+    () => [...q.filesTotal(stationId()), filter()],
     () =>
       pb.send(
         stationUrl(stationId()) +

@@ -12,6 +12,13 @@ export type CreateCameraMutation = {
   password: string;
 };
 
+export type UpdateCameraMutation = {
+  id: number;
+  ip: string;
+  username: string;
+  password: string;
+};
+
 export type Camera = {
   id: number;
   ip: string;
