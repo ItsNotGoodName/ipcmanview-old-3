@@ -5,37 +5,66 @@ use serde_json::{to_value, Value};
 
 use crate::{Error, RequestBuilder};
 
+fn is_zero(num: &i32) -> bool {
+    *num == 0
+}
+
 #[derive(Deserialize, Debug)]
-pub struct ConfigResponse<T> {
+pub struct GetConfigResponse<T> {
     pub table: T,
 }
 
 #[derive(Serialize, Debug)]
-pub struct ConfigRequest {
+pub struct GetConfigRequest {
     pub name: &'static str,
-    #[serde(skip_serializing_if = "Self::is_zero")]
+    #[serde(skip_serializing_if = "is_zero")]
     pub channel: i32,
 }
 
-impl ConfigRequest {
+impl GetConfigRequest {
     pub fn new(name: &'static str) -> Self {
         Self { name, channel: 0 }
     }
 
-    fn is_zero(num: &i32) -> bool {
-        *num == 0
+    pub async fn send<T>(self, rpc: RequestBuilder) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        rpc.method("configManager.getConfig")
+            .params(to_value(self).expect("could not serialize GetConfigRequest"))
+            .send::<GetConfigResponse<T>>()
+            .await?
+            .params_map(|p, _| p.table)
     }
 }
 
-pub async fn get<T>(rpc: RequestBuilder, params: ConfigRequest) -> Result<T, Error>
+#[derive(Serialize, Debug)]
+pub struct SetConfigRequest<T: Serialize> {
+    pub name: &'static str,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub channel: i32,
+    pub table: T,
+}
+
+impl<T> SetConfigRequest<T>
 where
-    T: DeserializeOwned,
+    T: Serialize,
 {
-    rpc.method("configManager.getConfig")
-        .params(to_value(params).expect("could not serialize ConfigRequest"))
-        .send::<ConfigResponse<T>>()
-        .await?
-        .params_map(|p, _| p.table)
+    pub fn new(name: &'static str, table: T) -> Self {
+        Self {
+            name,
+            table,
+            channel: 0,
+        }
+    }
+
+    pub async fn send(self, rpc: RequestBuilder) -> Result<(), Error> {
+        rpc.method("configManager.setConfig")
+            .params(to_value(self).expect("could not serialize SetConfigRequest"))
+            .send::<Value>()
+            .await
+            .map(|_| Ok(()))?
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -59,7 +88,11 @@ pub struct General {
 
 impl General {
     pub async fn get(rpc: RequestBuilder) -> Result<Self, Error> {
-        get::<Self>(rpc, ConfigRequest::new("General")).await
+        GetConfigRequest::new("General").send::<Self>(rpc).await
+    }
+
+    pub async fn set(self, rpc: RequestBuilder) -> Result<(), Error> {
+        SetConfigRequest::new("General", self).send(rpc).await
     }
 }
 
@@ -84,7 +117,7 @@ pub struct NTP {
 
 impl NTP {
     pub async fn get(rpc: RequestBuilder) -> Result<Self, Error> {
-        get::<Self>(rpc, ConfigRequest::new("NTP")).await
+        GetConfigRequest::new("NTP").send::<Self>(rpc).await
     }
 }
 
@@ -106,6 +139,6 @@ pub struct VideoInModeConfig {
 
 impl VideoInMode {
     pub async fn get(rpc: RequestBuilder) -> Result<Self, Error> {
-        get::<Self>(rpc, ConfigRequest::new("VideoInMode")).await
+        GetConfigRequest::new("VideoInMode").send::<Self>(rpc).await
     }
 }
