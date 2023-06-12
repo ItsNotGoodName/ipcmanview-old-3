@@ -142,3 +142,65 @@ impl VideoInMode {
         GetConfigRequest::new("VideoInMode").send::<Self>(rpc).await
     }
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Email {
+    #[serde(rename = "Address")]
+    pub address: String,
+    #[serde(rename = "Anonymous")]
+    pub anonymous: bool,
+    #[serde(rename = "AttachEnable")]
+    pub attach_enable: bool,
+    #[serde(rename = "Authentication")]
+    pub authentication: bool,
+    // #[serde(rename = "CustomTitle")]
+    // pub custom_title: Vec<Value>,
+    #[serde(rename = "Enable")]
+    pub enable: bool,
+    #[serde(rename = "HealthReport")]
+    pub health_report: EmailHealthReport,
+    #[serde(rename = "OnlyAttachment")]
+    pub only_attachment: bool,
+    #[serde(rename = "Password")]
+    pub password: String,
+    #[serde(rename = "Port")]
+    pub port: i32,
+    #[serde(rename = "Receivers")]
+    pub receivers: Vec<String>,
+    #[serde(rename = "SendAddress")]
+    pub send_address: String,
+    #[serde(rename = "SendInterv")]
+    pub send_interv: i32,
+    #[serde(rename = "SslEnable")]
+    pub ssl_enable: bool,
+    #[serde(rename = "Title")]
+    pub title: String,
+    #[serde(rename = "TlsEnable")]
+    pub tls_enable: bool,
+    #[serde(rename = "UserName")]
+    pub user_name: String,
+
+    #[serde(flatten)]
+    extra: HashMap<String, Value>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EmailHealthReport {
+    #[serde(rename = "Enable")]
+    pub enable: bool,
+    #[serde(rename = "Interval")]
+    pub interval: i32,
+
+    #[serde(flatten)]
+    extra: HashMap<String, Value>,
+}
+
+impl Email {
+    pub async fn get(rpc: RequestBuilder) -> Result<Self, Error> {
+        GetConfigRequest::new("Email").send::<Self>(rpc).await
+    }
+
+    pub async fn set(self, rpc: RequestBuilder) -> Result<(), Error> {
+        SetConfigRequest::new("Email", self).send(rpc).await
+    }
+}
