@@ -4,8 +4,7 @@ use serde_json::{json, Value};
 
 use crate::{
     utils::{
-        de_null_array_to_string_vec, de_string_to_date_time, parse_file_path_tags,
-        se_date_time_to_string,
+        de_null_to_default, de_string_to_date_time, parse_file_path_tags, se_date_time_to_string,
     },
     Error, RequestBuilder,
 };
@@ -85,17 +84,9 @@ pub struct FindNextFileInfo {
     pub disk: i32,
     #[serde(rename = "VideoStream")]
     pub video_stream: String,
-    #[serde(
-        default,
-        rename = "Flags",
-        deserialize_with = "de_null_array_to_string_vec"
-    )]
+    #[serde(default, rename = "Flags", deserialize_with = "de_null_to_default")]
     pub flags: Vec<String>,
-    #[serde(
-        default,
-        rename = "Events",
-        deserialize_with = "de_null_array_to_string_vec"
-    )]
+    #[serde(default, rename = "Events", deserialize_with = "de_null_to_default")]
     pub events: Vec<String>,
     #[serde(rename = "Cluster")]
     pub cluster: Option<i32>,
