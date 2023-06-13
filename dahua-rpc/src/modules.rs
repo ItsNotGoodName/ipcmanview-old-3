@@ -1,3 +1,4 @@
+pub mod config;
 pub mod configmanager;
 pub mod global;
 pub mod license;

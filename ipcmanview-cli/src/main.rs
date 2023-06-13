@@ -5,7 +5,7 @@ use ipcmanview_cli::run;
 async fn main() {
     dotenv().ok();
 
-    let ip = std::env::var("IPC_IP").expect("IPC_IP not set");
+    let ip = std::env::var("IPC_IPS").expect("IPC_IPS not set");
     let username = std::env::var("IPC_USERNAME").expect("IPC_USERNAME not set");
     let password = std::env::var("IPC_PASSWORD").expect("IPC_PASSWORD not set");
 

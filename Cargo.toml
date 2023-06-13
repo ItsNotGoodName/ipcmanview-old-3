@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "dahua-rpc",
+  "dahua-rpc/dahua-rpc_derive",
   "ipcmanview-station",
   "ipcmanview-cli"
 ]

@@ -1,26 +1,38 @@
-use dahua_rpc::{modules::configmanager, Client};
+use dahua_rpc::{modules::config, Client};
 
 pub async fn run(client: &mut Client) -> Result<(), Box<dyn std::error::Error>> {
     println!(
-        "{}",
-        serde_json::to_string_pretty(&configmanager::Email::get(client.rpc().await?).await?)?
+        "DisableEmailLinkage={:#?}",
+        config::DisableEmailLinkage::get(client.rpc().await?)
+            .await
+            .ok()
     );
-
-    // configmanager::Email::get(client.rpc().await?)
-    //     .await
-    //     .map(|mut r| {
-    //         println!("{:?}", r);
-    //         r.port = 25;
-    //         return r;
-    //     })?
-    //     .set(client.rpc().await?)
-    //     .await?;
-
-    // println!("{:?}", configmanager::NTP::get(client.rpc().await?).await?);
-    // println!(
-    //     "{:?}",
-    //     configmanager::VideoInMode::get(client.rpc().await?).await?
-    // );
+    println!(
+        "DisableLinkageTimeSection={:#?}",
+        config::DisableLinkageTimeSection::get(client.rpc().await?)
+            .await
+            .ok()
+    );
+    println!(
+        "VideoInMode={:#?}",
+        config::VideoInMode::get(client.rpc().await?).await.ok()
+    );
+    println!(
+        "NTP={:#?}",
+        config::NTP::get(client.rpc().await?).await.ok()
+    );
+    println!(
+        "Email={:#?}",
+        config::Email::get(client.rpc().await?).await.ok()
+    );
+    println!(
+        "Locales={:#?}",
+        config::Locales::get(client.rpc().await?).await.ok()
+    );
+    println!(
+        "General={:#?}",
+        config::General::get(client.rpc().await?).await.ok()
+    );
 
     Ok(())
 }

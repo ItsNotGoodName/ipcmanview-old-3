@@ -371,11 +371,20 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "chrono",
+ "dahua-rpc_derive",
  "md5",
  "reqwest",
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "dahua-rpc_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
