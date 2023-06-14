@@ -1,5 +1,12 @@
 import { Component } from "solid-js";
-import { A, Route, Routes, useLocation, useNavigate } from "@solidjs/router";
+import {
+  A,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "@solidjs/router";
 import {
   RiBuildingsHome5Line,
   RiDesignFocus2Line,
@@ -11,7 +18,7 @@ import { styled } from "@macaron-css/solid";
 import { CSSProperties, style } from "@macaron-css/core";
 
 import { ADMIN_PANEL_URL, nameToInitials } from "~/data/utils";
-import { usePb, usePbUser } from "~/data/pb";
+import { PbStationApiProvider, usePb, usePbUser } from "~/data/pb";
 import { minScreen, theme } from "~/ui/theme";
 
 const Root = styled("div", {
@@ -241,7 +248,17 @@ const Application: Component = () => {
             <Route path="/" component={Home} />
             <Route path="/profile" component={Profile} />
             <Route path="/stations" component={Stations} />
-            <Route path="/stations/:stationId" component={StationsShow} />
+            <Route
+              path="/stations/:stationId"
+              component={() => {
+                const { stationId } = useParams<{ stationId: string }>();
+                return (
+                  <PbStationApiProvider stationId={stationId}>
+                    <StationsShow />
+                  </PbStationApiProvider>
+                );
+              }}
+            />
           </Routes>
         </ContentBody>
       </Content>

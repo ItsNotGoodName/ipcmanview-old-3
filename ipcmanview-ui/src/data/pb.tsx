@@ -1,5 +1,9 @@
-import { createQuery, CreateQueryResult } from "@tanstack/solid-query";
-import PocketBase from "pocketbase";
+import {
+  createQuery,
+  CreateQueryResult,
+  QueryKey,
+} from "@tanstack/solid-query";
+import PocketBase, { SendOptions } from "pocketbase";
 import {
   Accessor,
   createContext,
@@ -14,7 +18,11 @@ import {
 } from "solid-js";
 
 import { PbAuth, UserRecord } from "./records";
-import { STATIONS_URI } from "./utils";
+import { StationApi, StationContext, StationContextType } from "./station";
+
+const STATIONS_URI = "/app/stations";
+
+// PocketBase
 
 type PbContextType = {
   pb: PocketBase;
@@ -100,6 +108,46 @@ export const PbProvider: ParentComponent<PbContextProps> = (props) => {
   );
 };
 
+// StationApi
+
+function stationUrl(stationId: string): string {
+  return STATIONS_URI + "/" + stationId;
+}
+
+export class PbStationApi implements StationApi {
+  constructor(readonly pb: PocketBase, readonly stationId: Accessor<string>) {}
+
+  send<T>(url: string, reqOptions?: SendOptions): Promise<T> {
+    return this.pb.send<T>(
+      stationUrl(this.stationId()) + url,
+      reqOptions || {}
+    );
+  }
+
+  wrapKey(key: QueryKey): QueryKey {
+    return ["t*#5T", this.stationId(), key];
+  }
+
+  unwrapKey(key: QueryKey): QueryKey | null {
+    if (key[0] === "t*#5T" && key[1] === this.stationId()) {
+      return key[2] as QueryKey;
+    }
+
+    return null;
+  }
+
+  fileUrl(cameraId: number, filePath: string): string {
+    return (
+      import.meta.env.VITE_BACKEND_URL +
+      stationUrl(this.stationId()) +
+      "/cameras/" +
+      cameraId +
+      "/fs/" +
+      filePath
+    );
+  }
+}
+
 type PbUser = {
   user: Accessor<UserRecord>;
   set: (user: UserRecord) => void;
@@ -120,3 +168,23 @@ export function usePbUser(): PbUser {
 
   return result.pbUser;
 }
+
+export type PbStationApiContextProps = {
+  stationId: string;
+};
+
+export const PbStationApiProvider: ParentComponent<PbStationApiContextProps> = (
+  props
+) => {
+  const pb = usePb();
+
+  const store: StationContextType = {
+    api: new PbStationApi(pb, () => props.stationId),
+  };
+
+  return (
+    <StationContext.Provider value={store}>
+      {props.children}
+    </StationContext.Provider>
+  );
+};

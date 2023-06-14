@@ -11,11 +11,10 @@ import { styled } from "@macaron-css/solid";
 import { Card, CardHeader } from "~/ui/Card";
 import { StationRecord } from "~/data/records";
 import { useCamerasTotal, useStations } from "~/data/hooks";
-import { usePb } from "~/data/pb";
+import { PbStationApi, usePb } from "~/data/pb";
 import { theme } from "~/ui/theme";
 import { Row } from "~/ui/utility";
 import { IconAlert, IconSpinner } from "~/ui/Icon";
-import { StationApiPb } from "~/data/station";
 
 const Overflow = styled("div", {
   base: {
@@ -50,7 +49,7 @@ const Stations: Component = () => {
       id: "cameras",
       header: "cameras",
       cell: (info) => {
-        const api = new StationApiPb(pb, () => info.row.original.id);
+        const api = new PbStationApi(pb, () => info.row.original.id);
         const total = useCamerasTotal(api);
 
         return (

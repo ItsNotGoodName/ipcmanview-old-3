@@ -1,4 +1,3 @@
-import { useParams } from "@solidjs/router";
 import { CreateQueryResult } from "@tanstack/solid-query";
 import {
   RiMediaImageFill,
@@ -7,7 +6,6 @@ import {
   RiSystemRefreshFill,
 } from "solid-icons/ri";
 import {
-  Accessor,
   Component,
   createEffect,
   createMemo,
@@ -38,14 +36,13 @@ import {
   HookFileFilter,
   HookFileQuery,
 } from "~/data/hooks";
-import { usePb } from "~/data/pb";
 import ErrorText from "~/ui/ErrorText";
-import { createPaging, fileUrl, formatDateTime } from "~/data/utils";
+import { createPaging, formatDateTime } from "~/data/utils";
 import Button from "~/ui/Button";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
-import { StationApiPb } from "~/data/station";
+import { useStationApi } from "~/data/station";
 
-const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
+const FilesViewer: Component = () => {
   const [filter, setFilter] = createSignal<HookFileFilter>({});
 
   const limit = 20;
@@ -63,7 +60,7 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
     })
   );
 
-  const api = new StationApiPb(usePb(), props.stationId);
+  const api = useStationApi();
   const filesTotal = useFilesTotal(api, filter);
 
   const files = useFiles(api, filter, query);
@@ -80,7 +77,7 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
   const selectedUrl = () => {
     const file = selectedFile();
     if (file) {
-      return fileUrl(props.stationId(), file.camera_id, file.file_path);
+      return api.fileUrl(file.camera_id, file.file_path);
     }
     return "";
   };
@@ -318,11 +315,10 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
   );
 };
 
-const StationShow: Component = () => {
-  const { stationId: stationIdParams } = useParams<{ stationId: string }>();
-  const stationId = () => stationIdParams;
 
-  const api = new StationApiPb(usePb(), stationId);
+const StationShow: Component = () => {
+
+  const api = useStationApi();
 
   const cameras = useCameras(api);
   const camerasTotal = useCamerasTotal(api);
@@ -348,7 +344,7 @@ const StationShow: Component = () => {
 
   return (
     <div class="flex flex-col gap-2">
-      <FilesViewer stationId={stationId} />
+      <FilesViewer  />
       <div class="divider" />
       <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
         <JsonCard title="Cameras" query={cameras} />

@@ -24,29 +24,7 @@ export function nameToInitials(name: string): string {
   return (words[0][0] ?? "?") + (words[1][0] ?? "");
 }
 
-export const STATIONS_URI = "/app/stations";
 export const ADMIN_PANEL_URL = import.meta.env.VITE_BACKEND_URL + "/_/";
-
-// TODO: remove this
-export function stationUrl(stationId: string): string {
-  return STATIONS_URI + "/" + stationId;
-}
-
-// TODO: remove this
-export function fileUrl(
-  stationId: string,
-  cameraId: number,
-  filePath: string
-): string {
-  return (
-    import.meta.env.VITE_BACKEND_URL +
-    stationUrl(stationId) +
-    "/cameras/" +
-    cameraId +
-    "/fs/" +
-    filePath
-  );
-}
 
 export function searchParamsFromObject(
   obj: Record<string, any>
