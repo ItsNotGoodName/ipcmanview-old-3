@@ -9,4 +9,10 @@ generateApi({
   output: path.resolve(process.cwd(), "./src/data"),
   input: path.resolve(process.cwd(), "../ipcmanview-station/swagger.json"),
   generateClient: false,
+  primitiveTypeConstructs: (constructs) => ({
+    ...constructs,
+    string: {
+      "date-time": "Date | string",
+    },
+  }),
 }).catch((e) => console.error(e));

@@ -10,7 +10,7 @@ import { CreateMutationResult, CreateQueryResult } from "@tanstack/solid-query";
 import { ClientResponseError } from "pocketbase";
 import { Accessor, createMemo } from "solid-js";
 
-export function formatDateTime(date: string): string {
+export function formatDateTime(date: Date | string): string {
   let d = new Date(date);
   return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }

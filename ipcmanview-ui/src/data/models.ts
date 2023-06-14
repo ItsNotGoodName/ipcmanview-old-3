@@ -10,11 +10,13 @@
  */
 
 export interface Camera {
-  created_at: any;
+  /** @format date-time */
+  created_at: Date | string;
   /** @format int64 */
   id: number;
   ip: string;
-  refreshed_at: any;
+  /** @format date-time */
+  refreshed_at: Date | string;
   username: string;
 }
 
@@ -31,7 +33,8 @@ export interface CameraDetail {
 export interface CameraFile {
   /** @format int64 */
   camera_id: number;
-  end_time: any;
+  /** @format date-time */
+  end_time: Date | string;
   events: string[];
   file_path: string;
   /** @format int64 */
@@ -39,20 +42,24 @@ export interface CameraFile {
   kind: string;
   /** @format int64 */
   size: number;
-  start_time: any;
-  updated_at: any;
+  /** @format date-time */
+  start_time: Date | string;
+  /** @format date-time */
+  updated_at: Date | string;
 }
 
 export interface CameraFileQuery {
   after?: string | null;
   before?: string | null;
   camera_ids?: number[];
-  end?: null;
+  /** @format date-time */
+  end?: Date | string | null;
   events?: string[];
   kinds?: string[];
   /** @format int32 */
   limit?: number | null;
-  start?: null;
+  /** @format date-time */
+  start?: Date | string | null;
 }
 
 export interface CameraFileQueryResult {
@@ -67,10 +74,12 @@ export interface CameraFileQueryResult {
 
 export interface CameraFileTotalQuery {
   camera_ids?: number[];
-  end?: null;
+  /** @format date-time */
+  end?: Date | string | null;
   events?: string[];
   kinds?: string[];
-  start?: null;
+  /** @format date-time */
+  start?: Date | string | null;
 }
 
 export interface CameraLicense {
@@ -86,7 +95,8 @@ export interface CameraLicense {
    * @min 0
    */
   effective_days: number;
-  effective_time: any;
+  /** @format date-time */
+  effective_time: Date | string;
   /**
    * @format int32
    * @min 0
@@ -102,7 +112,8 @@ export interface CameraLicense {
 }
 
 export interface CameraShow {
-  created_at: any;
+  /** @format date-time */
+  created_at: Date | string;
   detail: CameraDetail;
   /** @format int32 */
   file_total: number;
@@ -110,7 +121,8 @@ export interface CameraShow {
   id: number;
   ip: string;
   licenses: CameraLicense[];
-  refreshed_at: any;
+  /** @format date-time */
+  refreshed_at: Date | string;
   software: CameraSoftware;
   username: string;
 }
@@ -130,8 +142,10 @@ export interface CreateCameraRequest {
 }
 
 export interface DateTimeRange {
-  end: any;
-  start: any;
+  /** @format date-time */
+  end: Date | string;
+  /** @format date-time */
+  start: Date | string;
 }
 
 export interface PageQuery {
@@ -149,10 +163,14 @@ export interface ScanActive {
   kind: any;
   /** @format double */
   percent: number;
-  range_cursor: any;
-  range_end: any;
-  range_start: any;
-  started_at: any;
+  /** @format date-time */
+  range_cursor: Date | string;
+  /** @format date-time */
+  range_end: Date | string;
+  /** @format date-time */
+  range_start: Date | string;
+  /** @format date-time */
+  started_at: Date | string;
   /** @format int64 */
   upserted: number;
 }
@@ -171,11 +189,15 @@ export interface ScanCompleted {
   kind: any;
   /** @format double */
   percent: number;
-  range_cursor: any;
-  range_end: any;
-  range_start: any;
+  /** @format date-time */
+  range_cursor: Date | string;
+  /** @format date-time */
+  range_end: Date | string;
+  /** @format date-time */
+  range_start: Date | string;
   retry_pending: boolean;
-  started_at: any;
+  /** @format date-time */
+  started_at: Date | string;
   success: boolean;
   /** @format int64 */
   upserted: number;
@@ -199,8 +221,10 @@ export interface ScanPending {
   /** @format int64 */
   id: number;
   kind: any;
-  range_end: any;
-  range_start: any;
+  /** @format date-time */
+  range_end: Date | string;
+  /** @format date-time */
+  range_start: Date | string;
 }
 
 export interface TotalQueryResult {
