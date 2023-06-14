@@ -34,7 +34,7 @@ import {
   useScansActive,
   useScansCompleted,
   useScansPending,
-  useShowCamera,
+  useCameraShow,
   HookFileFilter,
   HookFileQuery,
 } from "~/data/hooks";
@@ -43,7 +43,7 @@ import ErrorText from "~/ui/ErrorText";
 import { createPaging, fileUrl, formatDateTime } from "~/data/utils";
 import Button from "~/ui/Button";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
-import { ProxyStationApi } from "~/data/api";
+import { StationApiPb } from "~/data/station";
 
 const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
   const [filter, setFilter] = createSignal<HookFileFilter>({});
@@ -63,7 +63,7 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
     })
   );
 
-  const api = new ProxyStationApi(usePb(), props.stationId);
+  const api = new StationApiPb(usePb(), props.stationId);
   const filesTotal = useFilesTotal(api, filter);
 
   const files = useFiles(api, filter, query);
@@ -322,7 +322,7 @@ const StationShow: Component = () => {
   const { stationId: stationIdParams } = useParams<{ stationId: string }>();
   const stationId = () => stationIdParams;
 
-  const api = new ProxyStationApi(usePb(), stationId);
+  const api = new StationApiPb(usePb(), stationId);
 
   const cameras = useCameras(api);
   const camerasTotal = useCamerasTotal(api);
@@ -409,7 +409,7 @@ const StationShow: Component = () => {
         <For each={cameras.data || []}>
           {(camera) => {
             const cameraId = () => camera.id;
-            const showCamera = useShowCamera(api, cameraId);
+            const cameraShow = useCameraShow(api, cameraId);
             const cameraDetail = useCameraDetail(api, cameraId);
             const cameraSoftware = useCameraSoftware(api, cameraId);
             const cameraLicenses = useCameraLicenses(api, cameraId);
@@ -434,7 +434,7 @@ const StationShow: Component = () => {
                 </JsonCard>
                 <JsonCard
                   title={"Show Camera " + camera.id}
-                  query={showCamera}
+                  query={cameraShow}
                 />
                 <JsonCard
                   title={"Camera " + camera.id + " Detail"}

@@ -26,16 +26,16 @@ import {
 } from "./models";
 import { StationRecord } from "./records";
 import { searchParamsFromObject } from "./utils";
-import { StationApi } from "./api";
+import { StationApi } from "./station";
 
 const q = {
   stations: ["stations"],
   cameras: ["cameras"],
   camerasTotal: ["camerasTotal"],
-  showCameras: (cameraId: number) => ["cameras", cameraId, "showCameras"],
-  cameraDetail: (cameraId: number) => ["cameras", cameraId, "cameraDetail"],
-  cameraSoftware: (cameraId: number) => ["cameras", cameraId, "cameraSoftware"],
-  cameraLicenses: (cameraId: number) => ["cameras", cameraId, "cameraLicenses"],
+  cameraShow: (id: number) => [q.cameras[0], id, "cameraShow"],
+  cameraDetail: (id: number) => [q.cameras[0], id, "cameraDetail"],
+  cameraSoftware: (id: number) => [q.cameras[0], id, "cameraSoftware"],
+  cameraLicenses: (id: number) => [q.cameras[0], id, "cameraLicenses"],
   scansPending: ["scansPending"],
   scansActive: ["scansActive"],
   scansCompleted: ["scansCompleted"],
@@ -44,13 +44,13 @@ const q = {
 };
 
 const p = {
-  camera: (api: StationApi, cameraId: number) => (query: Query) => {
-    const key = api.getKey(query.queryKey);
-    return key !== null && key[0] == "cameras" && key[1] == cameraId;
+  camera: (api: StationApi, id: number) => (query: Query) => {
+    const key = api.unwrapKey(query.queryKey);
+    return key !== null && key[0] == q.cameras[0] && key[1] == id;
   },
   files: (api: StationApi) => (query: Query) => {
-    const key = api.getKey(query.queryKey);
-    return key !== null && (key[0] == "files" || key[0] == "filesTotal");
+    const key = api.unwrapKey(query.queryKey);
+    return key !== null && (key[0] == q.files[0] || key[0] == q.filesTotal[0]);
   },
 };
 
@@ -66,7 +66,7 @@ export const useCameras = (
   api: StationApi
 ): CreateQueryResult<Array<Camera>, ClientResponseError> =>
   createQuery(
-    () => api.key(q.cameras),
+    () => api.wrapKey(q.cameras),
     () => api.send("/cameras")
   );
 
@@ -74,7 +74,7 @@ export const useCamerasTotal = (
   api: StationApi
 ): CreateQueryResult<TotalQueryResult, ClientResponseError> =>
   createQuery(
-    () => api.key(q.camerasTotal),
+    () => api.wrapKey(q.camerasTotal),
     () => api.send("/cameras-total")
   );
 
@@ -82,8 +82,8 @@ export const useCreateCamera = (api: StationApi) => {
   const queryClient = useQueryClient();
   return createMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.key(q.cameras) });
-      queryClient.invalidateQueries({ queryKey: api.key(q.camerasTotal) });
+      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.cameras) });
+      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.camerasTotal) });
     },
     mutationFn: (data: CreateCameraRequest) =>
       api.send("/cameras", {
@@ -97,8 +97,8 @@ export const useUpdateCamera = (api: StationApi) => {
   const queryClient = useQueryClient();
   return createMutation({
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: api.key(q.cameras) });
-      queryClient.invalidateQueries({ queryKey: api.key(q.camerasTotal) });
+      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.cameras) });
+      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.camerasTotal) });
       queryClient.invalidateQueries({ predicate: p.camera(api, variables.id) });
     },
     mutationFn: (data: UpdateCameraRequest) =>
@@ -113,8 +113,8 @@ export const useDeleteCamera = (api: StationApi) => {
   const queryClient = useQueryClient();
   return createMutation<unknown, ClientResponseError, number>({
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: api.key(q.cameras) });
-      queryClient.invalidateQueries({ queryKey: api.key(q.camerasTotal) });
+      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.cameras) });
+      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.camerasTotal) });
       queryClient.invalidateQueries({ predicate: p.camera(api, id) });
       queryClient.invalidateQueries({ predicate: p.files(api) });
     },
@@ -125,12 +125,12 @@ export const useDeleteCamera = (api: StationApi) => {
   });
 };
 
-export const useShowCamera = (
+export const useCameraShow = (
   api: StationApi,
   cameraId: Accessor<number>
 ): CreateQueryResult<CameraShow, ClientResponseError> =>
   createQuery(
-    () => api.key(q.showCameras(cameraId())),
+    () => api.wrapKey(q.cameraShow(cameraId())),
     () => api.send("/cameras/" + cameraId())
   );
 
@@ -139,7 +139,7 @@ export const useCameraDetail = (
   cameraId: Accessor<number>
 ): CreateQueryResult<CameraDetail, ClientResponseError> =>
   createQuery(
-    () => api.key(q.cameraDetail(cameraId())),
+    () => api.wrapKey(q.cameraDetail(cameraId())),
     () => api.send("/cameras/" + cameraId() + "/detail")
   );
 
@@ -148,7 +148,7 @@ export const useCameraSoftware = (
   cameraId: Accessor<number>
 ): CreateQueryResult<CameraSoftware, ClientResponseError> =>
   createQuery(
-    () => api.key(q.cameraSoftware(cameraId())),
+    () => api.wrapKey(q.cameraSoftware(cameraId())),
     () => api.send("/cameras/" + cameraId() + "/software")
   );
 
@@ -157,7 +157,7 @@ export const useCameraLicenses = (
   cameraId: Accessor<number>
 ): CreateQueryResult<Array<CameraLicense>, ClientResponseError> =>
   createQuery(
-    () => api.key(q.cameraLicenses(cameraId())),
+    () => api.wrapKey(q.cameraLicenses(cameraId())),
     () => api.send("/cameras/" + cameraId() + "/licenses")
   );
 
@@ -165,7 +165,7 @@ export const useScansPending = (
   api: StationApi
 ): CreateQueryResult<Array<ScanPending>, ClientResponseError> =>
   createQuery(
-    () => api.key(q.scansPending),
+    () => api.wrapKey(q.scansPending),
     () => api.send("/scans/pending")
   );
 
@@ -173,7 +173,7 @@ export const useScansActive = (
   api: StationApi
 ): CreateQueryResult<Array<ScanActive>, ClientResponseError> =>
   createQuery(
-    () => api.key(q.scansActive),
+    () => api.wrapKey(q.scansActive),
     () => api.send("/scans/active")
   );
 
@@ -183,7 +183,7 @@ export const useScansCompleted = (
   perPage: Accessor<number>
 ): CreateQueryResult<ScanCompletedPageResult> =>
   createQuery(
-    () => api.key([...q.scansCompleted, page(), perPage()]),
+    () => api.wrapKey([...q.scansCompleted, page(), perPage()]),
     () =>
       api.send("/scans/completed?page=" + page() + "&per_page=" + perPage()),
     { keepPreviousData: true }
@@ -210,7 +210,7 @@ export const useFiles = (
   query: Accessor<HookFileQuery>
 ) =>
   createQuery<CameraFileQueryResult, ClientResponseError>(
-    () => api.key([...q.files, filter(), query()]),
+    () => api.wrapKey([...q.files, filter(), query()]),
     () =>
       api.send("/files?" + searchParamsFromObject({ ...filter(), ...query() })),
     { keepPreviousData: true }
@@ -223,7 +223,7 @@ export const useInfiniteFiles = (
   query: Accessor<HookInfiniteFilesQuery>
 ) =>
   createInfiniteQuery<CameraFileQueryResult, ClientResponseError>({
-    queryKey: () => api.key([...q.files, filter(), query(), "infinite"]),
+    queryKey: () => api.wrapKey([...q.files, filter(), query(), "infinite"]),
     queryFn: ({ pageParam }) => {
       let p = searchParamsFromObject({ ...filter(), ...query() });
       if (pageParam) {
@@ -248,6 +248,6 @@ export const useFilesTotal = (
   filter: Accessor<HookFileFilter>
 ) =>
   createQuery<TotalQueryResult, ClientResponseError>(
-    () => api.key([...q.filesTotal, filter()]),
+    () => api.wrapKey([...q.filesTotal, filter()]),
     () => api.send("/files-total?" + searchParamsFromObject(filter()))
   );

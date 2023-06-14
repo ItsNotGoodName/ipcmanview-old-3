@@ -27,10 +27,12 @@ export function nameToInitials(name: string): string {
 export const STATIONS_URI = "/app/stations";
 export const ADMIN_PANEL_URL = import.meta.env.VITE_BACKEND_URL + "/_/";
 
+// TODO: remove this
 export function stationUrl(stationId: string): string {
   return STATIONS_URI + "/" + stationId;
 }
 
+// TODO: remove this
 export function fileUrl(
   stationId: string,
   cameraId: number,
@@ -118,18 +120,15 @@ function formErrorsFromMutation<T extends FieldValues>(
   return new FormError(err.message || "");
 }
 
-export type PageResult<T> = {
-  page: number;
-  per_page: number;
-  total_pages: number;
-  total_items: number;
-  items: T;
-};
-
 export type Paging = { has_previous: boolean; has_next: boolean };
 
-export function createPaging<T, U = unknown>(
-  query: CreateQueryResult<PageResult<T>, U>
+export function createPaging(
+  query: CreateQueryResult<{
+    page: number;
+    per_page: number;
+    total_pages: number;
+    total_items: number;
+  }>
 ): Accessor<Paging> {
   return createMemo(() => {
     let has_previous = false;
