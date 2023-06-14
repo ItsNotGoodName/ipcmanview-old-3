@@ -5,16 +5,17 @@ use axum::{
     Json,
 };
 use axum_extra::extract::Query;
-use chrono::{DateTime, Utc};
 use ipcmanview::{
     models::{Page, ScanActive, ScanCompleted, ScanPending},
     scan::{Scan, ScanKindPending, ScanRange},
 };
-use serde::Deserialize;
 
-use crate::app::AppState;
+use crate::{
+    app::AppState,
+    models::{DateTimeRange, PageQuery},
+};
 
-use super::api::{Error, PageQuery, ResultExt};
+use super::api::{Error, ResultExt};
 
 pub async fn full(
     Path(id): Path<i64>,
@@ -27,16 +28,10 @@ pub async fn full(
     Ok(StatusCode::ACCEPTED)
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Range {
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-}
-
 pub async fn manual(
     Path(id): Path<i64>,
     State(state): State<AppState>,
-    Json(range): Json<Range>,
+    Json(range): Json<DateTimeRange>,
 ) -> Result<impl IntoResponse, Error> {
     let range = ScanRange::new(range.start, range.end).or_error(StatusCode::BAD_REQUEST)?;
     Scan::queue(

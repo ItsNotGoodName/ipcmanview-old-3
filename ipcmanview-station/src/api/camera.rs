@@ -12,7 +12,7 @@ use ipcmanview::{
 };
 use serde_json::json;
 
-use crate::app::AppState;
+use crate::{app::AppState, models::Total};
 
 use super::api::{Error, ResultExt};
 
@@ -29,7 +29,7 @@ pub async fn total(State(state): State<AppState>) -> Result<impl IntoResponse, E
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(json!({ "total": total })))
+    Ok(Json(Total { total }))
 }
 
 pub async fn fs(

@@ -6,3 +6,6 @@ server:
 
 ui:
 	cd ipcmanview-ui && npm run dev
+
+gen:
+	cargo run --bin gen-openapi && cd ipcmanview-ui && npm run swag

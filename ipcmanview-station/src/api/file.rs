@@ -5,48 +5,14 @@ use axum::{
     Json,
 };
 use axum_extra::extract::Query;
-use chrono::{DateTime, Utc};
 use ipcmanview::models::{CameraFile, QueryCameraFile, QueryCameraFileFilter};
-use serde::Deserialize;
-use serde_json::json;
 
-use crate::{app::AppState, utils};
+use crate::{
+    app::AppState,
+    models::{FileFilterQuery, Total, TotalFileFilterQuery},
+};
 
 use super::api::{Error, ResultExt};
-
-#[derive(Deserialize, Debug)]
-pub struct FilterQuery {
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    start: Option<DateTime<Utc>>,
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    end: Option<DateTime<Utc>>,
-    #[serde(default)]
-    kinds: Vec<String>,
-    #[serde(default)]
-    events: Vec<String>,
-    #[serde(default)]
-    camera_ids: Vec<i64>,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct FileFilterQuery {
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    before: Option<String>,
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    after: Option<String>,
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    limit: Option<i32>,
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    start: Option<DateTime<Utc>>,
-    #[serde(default, deserialize_with = "utils::empty_string_as_none")]
-    end: Option<DateTime<Utc>>,
-    #[serde(default)]
-    kinds: Vec<String>,
-    #[serde(default)]
-    events: Vec<String>,
-    #[serde(default)]
-    camera_ids: Vec<i64>,
-}
 
 pub async fn query_by_camera(
     Path(id): Path<i64>,
@@ -83,7 +49,7 @@ pub async fn query(
 
 pub async fn total_by_camera(
     Path(id): Path<i64>,
-    mut filter_query: Query<FilterQuery>,
+    mut filter_query: Query<TotalFileFilterQuery>,
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     filter_query.camera_ids = vec![id];
@@ -92,7 +58,7 @@ pub async fn total_by_camera(
 }
 
 pub async fn total(
-    Query(query): Query<FilterQuery>,
+    Query(query): Query<TotalFileFilterQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let filter = QueryCameraFileFilter::new()
@@ -105,5 +71,5 @@ pub async fn total(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(json!({ "total": total })))
+    Ok(Json(Total { total }))
 }

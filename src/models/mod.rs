@@ -2,13 +2,14 @@ use std::ops::AddAssign;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::scan::ScanKind;
 
 pub mod page;
 pub mod query;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct Camera {
     pub id: i64,
     pub ip: String,
@@ -17,7 +18,7 @@ pub struct Camera {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct ShowCamera {
     pub id: i64,
     pub ip: String,
@@ -30,7 +31,7 @@ pub struct ShowCamera {
     pub licenses: Vec<CameraLicense>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct CameraDetail {
     pub sn: String,
     pub device_class: String,
@@ -41,7 +42,7 @@ pub struct CameraDetail {
     pub vendor: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct CameraSoftware {
     pub build: String,
     pub build_date: String,
@@ -50,7 +51,7 @@ pub struct CameraSoftware {
     pub web_version: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct CameraLicense {
     pub abroad_info: String,
     pub all_type: bool,
@@ -63,7 +64,7 @@ pub struct CameraLicense {
     pub username: String,
 }
 
-#[derive(Serialize, sqlx::FromRow, Debug)]
+#[derive(Serialize, ToSchema, sqlx::FromRow, Debug)]
 pub struct CameraFile {
     pub id: i64,
     pub camera_id: i64,
@@ -83,7 +84,8 @@ pub struct Page {
     pub per_page: i32,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
+#[aliases(PageResultScanCompleted = PageResult<ScanCompleted>)]
 pub struct PageResult<T> {
     pub page: i32,
     pub per_page: i32,
@@ -115,7 +117,7 @@ pub struct QueryCameraFile<'a> {
     pub filter: &'a QueryCameraFileFilter,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct QueryCameraFileResult {
     pub files: Vec<CameraFile>,
     pub has_before: bool,
@@ -145,7 +147,7 @@ impl AddAssign for CameraScanResult {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct ScanCompleted {
     pub id: i64,
     pub camera_id: i64,
@@ -164,7 +166,7 @@ pub struct ScanCompleted {
     pub can_retry: bool,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct ScanActive {
     pub camera_id: i64,
     pub kind: ScanKind,
@@ -177,7 +179,7 @@ pub struct ScanActive {
     pub deleted: i64,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, ToSchema, Debug)]
 pub struct ScanPending {
     pub id: i64,
     pub camera_id: i64,

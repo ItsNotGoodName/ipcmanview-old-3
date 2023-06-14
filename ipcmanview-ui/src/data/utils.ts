@@ -10,8 +10,6 @@ import { CreateMutationResult, CreateQueryResult } from "@tanstack/solid-query";
 import { ClientResponseError } from "pocketbase";
 import { Accessor, createMemo } from "solid-js";
 
-import { PageResult } from "./models";
-
 export function formatDateTime(date: string): string {
   let d = new Date(date);
   return d.toLocaleDateString() + " " + d.toLocaleTimeString();
@@ -119,6 +117,14 @@ function formErrorsFromMutation<T extends FieldValues>(
 
   return new FormError(err.message || "");
 }
+
+export type PageResult<T> = {
+  page: number;
+  per_page: number;
+  total_pages: number;
+  total_items: number;
+  items: T;
+};
 
 export type Paging = { has_previous: boolean; has_next: boolean };
 

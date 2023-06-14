@@ -1,0 +1,645 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ipcmanview-station",
+    "description": "",
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Camera": {
+        "type": "object",
+        "required": [
+          "id",
+          "ip",
+          "username",
+          "refreshed_at",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "refreshed_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "CameraDetail": {
+        "type": "object",
+        "required": [
+          "sn",
+          "device_class",
+          "device_type",
+          "hardware_version",
+          "market_area",
+          "process_info",
+          "vendor"
+        ],
+        "properties": {
+          "device_class": {
+            "type": "string"
+          },
+          "device_type": {
+            "type": "string"
+          },
+          "hardware_version": {
+            "type": "string"
+          },
+          "market_area": {
+            "type": "string"
+          },
+          "process_info": {
+            "type": "string"
+          },
+          "sn": {
+            "type": "string"
+          },
+          "vendor": {
+            "type": "string"
+          }
+        }
+      },
+      "CameraFile": {
+        "type": "object",
+        "required": [
+          "id",
+          "camera_id",
+          "file_path",
+          "kind",
+          "size",
+          "start_time",
+          "end_time",
+          "updated_at",
+          "events"
+        ],
+        "properties": {
+          "camera_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "end_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "events": {
+            "$ref": "#/components/schemas/sqlx.types.Json"
+          },
+          "file_path": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "start_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        }
+      },
+      "CameraLicense": {
+        "type": "object",
+        "required": [
+          "abroad_info",
+          "all_type",
+          "digit_channel",
+          "effective_days",
+          "effective_time",
+          "license_id",
+          "product_type",
+          "status",
+          "username"
+        ],
+        "properties": {
+          "abroad_info": {
+            "type": "string"
+          },
+          "all_type": {
+            "type": "boolean"
+          },
+          "digit_channel": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0.0
+          },
+          "effective_days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0.0
+          },
+          "effective_time": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "license_id": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0.0
+          },
+          "product_type": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0.0
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "CameraSoftware": {
+        "type": "object",
+        "required": [
+          "build",
+          "build_date",
+          "security_base_line_version",
+          "version",
+          "web_version"
+        ],
+        "properties": {
+          "build": {
+            "type": "string"
+          },
+          "build_date": {
+            "type": "string"
+          },
+          "security_base_line_version": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "web_version": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateCamera": {
+        "type": "object",
+        "required": [
+          "ip",
+          "username",
+          "password"
+        ],
+        "properties": {
+          "ip": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "DateTimeRange": {
+        "type": "object",
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "end": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "start": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        }
+      },
+      "FileFilterQuery": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": "string",
+            "nullable": true
+          },
+          "before": {
+            "type": "string",
+            "nullable": true
+          },
+          "camera_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "end": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ],
+            "nullable": true
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "start": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "PageQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "per_page": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PageResultScanCompleted": {
+        "type": "object",
+        "required": [
+          "page",
+          "per_page",
+          "total_pages",
+          "total_items",
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScanCompleted"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "per_page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total_items": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total_pages": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "QueryCameraFileResult": {
+        "type": "object",
+        "required": [
+          "files",
+          "has_before",
+          "before",
+          "has_after",
+          "after",
+          "count"
+        ],
+        "properties": {
+          "after": {
+            "type": "string"
+          },
+          "before": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CameraFile"
+            }
+          },
+          "has_after": {
+            "type": "boolean"
+          },
+          "has_before": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ScanActive": {
+        "type": "object",
+        "required": [
+          "camera_id",
+          "kind",
+          "range_start",
+          "range_end",
+          "started_at",
+          "range_cursor",
+          "percent",
+          "upserted",
+          "deleted"
+        ],
+        "properties": {
+          "camera_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "deleted": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ScanKind"
+          },
+          "percent": {
+            "type": "number",
+            "format": "double"
+          },
+          "range_cursor": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "range_end": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "range_start": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "started_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "upserted": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ScanCompleted": {
+        "type": "object",
+        "required": [
+          "id",
+          "camera_id",
+          "kind",
+          "range_start",
+          "range_end",
+          "started_at",
+          "range_cursor",
+          "duration",
+          "error",
+          "percent",
+          "upserted",
+          "deleted",
+          "success",
+          "retry_pending",
+          "can_retry"
+        ],
+        "properties": {
+          "camera_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "can_retry": {
+            "type": "boolean"
+          },
+          "deleted": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "error": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ScanKind"
+          },
+          "percent": {
+            "type": "number",
+            "format": "double"
+          },
+          "range_cursor": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "range_end": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "range_start": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "retry_pending": {
+            "type": "boolean"
+          },
+          "started_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "upserted": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ScanPending": {
+        "type": "object",
+        "required": [
+          "id",
+          "camera_id",
+          "range_start",
+          "range_end",
+          "kind"
+        ],
+        "properties": {
+          "camera_id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ScanKind"
+          },
+          "range_end": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "range_start": {
+            "$ref": "#/components/schemas/DateTime"
+          }
+        }
+      },
+      "ShowCamera": {
+        "type": "object",
+        "required": [
+          "id",
+          "ip",
+          "username",
+          "refreshed_at",
+          "created_at",
+          "detail",
+          "software",
+          "file_total",
+          "licenses"
+        ],
+        "properties": {
+          "created_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "detail": {
+            "$ref": "#/components/schemas/CameraDetail"
+          },
+          "file_total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ip": {
+            "type": "string"
+          },
+          "licenses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CameraLicense"
+            }
+          },
+          "refreshed_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "software": {
+            "$ref": "#/components/schemas/CameraSoftware"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "Total": {
+        "type": "object",
+        "required": [
+          "total"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "TotalFileFilterQuery": {
+        "type": "object",
+        "properties": {
+          "camera_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          "end": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ],
+            "nullable": true
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "start": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateTime"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "UpdateCamera": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ip": {
+            "type": "string",
+            "nullable": true
+          },
+          "password": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}

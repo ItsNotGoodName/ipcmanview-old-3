@@ -14,18 +14,16 @@ import {
   CameraDetail,
   CameraLicense,
   CameraSoftware,
-  CamerasTotal,
-  CreateCameraMutation,
-  FilesQuery,
-  FilesResult,
-  FilesFilter,
-  InfiniteFilesQuery,
-  PageResult,
   ScanActive,
-  ScanCompleted,
   ScanPending,
   ShowCamera,
-  UpdateCameraMutation,
+  CreateCamera,
+  UpdateCamera,
+  PageResultScanCompleted,
+  Total,
+  TotalFileFilterQuery,
+  QueryCameraFileResult,
+  FileFilterQuery,
 } from "./models";
 import { StationRecord } from "./records";
 import { searchParamsFromObject, stationUrl } from "./utils";
@@ -95,7 +93,7 @@ export const useCameras = (
 export const useCamerasTotal = (
   pb: PocketBase,
   stationId: Accessor<string>
-): CreateQueryResult<CamerasTotal, ClientResponseError> =>
+): CreateQueryResult<Total, ClientResponseError> =>
   createQuery(
     () => q.camerasTotal(stationId()),
     () => pb.send(stationUrl(stationId()) + "/cameras-total", {})
@@ -111,7 +109,7 @@ export const useCreateCamera = (
       queryClient.invalidateQueries({ queryKey: q.cameras(stationId()) });
       queryClient.invalidateQueries({ queryKey: q.camerasTotal(stationId()) });
     },
-    mutationFn: (data: CreateCameraMutation) =>
+    mutationFn: (data: CreateCamera) =>
       pb.send(stationUrl(stationId()) + "/cameras", {
         method: "POST",
         body: JSON.stringify(data),
@@ -132,7 +130,7 @@ export const useUpdateCamera = (
         predicate: p.camera(stationId(), variables.id),
       });
     },
-    mutationFn: (data: UpdateCameraMutation) =>
+    mutationFn: (data: UpdateCamera) =>
       pb.send(stationUrl(stationId()) + "/cameras" + data.id, {
         method: "POST",
         body: JSON.stringify(data),
@@ -238,7 +236,7 @@ export const useScansCompleted = (
   stationId: Accessor<string>,
   page: Accessor<number>,
   perPage: Accessor<number>
-): CreateQueryResult<PageResult<ScanCompleted>> =>
+): CreateQueryResult<PageResultScanCompleted> =>
   createQuery(
     () => [...q.scansCompleted(stationId()), page(), perPage()],
     () =>
@@ -253,13 +251,25 @@ export const useScansCompleted = (
     { keepPreviousData: true }
   );
 
+export type FilesFilter = Omit<FileFilterQuery, "limit" | "before" | "after">;
+
+export type FilesQuery = {
+  limit?: number;
+  before?: string;
+  after?: string;
+};
+
+export type InfiniteFilesQuery = {
+  limit?: number;
+};
+
 export const useFiles = (
   pb: PocketBase,
   stationId: Accessor<string>,
   filter: Accessor<FilesFilter>,
   query: Accessor<FilesQuery>
 ) =>
-  createQuery<FilesResult, ClientResponseError>(
+  createQuery<QueryCameraFileResult, ClientResponseError>(
     () => [...q.files(stationId()), filter(), query()],
     () => {
       return pb.send(
@@ -281,7 +291,7 @@ export const useInfiniteFiles = (
   filter: Accessor<FilesFilter>,
   query: Accessor<InfiniteFilesQuery>
 ) =>
-  createInfiniteQuery<FilesResult, ClientResponseError>({
+  createInfiniteQuery<QueryCameraFileResult, ClientResponseError>({
     queryKey: () => [...q.files(stationId()), filter(), query(), "infinite"],
     queryFn: ({ pageParam }) => {
       let p = searchParamsFromObject({ ...filter(), ...query() });
@@ -305,7 +315,7 @@ export const useInfiniteFiles = (
 export const useFilesTotal = (
   pb: PocketBase,
   stationId: Accessor<string>,
-  filter: Accessor<FilesFilter>
+  filter: Accessor<TotalFileFilterQuery>
 ) =>
   createQuery<{ total: number }, ClientResponseError>(
     () => [...q.filesTotal(stationId()), filter()],
