@@ -315,9 +315,7 @@ const FilesViewer: Component = () => {
   );
 };
 
-
 const StationShow: Component = () => {
-
   const api = useStationApi();
 
   const cameras = useCameras(api);
@@ -326,7 +324,7 @@ const StationShow: Component = () => {
   const scansActive = useScansActive(api);
 
   const filesFilter = () => {
-    return {} satisfies HookFileFilter;
+    return {} as HookFileFilter;
   };
   const files = useInfiniteFiles(api, filesFilter, () => {
     return { limit: 10 };
@@ -344,7 +342,7 @@ const StationShow: Component = () => {
 
   return (
     <div class="flex flex-col gap-2">
-      <FilesViewer  />
+      <FilesViewer />
       <div class="divider" />
       <div class="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
         <JsonCard title="Cameras" query={cameras} />

@@ -131,7 +131,7 @@ const activeChipClass = style({
 const chipChildStyle = {
   height: theme.space[7],
   width: theme.space[7],
-} satisfies CSSProperties;
+} as CSSProperties;
 
 const iconClass = style({
   ...chipChildStyle,

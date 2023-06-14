@@ -11,22 +11,22 @@ const rotate = keyframes({
 export const utility = {
   animateSpin: {
     animation: `${rotate} 1s linear infinite`,
-  } satisfies CSSProperties,
+  } as CSSProperties,
 
   shadow: {
     boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-  } satisfies CSSProperties,
+  } as CSSProperties,
 
   shadowXl: {
     boxShadow: `0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
-  } satisfies CSSProperties,
+  } as CSSProperties,
 
-  icon(space?: keyof (typeof theme)["space"]) {
+  icon(space?: keyof typeof theme["space"]) {
     space = space ?? "6";
     return {
       height: theme.space[space],
       width: theme.space[space],
-    } satisfies CSSProperties;
+    } as CSSProperties;
   },
 };
 
