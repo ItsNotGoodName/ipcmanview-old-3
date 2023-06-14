@@ -76,7 +76,7 @@ pub struct CameraLicense {
     pub username: String,
 }
 
-#[derive(Serialize, ToSchema, sqlx::FromRow, Debug)]
+#[derive(Serialize, sqlx::FromRow, ToSchema, Debug)]
 pub struct CameraFile {
     pub id: i64,
     pub camera_id: i64,
@@ -86,6 +86,7 @@ pub struct CameraFile {
     pub start_time: DateTime<Utc>,
     pub end_time: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    #[schema(value_type = Vec<String>)]
     pub events: sqlx::types::Json<Vec<String>>,
 }
 

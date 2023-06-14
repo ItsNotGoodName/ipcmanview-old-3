@@ -96,7 +96,10 @@
             "$ref": "#/components/schemas/DateTime"
           },
           "events": {
-            "$ref": "#/components/schemas/sqlx.types.Json"
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           },
           "file_path": {
             "type": "string"

@@ -32,7 +32,7 @@ export interface CameraFile {
   /** @format int64 */
   camera_id: number;
   end_time: any;
-  events: any;
+  events: string[];
   file_path: string;
   /** @format int64 */
   id: number;

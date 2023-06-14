@@ -35,19 +35,21 @@ import {
   useScansCompleted,
   useScansPending,
   useShowCamera,
+  HookFileFilter,
+  HookFileQuery,
 } from "~/data/hooks";
-import { FilesFilter, FilesQuery } from "~/data/models";
 import { usePb } from "~/data/pb";
 import ErrorText from "~/ui/ErrorText";
 import { createPaging, fileUrl, formatDateTime } from "~/data/utils";
 import Button from "~/ui/Button";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
+import { ProxyStationApi } from "~/data/api";
 
 const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
-  const [filter, setFilter] = createSignal<FilesFilter>({});
+  const [filter, setFilter] = createSignal<HookFileFilter>({});
 
   const limit = 20;
-  const [query, setQuery] = createSignal<FilesQuery>({ limit });
+  const [query, setQuery] = createSignal<HookFileQuery>({ limit });
   const [estimate, setEstimate] = createSignal(0);
   createEffect(
     on(query, () => {
@@ -61,10 +63,10 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
     })
   );
 
-  const pb = usePb();
-  const filesTotal = useFilesTotal(pb, props.stationId, filter);
+  const api = new ProxyStationApi(usePb(), props.stationId);
+  const filesTotal = useFilesTotal(api, filter);
 
-  const files = useFiles(pb, props.stationId, filter, query);
+  const files = useFiles(api, filter, query);
   const [selectedFileId, setSelectedFileId] = createSignal<number>();
   const selectedFile = createMemo(() => {
     if (files.data) {
@@ -102,7 +104,7 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
     }
   });
 
-  const cameras = useCameras(pb, props.stationId);
+  const cameras = useCameras(api);
 
   return (
     <div class="flex flex-col gap-4 2xl:flex-row">
@@ -317,29 +319,28 @@ const FilesViewer: Component<{ stationId: Accessor<string> }> = (props) => {
 };
 
 const StationShow: Component = () => {
-  const pb = usePb();
-
   const { stationId: stationIdParams } = useParams<{ stationId: string }>();
   const stationId = () => stationIdParams;
 
-  const cameras = useCameras(pb, stationId);
-  const camerasTotal = useCamerasTotal(pb, stationId);
-  const scansPending = useScansPending(pb, stationId);
-  const scansActive = useScansActive(pb, stationId);
+  const api = new ProxyStationApi(usePb(), stationId);
+
+  const cameras = useCameras(api);
+  const camerasTotal = useCamerasTotal(api);
+  const scansPending = useScansPending(api);
+  const scansActive = useScansActive(api);
 
   const filesFilter = () => {
-    return {} satisfies FilesQuery;
+    return {} satisfies HookFileFilter;
   };
-  const files = useInfiniteFiles(pb, stationId, filesFilter, () => {
+  const files = useInfiniteFiles(api, filesFilter, () => {
     return { limit: 10 };
   });
-  const filesTotal = useFilesTotal(pb, stationId, filesFilter);
+  const filesTotal = useFilesTotal(api, filesFilter);
 
   const [scansCompletedPage, setScansCompletedPage] = createSignal(1);
   const [scansCompletedPerPage, setScansCompletedPerPage] = createSignal(5);
   const scansCompleted = useScansCompleted(
-    pb,
-    stationId,
+    api,
     scansCompletedPage,
     scansCompletedPerPage
   );
@@ -408,12 +409,12 @@ const StationShow: Component = () => {
         <For each={cameras.data || []}>
           {(camera) => {
             const cameraId = () => camera.id;
-            const showCamera = useShowCamera(pb, stationId, cameraId);
-            const cameraDetail = useCameraDetail(pb, stationId, cameraId);
-            const cameraSoftware = useCameraSoftware(pb, stationId, cameraId);
-            const cameraLicenses = useCameraLicenses(pb, stationId, cameraId);
+            const showCamera = useShowCamera(api, cameraId);
+            const cameraDetail = useCameraDetail(api, cameraId);
+            const cameraSoftware = useCameraSoftware(api, cameraId);
+            const cameraLicenses = useCameraLicenses(api, cameraId);
 
-            const deleteCamera = useDeleteCamera(pb, stationId);
+            const deleteCamera = useDeleteCamera(api);
 
             return (
               <>

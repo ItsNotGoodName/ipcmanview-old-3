@@ -15,6 +15,7 @@ import { usePb } from "~/data/pb";
 import { theme } from "~/ui/theme";
 import { Row } from "~/ui/utility";
 import { IconAlert, IconSpinner } from "~/ui/Icon";
+import { ProxyStationApi } from "~/data/api";
 
 const Overflow = styled("div", {
   base: {
@@ -49,7 +50,9 @@ const Stations: Component = () => {
       id: "cameras",
       header: "cameras",
       cell: (info) => {
-        const total = useCamerasTotal(pb, () => info.row.original.id);
+        const api = new ProxyStationApi(pb, () => info.row.original.id);
+        const total = useCamerasTotal(api);
+
         return (
           <Row>
             <Switch>
