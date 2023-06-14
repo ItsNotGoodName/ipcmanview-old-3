@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDateTime, Utc};
 
-use crate::models::{QueryCameraFile, QueryCameraFileCursor, QueryCameraFileFilter};
+use crate::models::{CameraFileQuery, CameraFileQueryCursor, CameraFileQueryFilter};
 
-impl QueryCameraFileCursor {
+impl CameraFileQueryCursor {
     fn from_(cursor: &str) -> Result<(i64, DateTime<Utc>)> {
         let (first, second) = cursor.split_once("_").context("no seperator")?;
         let id: i64 = first.parse()?;
@@ -26,9 +26,9 @@ impl QueryCameraFileCursor {
     }
 }
 
-impl QueryCameraFileFilter {
+impl CameraFileQueryFilter {
     pub fn new() -> Self {
-        QueryCameraFileFilter {
+        CameraFileQueryFilter {
             start: None,
             end: None,
             camera_ids: vec![],
@@ -63,10 +63,10 @@ impl QueryCameraFileFilter {
     }
 }
 
-impl<'a> QueryCameraFile<'a> {
-    pub fn new(filter: &'a QueryCameraFileFilter) -> Self {
-        QueryCameraFile {
-            cursor: QueryCameraFileCursor::None,
+impl<'a> CameraFileQuery<'a> {
+    pub fn new(filter: &'a CameraFileQueryFilter) -> Self {
+        CameraFileQuery {
+            cursor: CameraFileQueryCursor::None,
             limit: 25,
             filter,
         }
@@ -88,7 +88,7 @@ impl<'a> QueryCameraFile<'a> {
     pub fn maybe_after(mut self, cursor: Option<String>) -> Result<Self> {
         if let Some(cursor) = cursor {
             if !cursor.is_empty() {
-                self.cursor = QueryCameraFileCursor::After(QueryCameraFileCursor::from(&cursor)?);
+                self.cursor = CameraFileQueryCursor::After(CameraFileQueryCursor::from(&cursor)?);
             }
         }
         Ok(self)
@@ -97,7 +97,7 @@ impl<'a> QueryCameraFile<'a> {
     pub fn maybe_before(mut self, cursor: Option<String>) -> Result<Self> {
         if let Some(cursor) = cursor {
             if !cursor.is_empty() {
-                self.cursor = QueryCameraFileCursor::Before(QueryCameraFileCursor::from(&cursor)?);
+                self.cursor = CameraFileQueryCursor::Before(CameraFileQueryCursor::from(&cursor)?);
             }
         }
         Ok(self)
@@ -115,7 +115,7 @@ mod tests {
         let (id, time) = (4, Utc::now().with_nanosecond(0).unwrap());
 
         assert_eq!(
-            QueryCameraFileCursor::from(&QueryCameraFileCursor::to(id, time)).unwrap(),
+            CameraFileQueryCursor::from(&CameraFileQueryCursor::to(id, time)).unwrap(),
             (id, time)
         );
     }

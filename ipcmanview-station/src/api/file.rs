@@ -5,18 +5,15 @@ use axum::{
     Json,
 };
 use axum_extra::extract::Query;
-use ipcmanview::models::{CameraFile, QueryCameraFile, QueryCameraFileFilter};
+use ipcmanview::models::{CameraFile, CameraFileQuery, CameraFileQueryFilter};
 
-use crate::{
-    app::AppState,
-    models::{FileFilterQuery, Total, TotalFileFilterQuery},
-};
+use crate::{app::AppState, dto};
 
 use super::api::{Error, ResultExt};
 
 pub async fn query_by_camera(
     Path(id): Path<i64>,
-    mut file_filter_query: Query<FileFilterQuery>,
+    mut file_filter_query: Query<dto::CameraFileQuery>,
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     file_filter_query.camera_ids = vec![id];
@@ -25,16 +22,16 @@ pub async fn query_by_camera(
 }
 
 pub async fn query(
-    Query(query): Query<FileFilterQuery>,
+    Query(query): Query<dto::CameraFileQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let filter = QueryCameraFileFilter::new()
+    let filter = CameraFileQueryFilter::new()
         .start(query.start)
         .end(query.end)
         .kinds(query.kinds)
         .events(query.events)
         .camera_ids(query.camera_ids);
-    let query = QueryCameraFile::new(&filter)
+    let query = CameraFileQuery::new(&filter)
         .maybe_before(query.before)
         .or_error(StatusCode::BAD_REQUEST)?
         .maybe_after(query.after)
@@ -49,7 +46,7 @@ pub async fn query(
 
 pub async fn total_by_camera(
     Path(id): Path<i64>,
-    mut filter_query: Query<TotalFileFilterQuery>,
+    mut filter_query: Query<dto::CameraFileTotalQuery>,
     state: State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     filter_query.camera_ids = vec![id];
@@ -58,10 +55,10 @@ pub async fn total_by_camera(
 }
 
 pub async fn total(
-    Query(query): Query<TotalFileFilterQuery>,
+    Query(query): Query<dto::CameraFileTotalQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let filter = QueryCameraFileFilter::new()
+    let filter = CameraFileQueryFilter::new()
         .start(query.start)
         .end(query.end)
         .kinds(query.kinds)
@@ -71,5 +68,5 @@ pub async fn total(
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(Total { total }))
+    Ok(Json(dto::TotalQueryResult { total }))
 }

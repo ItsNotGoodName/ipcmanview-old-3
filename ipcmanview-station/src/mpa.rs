@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app::AppState, utils};
 use ipcmanview::{
-    dto::{CreateCamera, UpdateCamera},
     models::{
-        Camera, CameraFile, IpcEvent, QueryCameraFile, QueryCameraFileFilter,
-        QueryCameraFileResult, ScanActive, ScanCompleted, ScanPending, ShowCamera,
+        Camera, CameraFile, CameraFileQuery, CameraFileQueryFilter, CameraFileQueryResult,
+        CameraShow, CreateCameraRequest, IpcEvent, ScanActive, ScanCompleted, ScanPending,
+        UpdateCameraRequest,
     },
     scan::{Scan, ScanKindPending},
 };
@@ -107,14 +107,14 @@ async fn files_page(
     current_query.after = None;
     current_query.before = None;
 
-    let filter = QueryCameraFileFilter::new()
+    let filter = CameraFileQueryFilter::new()
         .start(query.start)
         .end(query.end)
         .kinds(query.kinds)
         .events(query.events)
         .camera_ids(query.camera_ids);
 
-    let query = QueryCameraFile::new(&filter)
+    let query = CameraFileQuery::new(&filter)
         .maybe_before(query.before)?
         .maybe_after(query.after)?
         .maybe_limit(query.limit);
@@ -149,7 +149,7 @@ struct FilesPageTemplate {
     cameras: Vec<Camera>,
     ipc_events: Vec<String>,
     files_total: i32,
-    files: QueryCameraFileResult,
+    files: CameraFileQueryResult,
     before_query: String,
     after_query: String,
 }
@@ -200,7 +200,7 @@ async fn camera_page(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, MpaError> {
-    let show_cameras = ShowCamera::find(&state.pool, id).await?; // TODO: NotFound
+    let show_cameras = CameraShow::find(&state.pool, id).await?; // TODO: NotFound
 
     Ok(CameraPageTemplate { show_cameras })
 }
@@ -208,12 +208,12 @@ async fn camera_page(
 #[derive(Template)]
 #[template(path = "camera/show.jinja.html")]
 struct CameraPageTemplate {
-    show_cameras: ShowCamera,
+    show_cameras: CameraShow,
 }
 
 async fn camera_create(
     State(state): State<AppState>,
-    Form(form): Form<CreateCamera>,
+    Form(form): Form<CreateCameraRequest>,
 ) -> Result<impl IntoResponse, MpaError> {
     let id = form.create(&state.pool, &state.store).await?; // TODO: map to either BadRequest, Conflict, or InternalServerError
 
@@ -235,7 +235,7 @@ async fn camera_update(
     State(state): State<AppState>,
     Form(form): Form<CameraUpdate>,
 ) -> Result<impl IntoResponse, MpaError> {
-    UpdateCamera {
+    UpdateCameraRequest {
         id,
         ip: form.ip,
         username: form.username,

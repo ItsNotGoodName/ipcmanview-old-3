@@ -5,10 +5,10 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use ipcmanview::{ipc::IpcManager, models::Page};
+use ipcmanview::ipc::IpcManager;
 use serde_json::json;
 
-use crate::{app::AppState, models::PageQuery};
+use crate::app::AppState;
 
 pub struct Error(StatusCode, String, serde_json::Value);
 
@@ -80,10 +80,4 @@ impl AppState {
 
 pub async fn fallback() -> impl IntoResponse {
     Error::from(StatusCode::NOT_FOUND)
-}
-
-impl From<PageQuery> for Page {
-    fn from(value: PageQuery) -> Self {
-        Page::new(value.page, value.per_page)
-    }
 }

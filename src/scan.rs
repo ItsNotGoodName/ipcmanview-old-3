@@ -3,7 +3,7 @@ use std::time::Instant;
 use anyhow::{bail, Result};
 use chrono::{DateTime, Duration, Local, TimeZone, Utc};
 
-use crate::models::ScanCompleted;
+use crate::models::{ScanCompleted, ScanKind};
 
 pub struct Scan {}
 
@@ -93,15 +93,6 @@ impl Iterator for ScanRangeIterator {
 
         Some((ScanRange { start, end }, percent))
     }
-}
-
-#[derive(sqlx::Type, serde::Serialize, Debug)]
-#[sqlx(rename_all = "snake_case")]
-#[serde(rename_all = "snake_case")]
-pub enum ScanKind {
-    Full,
-    Cursor,
-    Manual,
 }
 
 impl From<ScanKindPending> for ScanKind {

@@ -3,8 +3,8 @@ use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
 
-use crate::models::{Page, PageResult, ScanActive, ScanCompleted, ScanPending};
-use crate::scan::{Scan, ScanActor, ScanCamera, ScanKind, ScanKindPending, ScanRange};
+use crate::models::{Page, PageResult, ScanActive, ScanCompleted, ScanKind, ScanPending};
+use crate::scan::{Scan, ScanActor, ScanCamera, ScanKindPending, ScanRange};
 
 use super::NotFound;
 

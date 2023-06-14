@@ -2,11 +2,11 @@ use anyhow::{Context, Result};
 use chrono::Utc;
 use sqlx::{QueryBuilder, Sqlite, SqlitePool};
 
-use crate::dto::{CreateCamera, UpdateCamera};
 use crate::{
     models::{
-        Camera, CameraDetail, CameraFile, CameraLicense, CameraSoftware, ICamera, QueryCameraFile,
-        QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult,
+        Camera, CameraDetail, CameraFile, CameraFileQuery, CameraFileQueryCursor,
+        CameraFileQueryFilter, CameraFileQueryResult, CameraLicense, CameraSoftware,
+        CreateCameraRequest, ICamera, UpdateCameraRequest,
     },
     scan::Scan,
 };
@@ -14,7 +14,7 @@ use crate::{
 use super::utils::CountRow;
 use super::NotFound;
 
-impl CreateCamera {
+impl CreateCameraRequest {
     pub(crate) async fn create_db(self, pool: &SqlitePool) -> Result<i64> {
         let mut pool = pool.begin().await?;
 
@@ -68,7 +68,7 @@ impl CreateCamera {
     }
 }
 
-impl UpdateCamera {
+impl UpdateCameraRequest {
     pub(crate) async fn update_db(self, pool: &SqlitePool) -> Result<()> {
         sqlx::query!(
             r#"
@@ -255,13 +255,13 @@ impl CameraLicense {
 }
 
 trait CameraFileFilter<'a> {
-    fn push_camera_file_filter(self, query: &'a QueryCameraFileFilter) -> QueryBuilder<'a, Sqlite>;
+    fn push_camera_file_filter(self, query: &'a CameraFileQueryFilter) -> QueryBuilder<'a, Sqlite>;
 }
 
 impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
     fn push_camera_file_filter(
         mut self,
-        filter: &'a QueryCameraFileFilter,
+        filter: &'a CameraFileQueryFilter,
     ) -> QueryBuilder<'a, Sqlite> {
         self.push(" WHERE 1=1");
 
@@ -311,7 +311,7 @@ impl<'a> CameraFileFilter<'a> for QueryBuilder<'a, Sqlite> {
 }
 
 impl CameraFile {
-    pub async fn total(pool: &SqlitePool, filter: &QueryCameraFileFilter) -> Result<i32> {
+    pub async fn total(pool: &SqlitePool, filter: &CameraFileQueryFilter) -> Result<i32> {
         let count = QueryBuilder::new("SELECT COUNT(id) AS count FROM camera_files")
             .push_camera_file_filter(&filter)
             .build_query_as::<CountRow>()
@@ -325,8 +325,8 @@ impl CameraFile {
 
     pub(crate) async fn query_db(
         pool: &SqlitePool,
-        query: QueryCameraFile<'_>,
-    ) -> Result<QueryCameraFileResult> {
+        query: CameraFileQuery<'_>,
+    ) -> Result<CameraFileQueryResult> {
         let mut has_after = false;
         let mut has_before = false;
 
@@ -334,7 +334,7 @@ impl CameraFile {
         let mut qb =
             QueryBuilder::new("SELECT * FROM camera_files").push_camera_file_filter(query.filter);
         let files = match query.cursor {
-            QueryCameraFileCursor::After((id, time)) => {
+            CameraFileQueryCursor::After((id, time)) => {
                 let mut files = qb
                     .push(" AND (start_time < ")
                     .push_bind(time)
@@ -369,7 +369,7 @@ impl CameraFile {
 
                 files
             }
-            QueryCameraFileCursor::Before((id, time)) => {
+            CameraFileQueryCursor::Before((id, time)) => {
                 let mut files = qb
                     .push(" AND (start_time > ")
                     .push_bind(time)
@@ -406,7 +406,7 @@ impl CameraFile {
 
                 files
             }
-            QueryCameraFileCursor::None => {
+            CameraFileQueryCursor::None => {
                 let mut files = qb
                     .push(" ORDER BY start_time DESC, camera_id DESC LIMIT ")
                     .push_bind(limit)
@@ -424,18 +424,18 @@ impl CameraFile {
         };
 
         let before = match files.first() {
-            Some(first) => QueryCameraFileCursor::to(first.camera_id, first.start_time),
+            Some(first) => CameraFileQueryCursor::to(first.camera_id, first.start_time),
             None => "".to_string(),
         };
 
         let after = match files.last() {
-            Some(last) => QueryCameraFileCursor::to(last.camera_id, last.start_time),
+            Some(last) => CameraFileQueryCursor::to(last.camera_id, last.start_time),
             None => "".to_string(),
         };
 
         let count = files.len() as i32;
 
-        Ok(QueryCameraFileResult {
+        Ok(CameraFileQueryResult {
             files,
             has_before,
             before,

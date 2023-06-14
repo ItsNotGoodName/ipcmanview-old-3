@@ -43,6 +43,36 @@ export interface CameraFile {
   updated_at: any;
 }
 
+export interface CameraFileQuery {
+  after?: string | null;
+  before?: string | null;
+  camera_ids?: number[];
+  end?: null;
+  events?: string[];
+  kinds?: string[];
+  /** @format int32 */
+  limit?: number | null;
+  start?: null;
+}
+
+export interface CameraFileQueryResult {
+  after: string;
+  before: string;
+  /** @format int32 */
+  count: number;
+  files: CameraFile[];
+  has_after: boolean;
+  has_before: boolean;
+}
+
+export interface CameraFileTotalQuery {
+  camera_ids?: number[];
+  end?: null;
+  events?: string[];
+  kinds?: string[];
+  start?: null;
+}
+
 export interface CameraLicense {
   abroad_info: string;
   all_type: boolean;
@@ -71,6 +101,20 @@ export interface CameraLicense {
   username: string;
 }
 
+export interface CameraShow {
+  created_at: any;
+  detail: CameraDetail;
+  /** @format int32 */
+  file_total: number;
+  /** @format int64 */
+  id: number;
+  ip: string;
+  licenses: CameraLicense[];
+  refreshed_at: any;
+  software: CameraSoftware;
+  username: string;
+}
+
 export interface CameraSoftware {
   build: string;
   build_date: string;
@@ -79,7 +123,7 @@ export interface CameraSoftware {
   web_version: string;
 }
 
-export interface CreateCamera {
+export interface CreateCameraRequest {
   ip: string;
   password: string;
   username: string;
@@ -90,45 +134,11 @@ export interface DateTimeRange {
   start: any;
 }
 
-export interface FileFilterQuery {
-  after?: string | null;
-  before?: string | null;
-  camera_ids?: number[];
-  end?: null;
-  events?: string[];
-  kinds?: string[];
-  /** @format int32 */
-  limit?: number | null;
-  start?: null;
-}
-
 export interface PageQuery {
   /** @format int32 */
   page?: number;
   /** @format int32 */
   per_page?: number;
-}
-
-export interface PageResultScanCompleted {
-  items: ScanCompleted[];
-  /** @format int32 */
-  page: number;
-  /** @format int32 */
-  per_page: number;
-  /** @format int32 */
-  total_items: number;
-  /** @format int32 */
-  total_pages: number;
-}
-
-export interface QueryCameraFileResult {
-  after: string;
-  before: string;
-  /** @format int32 */
-  count: number;
-  files: CameraFile[];
-  has_after: boolean;
-  has_before: boolean;
 }
 
 export interface ScanActive {
@@ -171,6 +181,18 @@ export interface ScanCompleted {
   upserted: number;
 }
 
+export interface ScanCompletedPageResult {
+  items: ScanCompleted[];
+  /** @format int32 */
+  page: number;
+  /** @format int32 */
+  per_page: number;
+  /** @format int32 */
+  total_items: number;
+  /** @format int32 */
+  total_pages: number;
+}
+
 export interface ScanPending {
   /** @format int64 */
   camera_id: number;
@@ -181,34 +203,12 @@ export interface ScanPending {
   range_start: any;
 }
 
-export interface ShowCamera {
-  created_at: any;
-  detail: CameraDetail;
-  /** @format int32 */
-  file_total: number;
-  /** @format int64 */
-  id: number;
-  ip: string;
-  licenses: CameraLicense[];
-  refreshed_at: any;
-  software: CameraSoftware;
-  username: string;
-}
-
-export interface Total {
+export interface TotalQueryResult {
   /** @format int32 */
   total: number;
 }
 
-export interface TotalFileFilterQuery {
-  camera_ids?: number[];
-  end?: null;
-  events?: string[];
-  kinds?: string[];
-  start?: null;
-}
-
-export interface UpdateCamera {
+export interface UpdateCameraRequest {
   /** @format int64 */
   id: number;
   ip?: string | null;

@@ -1,18 +1,17 @@
 use anyhow::Result;
 use sqlx::SqlitePool;
 
-use crate::dto::{CreateCamera, UpdateCamera};
 use crate::ipc::{IpcDetail, IpcLicenses, IpcManager, IpcSoftware, IpcStore};
 use crate::models::{
-    Camera, CameraDetail, CameraFile, CameraLicense, CameraScanResult, CameraSoftware,
-    QueryCameraFile, QueryCameraFileCursor, QueryCameraFileFilter, QueryCameraFileResult,
-    ScanCompleted, ShowCamera,
+    Camera, CameraDetail, CameraFile, CameraFileQuery, CameraFileQueryCursor,
+    CameraFileQueryFilter, CameraFileQueryResult, CameraLicense, CameraScanResult, CameraShow,
+    CameraSoftware, CreateCameraRequest, ScanCompleted, UpdateCameraRequest,
 };
 use crate::scan::{Scan, ScanActor, ScanKindPending};
 
 // -------------------- Camera
 
-impl CreateCamera {
+impl CreateCameraRequest {
     pub async fn create(self, pool: &SqlitePool, store: &IpcStore) -> Result<i64> {
         // Create in database
         let id = self.create_db(pool).await?;
@@ -27,7 +26,7 @@ impl CreateCamera {
     }
 }
 
-impl UpdateCamera {
+impl UpdateCameraRequest {
     pub async fn update(self, pool: &SqlitePool, store: &IpcStore) -> Result<()> {
         let id = self.id;
         // Update in database
@@ -52,7 +51,7 @@ impl Camera {
     }
 }
 
-impl ShowCamera {
+impl CameraShow {
     // TODO: make this into a single query inside of db crate
     pub async fn find(pool: &SqlitePool, id: i64) -> Result<Self> {
         let detail = CameraDetail::find(pool, id).await?;
@@ -61,9 +60,9 @@ impl ShowCamera {
         let camera = Camera::find(pool, id).await?;
 
         let file_total =
-            CameraFile::total(pool, &QueryCameraFileFilter::new().camera_ids(vec![id])).await?;
+            CameraFile::total(pool, &CameraFileQueryFilter::new().camera_ids(vec![id])).await?;
 
-        Ok(ShowCamera {
+        Ok(CameraShow {
             id: camera.id,
             ip: camera.ip,
             username: camera.username,
@@ -102,10 +101,10 @@ impl CameraFile {
     pub async fn query(
         pool: &SqlitePool,
         store: &IpcStore,
-        query: QueryCameraFile<'_>,
-    ) -> Result<QueryCameraFileResult> {
+        query: CameraFileQuery<'_>,
+    ) -> Result<CameraFileQueryResult> {
         // Cursor scan when no cursor is supplied
-        if let QueryCameraFileCursor::None = query.cursor {
+        if let CameraFileQueryCursor::None = query.cursor {
             Scan::queue_all(pool, store, ScanKindPending::Cursor).await?;
         }
 

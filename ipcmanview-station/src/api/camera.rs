@@ -7,12 +7,14 @@ use axum::{
 };
 use ipcmanview::{
     db,
-    dto::{CreateCamera, UpdateCamera},
-    models::{Camera, CameraDetail, CameraLicense, CameraSoftware, ShowCamera},
+    models::{
+        Camera, CameraDetail, CameraLicense, CameraShow, CameraSoftware, CreateCameraRequest,
+        UpdateCameraRequest,
+    },
 };
 use serde_json::json;
 
-use crate::{app::AppState, models::Total};
+use crate::{app::AppState, dto};
 
 use super::api::{Error, ResultExt};
 
@@ -29,7 +31,7 @@ pub async fn total(State(state): State<AppState>) -> Result<impl IntoResponse, E
         .await
         .or_error(StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Json(Total { total }))
+    Ok(Json(dto::TotalQueryResult { total }))
 }
 
 pub async fn fs(
@@ -83,7 +85,7 @@ pub async fn fs(
 
 pub async fn create(
     State(state): State<AppState>,
-    Json(json): Json<CreateCamera>,
+    Json(json): Json<CreateCameraRequest>,
 ) -> Result<impl IntoResponse, Error> {
     // TODO: validate request
     let id = json.create(&state.pool, &state.store).await.map_err(|e| {
@@ -118,7 +120,7 @@ pub async fn show(
     Path(id): Path<i64>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
-    let show_camera = ShowCamera::find(&state.pool, id).await.map_err(|e| {
+    let show_camera = CameraShow::find(&state.pool, id).await.map_err(|e| {
         if db::NotFound == e {
             Error::from((StatusCode::NOT_FOUND, e))
         } else {
@@ -131,7 +133,7 @@ pub async fn show(
 
 pub async fn update(
     State(state): State<AppState>,
-    Json(json): Json<UpdateCamera>,
+    Json(json): Json<UpdateCameraRequest>,
 ) -> Result<impl IntoResponse, Error> {
     // TODO: validate request
     json.update(&state.pool, &state.store).await.map_err(|e| {

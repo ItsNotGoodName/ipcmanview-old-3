@@ -4,6 +4,8 @@ use utoipa::ToSchema;
 
 use crate::utils;
 
+mod page;
+
 #[derive(Deserialize, ToSchema, Debug)]
 pub struct PageQuery {
     #[serde(default)]
@@ -19,12 +21,12 @@ pub struct DateTimeRange {
 }
 
 #[derive(Serialize, ToSchema, Debug)]
-pub struct Total {
+pub struct TotalQueryResult {
     pub total: i32,
 }
 
 #[derive(Deserialize, ToSchema, Debug)]
-pub struct TotalFileFilterQuery {
+pub struct CameraFileTotalQuery {
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
     pub start: Option<DateTime<Utc>>,
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
@@ -38,7 +40,7 @@ pub struct TotalFileFilterQuery {
 }
 
 #[derive(Deserialize, ToSchema, Debug)]
-pub struct FileFilterQuery {
+pub struct CameraFileQuery {
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]
     pub before: Option<String>,
     #[serde(default, deserialize_with = "utils::empty_string_as_none")]

@@ -1,13 +1,25 @@
-use std::ops::AddAssign;
-
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::scan::ScanKind;
+mod page;
+mod query;
+mod scan;
 
-pub mod page;
-pub mod query;
+#[derive(Deserialize, ToSchema, Debug)]
+pub struct CreateCameraRequest {
+    pub ip: String,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Deserialize, ToSchema, Debug)]
+pub struct UpdateCameraRequest {
+    pub id: i64,
+    pub ip: Option<String>,
+    pub username: Option<String>,
+    pub password: Option<String>,
+}
 
 #[derive(Serialize, ToSchema, Debug)]
 pub struct Camera {
@@ -19,7 +31,7 @@ pub struct Camera {
 }
 
 #[derive(Serialize, ToSchema, Debug)]
-pub struct ShowCamera {
+pub struct CameraShow {
     pub id: i64,
     pub ip: String,
     pub username: String,
@@ -85,7 +97,7 @@ pub struct Page {
 }
 
 #[derive(Serialize, ToSchema, Debug)]
-#[aliases(PageResultScanCompleted = PageResult<ScanCompleted>)]
+#[aliases(ScanCompletedPageResult = PageResult<ScanCompleted>)]
 pub struct PageResult<T> {
     pub page: i32,
     pub per_page: i32,
@@ -95,14 +107,14 @@ pub struct PageResult<T> {
 }
 
 #[derive(Debug)]
-pub enum QueryCameraFileCursor {
+pub enum CameraFileQueryCursor {
     Before((i64, DateTime<Utc>)),
     After((i64, DateTime<Utc>)),
     None,
 }
 
 #[derive(Debug)]
-pub struct QueryCameraFileFilter {
+pub struct CameraFileQueryFilter {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
     pub camera_ids: Vec<i64>,
@@ -111,14 +123,14 @@ pub struct QueryCameraFileFilter {
 }
 
 #[derive(Debug)]
-pub struct QueryCameraFile<'a> {
-    pub cursor: QueryCameraFileCursor,
+pub struct CameraFileQuery<'a> {
+    pub cursor: CameraFileQueryCursor,
     pub limit: i32,
-    pub filter: &'a QueryCameraFileFilter,
+    pub filter: &'a CameraFileQueryFilter,
 }
 
 #[derive(Serialize, ToSchema, Debug)]
-pub struct QueryCameraFileResult {
+pub struct CameraFileQueryResult {
     pub files: Vec<CameraFile>,
     pub has_before: bool,
     pub before: String,
@@ -140,11 +152,13 @@ pub struct CameraScanResult {
     pub deleted: u64,
 }
 
-impl AddAssign for CameraScanResult {
-    fn add_assign(&mut self, rhs: Self) {
-        self.upserted += rhs.upserted;
-        self.deleted += rhs.deleted;
-    }
+#[derive(sqlx::Type, serde::Serialize, Debug)]
+#[sqlx(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case")]
+pub enum ScanKind {
+    Full,
+    Cursor,
+    Manual,
 }
 
 #[derive(Serialize, ToSchema, Debug)]

@@ -10,10 +10,7 @@ use ipcmanview::{
     scan::{Scan, ScanKindPending, ScanRange},
 };
 
-use crate::{
-    app::AppState,
-    models::{DateTimeRange, PageQuery},
-};
+use crate::{app::AppState, dto};
 
 use super::api::{Error, ResultExt};
 
@@ -31,7 +28,7 @@ pub async fn full(
 pub async fn manual(
     Path(id): Path<i64>,
     State(state): State<AppState>,
-    Json(range): Json<DateTimeRange>,
+    Json(range): Json<dto::DateTimeRange>,
 ) -> Result<impl IntoResponse, Error> {
     let range = ScanRange::new(range.start, range.end).or_error(StatusCode::BAD_REQUEST)?;
     Scan::queue(
@@ -63,7 +60,7 @@ pub async fn pending_list(State(state): State<AppState>) -> Result<impl IntoResp
 }
 
 pub async fn completed_list(
-    Query(query): Query<PageQuery>,
+    Query(query): Query<dto::PageQuery>,
     State(state): State<AppState>,
 ) -> Result<impl IntoResponse, Error> {
     let page = Page::from(query);
