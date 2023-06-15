@@ -18,7 +18,7 @@ import {
 } from "solid-js";
 
 import { PbAuth, UserRecord } from "./records";
-import { StationApi, StationContext, StationContextType } from "./station";
+import { StationApi, StationContext, StationContextType } from "~/data/station";
 
 const STATIONS_URI = "/app/stations";
 

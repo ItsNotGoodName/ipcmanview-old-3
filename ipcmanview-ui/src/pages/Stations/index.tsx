@@ -9,8 +9,9 @@ import {
 import { styled } from "@macaron-css/solid";
 
 import { Card, CardHeader } from "~/ui/Card";
-import { StationRecord } from "~/data/records";
-import { useCamerasTotal, useStations } from "~/data/hooks";
+import { StationRecord } from "~/data/pb/records";
+import { useStations } from "~/data/pb/hooks";
+import { useCamerasTotal } from "~/data/station/hooks";
 import { PbStationApi, usePb } from "~/data/pb";
 import { theme } from "~/ui/theme";
 import { Row } from "~/ui/utility";

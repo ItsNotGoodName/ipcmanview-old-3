@@ -1,7 +1,7 @@
 import { QueryKey } from "@tanstack/solid-query";
 import { Accessor } from "solid-js";
 
-import { StationApi } from "./station";
+import { StationApi } from ".";
 
 export class DirectStationApi implements StationApi {
   constructor(readonly url: Accessor<string>) {}

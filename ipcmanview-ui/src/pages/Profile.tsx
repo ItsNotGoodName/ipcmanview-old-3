@@ -8,7 +8,7 @@ import Button from "~/ui/Button";
 import ErrorText from "~/ui/ErrorText";
 import InputText from "~/ui/InputText";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
-import { UserRecord } from "~/data/records";
+import { UserRecord } from "~/data/pb/records";
 import { createMutationForm, formatDateTime } from "~/data/utils";
 import { usePb, usePbUser } from "~/data/pb";
 import { minScreen, theme } from "~/ui/theme";

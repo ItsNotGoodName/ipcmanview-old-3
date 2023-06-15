@@ -6,7 +6,7 @@ const fs = require("fs");
 generateApi({
   name: "models.ts",
   // set to `false` to prevent the tool from writing to disk
-  output: path.resolve(process.cwd(), "./src/data"),
+  output: path.resolve(process.cwd(), "./src/data/station"),
   input: path.resolve(process.cwd(), "../ipcmanview-station/swagger.json"),
   generateClient: false,
   primitiveTypeConstructs: (constructs) => ({

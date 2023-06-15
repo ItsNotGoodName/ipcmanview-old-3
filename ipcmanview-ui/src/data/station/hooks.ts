@@ -1,4 +1,3 @@
-import PocketBase, { ClientResponseError } from "pocketbase";
 import { Accessor } from "solid-js";
 import {
   createInfiniteQuery,
@@ -8,6 +7,7 @@ import {
   CreateQueryResult,
   Query,
 } from "@tanstack/solid-query";
+import { ClientResponseError } from "pocketbase";
 
 import {
   Camera,
@@ -24,12 +24,10 @@ import {
   CameraFileQueryResult,
   CameraFileQuery,
 } from "./models";
-import { StationRecord } from "./records";
-import { searchParamsFromObject } from "./utils";
-import { StationApi } from "./station";
+import { searchParamsFromObject } from "~/data/utils";
+import { StationApi } from ".";
 
 const q = {
-  stations: ["stations"],
   cameras: ["cameras"],
   camerasTotal: ["camerasTotal"],
   cameraShow: (id: number) => [q.cameras[0], id, "cameraShow"],
@@ -53,14 +51,6 @@ const p = {
     return key !== null && (key[0] == q.files[0] || key[0] == q.filesTotal[0]);
   },
 };
-
-export const useStations = (
-  pb: PocketBase
-): CreateQueryResult<Array<StationRecord>, ClientResponseError> =>
-  createQuery(
-    () => q.stations,
-    () => pb.collection("stations").getFullList()
-  );
 
 export const useCameras = (
   api: StationApi
