@@ -7,6 +7,7 @@ import {
   ResponseData,
 } from "@modular-forms/solid";
 import { CreateMutationResult, CreateQueryResult } from "@tanstack/solid-query";
+import { ClientResponseError } from "pocketbase";
 import { Accessor, createMemo } from "solid-js";
 
 export function formatDateTime(date: Date | string): string {
@@ -47,7 +48,11 @@ export function createMutationForm<
   TFieldValues extends FieldValues,
   TVariables
 >(
-  mutationResult: CreateMutationResult<unknown, ResponseError, TVariables>,
+  mutationResult: CreateMutationResult<
+    unknown,
+    ClientResponseError,
+    TVariables
+  >,
   formStore: FormStore<TFieldValues, ResponseData>
 ): [
   (data: TVariables) => Promise<unknown>,
@@ -72,7 +77,7 @@ export function createMutationForm<
 }
 
 function formErrorsFromMutation<T extends FieldValues>(
-  err: ResponseError | null
+  err: ClientResponseError | null
 ): FormError<T> | null {
   if (!err) {
     return null;
