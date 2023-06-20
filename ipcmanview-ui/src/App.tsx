@@ -7,18 +7,14 @@ import { PbProvider } from "~/data/pb";
 import { theme } from "~/ui/theme";
 import { themeModeClass } from "~/ui/theme-mode";
 
-import Application from "~/views/Application";
-import Debug from "~/views/Debug";
-import Loading from "~/views/Loading";
-import Login from "~/views/Login";
+import { Application } from "~/views/Application";
+import { Debug } from "~/views/Debug";
+import { Loading } from "~/views/Loading";
+import { Login } from "~/views/Login";
 
 globalStyle("a", {
   textDecoration: "none",
   color: theme.color.Blue,
-});
-
-globalStyle("a:hover", {
-  textDecoration: "underline",
 });
 
 const Root = styled("div", {
@@ -44,5 +40,3 @@ export const App: Component = () => {
     </Root>
   );
 };
-
-export default App;

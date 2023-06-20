@@ -26,7 +26,7 @@ const iconClass = style({
   width: theme.space[10],
 });
 
-const Loading: Component = () => (
+export const Loading: Component = () => (
   <LayoutCenter>
     <Center>
       <Title>IPCManView</Title>
@@ -36,5 +36,3 @@ const Loading: Component = () => (
     </Center>
   </LayoutCenter>
 );
-
-export default Loading;

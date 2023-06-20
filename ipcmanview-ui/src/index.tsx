@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 
 import "modern-normalize/modern-normalize.css";
 
-import App from "./App";
+import { App } from "./App";
 
 const queryClient = new QueryClient();
 const root = document.getElementById("root");

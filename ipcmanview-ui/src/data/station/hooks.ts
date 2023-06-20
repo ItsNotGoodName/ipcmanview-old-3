@@ -70,12 +70,14 @@ export const useCamerasTotal = (
 
 export const useCreateCamera = (api: StationApi) => {
   const queryClient = useQueryClient();
-  return createMutation({
+  return createMutation<any, ClientResponseError, CreateCameraRequest>({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: api.wrapKey(q.cameras) });
-      queryClient.invalidateQueries({ queryKey: api.wrapKey(q.camerasTotal) });
+      queryClient.invalidateQueries({
+        queryKey: api.wrapKey(q.camerasTotal),
+      });
     },
-    mutationFn: (data: CreateCameraRequest) =>
+    mutationFn: (data) =>
       api.send("/cameras", {
         method: "POST",
         body: JSON.stringify(data),

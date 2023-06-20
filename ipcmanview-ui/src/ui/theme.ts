@@ -112,6 +112,14 @@ export const minScreen = {
   "2xl": "screen and (min-width: 1536px)",
 };
 
+export const maxScreen = {
+  sm: "screen and (max-width: 639px)",
+  md: "screen and (max-width: 767px)",
+  lg: "screen and (max-width: 1023px)",
+  xl: "screen and (max-width: 1279px)",
+  "2xl": "screen and (max-width: 1535px)",
+};
+
 const themeDefault = {
   space,
   size,

@@ -1,47 +1,68 @@
+import { keyframes } from "@macaron-css/core";
 import { styled } from "@macaron-css/solid";
-import { Accessor, Component, createSignal, JSX } from "solid-js";
+import {
+  Accessor,
+  Component,
+  createEffect,
+  createSignal,
+  JSX,
+  onCleanup,
+  ParentComponent,
+  Show,
+} from "solid-js";
 
+import { buttonVariants } from "./Button";
 import { theme } from "./theme";
 import { utility } from "./utility";
 
-const Details = styled("details", {
-  base: {
-    display: "inline-block",
-    position: "relative",
-  },
-});
+const TheDropdown = styled("details", {});
 
-type DropdownProps = {
+export type DropdownProps = {
   children: (props: {
     open: Accessor<boolean>;
     close: () => void;
   }) => JSX.Element;
 };
 
-const Dropdown: Component<DropdownProps> = (props) => {
+export const Dropdown: Component<DropdownProps> = (props) => {
   const [open, setOpen] = createSignal(false);
   let det: HTMLDetailsElement;
   const close = () => (det.open = false);
 
+  const onClick = (ev: MouseEvent) => {
+    if (!det.contains(ev.target as Node)) {
+      det.open = false;
+    }
+  };
+
+  createEffect(() => {
+    if (open()) {
+      document.addEventListener("click", onClick);
+    } else {
+      document.removeEventListener("click", onClick);
+    }
+  });
+
+  onCleanup(() => {
+    document.removeEventListener("click", onClick);
+  });
+
   return (
-    <Details
+    <TheDropdown
       ref={det!}
       onToggle={() => {
         setOpen(det.open);
       }}
-      onFocusOut={(e) => {
-        if (!e.relatedTarget || !det.contains(e.relatedTarget as Node))
-          det.open = false;
-      }}
     >
       <props.children open={open} close={close} />
-    </Details>
+    </TheDropdown>
   );
 };
 
-export const DropdownButton = styled("summary", {
+export const DropdownSummary = styled("summary", {
   base: {
     cursor: "pointer",
+    overflow: "hidden",
     selectors: {
       ["&::marker"]: {
         content: "",
@@ -50,25 +71,78 @@ export const DropdownButton = styled("summary", {
   },
 });
 
-export const DropdownContent = styled("div", {
+export const DropdownButton = styled("summary", {
   base: {
-    ...utility.shadow,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    borderRadius: theme.borderRadius,
+    cursor: "pointer",
+    userSelect: "none",
+    selectors: {
+      ["&::marker"]: {
+        content: "",
+      },
+      ["&:hover"]: {
+        opacity: theme.opacity.active,
+      },
+      [`${TheDropdown}[open] &`]: {
+        opacity: theme.opacity.active,
+      },
+    },
+  },
+  variants: buttonVariants,
+  defaultVariants: {
+    size: "medium",
+    color: "primary",
+  },
+});
+
+const appearAnimation = keyframes({
+  from: { transform: "scale(95%)", opacity: 0 },
+  to: { transform: "scale(100%)", opacity: 1 },
+});
+
+const TheDropdownEnd = styled("div", {
+  base: {
+    display: "flex",
+    flexDirection: "row-reverse",
+  },
+});
+
+const TheDropdownContent = styled("div", {
+  base: {
+    ...utility.shadowXl,
     zIndex: 10,
     position: "absolute",
+    width: theme.space[32],
     borderRadius: theme.borderRadius,
-    minInlineSize: "max-content",
-    padding: theme.space[2],
     backgroundColor: theme.color.Surface0,
     border: `${theme.space.px} solid ${theme.color.Overlay0}`,
-  },
-  variants: {
-    position: {
-      end: {
-        right: 1,
-        marginTop: theme.space[1],
+    marginTop: theme.space[1],
+    selectors: {
+      [`${TheDropdown}[open] &`]: {
+        animation: `${appearAnimation} 0.1s`,
       },
+      [`${TheDropdownEnd} &`]: {},
     },
   },
 });
 
-export default Dropdown;
+type DropdownContentProps = {
+  end?: boolean;
+} & JSX.HTMLAttributes<HTMLDivElement>;
+
+export const DropdownContent: ParentComponent<DropdownContentProps> = (
+  props
+) => (
+  <Show
+    when={props.end}
+    fallback={
+      <TheDropdownContent {...props}>{props.children}</TheDropdownContent>
+    }
+  >
+    <TheDropdownEnd>
+      <TheDropdownContent {...props}>{props.children}</TheDropdownContent>
+    </TheDropdownEnd>
+  </Show>
+);

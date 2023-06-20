@@ -1,14 +1,13 @@
 import { styled } from "@macaron-css/solid";
 import { Component, JSX, mergeProps, Show, splitProps } from "solid-js";
 
-import ErrorText from "./ErrorText";
+import { ErrorText } from "./ErrorText";
 import { theme } from "./theme";
+import { utility } from "./utility";
 
 const Control = styled("div", {
   base: {
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.space[2],
+    ...utility.stack("2"),
   },
 });
 
@@ -37,7 +36,7 @@ const Input = styled("input", {
     },
     error: {
       true: {
-        borderColor: theme.color.Red,
+        border: `${theme.space.px} solid ${theme.color.Red}`,
       },
     },
   },
@@ -58,7 +57,7 @@ type InputTextProps = {
   size?: "small" | "medium" | "large";
 } & JSX.InputHTMLAttributes<HTMLInputElement>;
 
-const InputText: Component<InputTextProps> = (props) => {
+export const InputText: Component<InputTextProps> = (props) => {
   const [, other] = splitProps(mergeProps({ type: "text" }, props), [
     "error",
     "label",
@@ -78,5 +77,3 @@ const InputText: Component<InputTextProps> = (props) => {
     </Control>
   );
 };
-
-export default InputText;

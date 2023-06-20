@@ -1,10 +1,11 @@
 import { styled } from "@macaron-css/solid";
 import {
-  RiDesignContrastFill,
-  RiWeatherMoonFill,
-  RiWeatherSunFill,
+  RiDesignContrastLine,
+  RiWeatherMoonLine,
+  RiWeatherSunLine,
 } from "solid-icons/ri";
-import { Component, Match, Switch } from "solid-js";
+import { Component, JSX, Match, ParentComponent, Switch } from "solid-js";
+import { IconProps } from "solid-icons";
 
 import {
   DARK_MODE,
@@ -14,7 +15,7 @@ import {
 } from "./theme-mode";
 import { theme } from "./theme";
 
-const Root = styled("button", {
+const TheButton = styled("button", {
   base: {
     padding: 0,
     border: "none",
@@ -24,19 +25,29 @@ const Root = styled("button", {
   },
 });
 
-const ThemeSwitcher: Component<{ class?: string; iconClass?: string }> = (
-  props
-) => (
-  <Root onClick={toggleThemeMode} class={props.class}>
-    <Switch fallback={<RiDesignContrastFill class={props.iconClass} />}>
-      <Match when={themeMode() == DARK_MODE}>
-        <RiWeatherMoonFill class={props.iconClass} />
-      </Match>
-      <Match when={themeMode() == LIGHT_MODE}>
-        <RiWeatherSunFill class={props.iconClass} />
-      </Match>
-    </Switch>
-  </Root>
+export const ThemeSwitcher: ParentComponent<
+  Omit<
+    JSX.ButtonHTMLAttributes<HTMLButtonElement>,
+    "onClick" | "aria-label" | "title"
+  >
+> = (props) => (
+  <TheButton
+    {...props}
+    onClick={toggleThemeMode}
+    aria-label="Toggle Theme"
+    title="Toggle Theme"
+  />
 );
 
-export default ThemeSwitcher;
+export const ThemeSwitcherIcon: Component<IconProps> = (props) => {
+  return (
+    <Switch fallback={<RiDesignContrastLine {...props} />}>
+      <Match when={themeMode() == DARK_MODE}>
+        <RiWeatherMoonLine {...props} />
+      </Match>
+      <Match when={themeMode() == LIGHT_MODE}>
+        <RiWeatherSunLine {...props} />
+      </Match>
+    </Switch>
+  );
+};

@@ -1,7 +1,7 @@
 import { Component } from "solid-js";
 
-const Home: Component = () => {
-  return <>Home</>;
-};
+import { LayoutDefault } from "~/ui/Layouts";
 
-export default Home;
+export const Home: Component = () => {
+  return <LayoutDefault>Home</LayoutDefault>;
+};

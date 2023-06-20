@@ -1,11 +1,15 @@
+import { keyframes } from "@macaron-css/core";
 import { styled } from "@macaron-css/solid";
 
 import { theme } from "./theme";
-import { utility } from "./utility";
 
-const Dialog = styled("dialog", {
+const appearAnimation = keyframes({
+  from: { transform: "translateY(-20%)", opacity: 0 },
+  to: { transform: "translateY(0%)", opacity: 1 },
+});
+
+export const Dialog = styled("dialog", {
   base: {
-    ...utility.shadowXl,
     marginTop: "10vh",
     padding: "0",
     width: "auto",
@@ -14,7 +18,11 @@ const Dialog = styled("dialog", {
     overflowY: "auto",
     background: "none",
     border: "none",
+    color: theme.color.Text,
+    selectors: {
+      ["&[open]"]: {
+        animation: `${appearAnimation} 0.1s`,
+      },
+    },
   },
 });
-
-export default Dialog;

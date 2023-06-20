@@ -9,20 +9,20 @@ import {
 } from "@solidjs/router";
 import {
   RiBuildingsHome5Line,
-  RiDesignFocus2Line,
-  RiSystemLogoutBoxRLine,
-  RiUserAccountCircleFill,
-  RiUserAdminFill,
+  RiDeviceServerLine,
+  RiUserAdminLine,
 } from "solid-icons/ri";
 import { styled } from "@macaron-css/solid";
 import { CSSProperties, style } from "@macaron-css/core";
 
-import { ADMIN_PANEL_URL, nameToInitials } from "~/data/utils";
+import { ADMIN_PANEL_URL, initialFromName } from "~/data/utils";
 import { PbStationApiProvider, usePb, usePbUser } from "~/data/pb";
 import { minScreen, theme } from "~/ui/theme";
+import { Menu, menuChildClass } from "~/ui/Menu";
 
 const Root = styled("div", {
   base: {
+    minWidth: "200px",
     display: "flex",
     flexDirection: "column",
     height: "100%",
@@ -31,6 +31,7 @@ const Root = styled("div", {
 
 const Header = styled("div", {
   base: {
+    overflow: "auto",
     display: "flex",
     height: theme.space[11],
     gap: theme.space[2],
@@ -43,9 +44,15 @@ const Header = styled("div", {
 
 const HeaderText = styled("div", {
   base: {
+    display: "flex",
+    alignItems: "center",
     overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+  },
+});
+
+const HeaderTextContent = styled("div", {
+  base: {
+    ...utility.textLine(),
     fontSize: "x-large",
   },
 });
@@ -106,7 +113,6 @@ const ContentBody = styled("div", {
     width: "100%",
     height: "100%",
     overflow: "auto",
-    padding: theme.space[4],
   },
 });
 
@@ -115,7 +121,7 @@ const chipClass = style({
   alignItems: "center",
   justifyContent: "center",
   color: theme.color.Text,
-  ":active": {
+  ":hover": {
     color: theme.color.Mauve,
     borderColor: theme.color.Mauve,
     fill: theme.color.Mauve,
@@ -150,17 +156,16 @@ const avatarClass = style({
   userSelect: "none",
 });
 
-import Dropdown, { DropdownButton, DropdownContent } from "~/ui/Dropdown";
-import ThemeSwitcher from "~/ui/ThemeSwitcher";
-import Button from "~/ui/Button";
-import { Row, Stack } from "~/ui/utility";
+import { Dropdown, DropdownSummary, DropdownContent } from "~/ui/Dropdown";
+import { ThemeSwitcher, ThemeSwitcherIcon } from "~/ui/ThemeSwitcher";
 
-import Home from "~/pages/Home";
-import Profile from "~/pages/Profile";
-import Stations from "~/pages/Stations";
-import StationsShow from "~/pages/Stations/Show";
+import { Home } from "~/pages/Home";
+import { Profile } from "~/pages/Profile";
+import { Stations } from "~/pages/Stations";
+import { Station } from "~/pages/Station";
+import { utility } from "~/ui/utility";
 
-const Application: Component = () => {
+export const Application: Component = () => {
   const pb = usePb();
   const navigate = useNavigate();
 
@@ -173,9 +178,13 @@ const Application: Component = () => {
     <Root>
       <div>
         <Header>
-          <HeaderText>IPCManView</HeaderText>
+          <HeaderText>
+            <HeaderTextContent>IPCManView</HeaderTextContent>
+          </HeaderText>
           <HeaderEnd>
-            <ThemeSwitcher class={chipClass} iconClass={iconClass} />
+            <ThemeSwitcher class={chipClass}>
+              <ThemeSwitcherIcon class={iconClass} />
+            </ThemeSwitcher>
             <Dropdown>
               {(props) => {
                 const { user } = usePbUser();
@@ -185,29 +194,28 @@ const Application: Component = () => {
 
                 return (
                   <>
-                    <DropdownButton
+                    <DropdownSummary
                       class={chipClass}
                       classList={{ [activeChipClass]: active() }}
+                      title="User"
                     >
                       <div class={avatarClass}>
-                        {nameToInitials(user().name)}
+                        {initialFromName(user().name)}
                       </div>
-                    </DropdownButton>
-                    <DropdownContent position="end">
-                      <Stack gap={1}>
-                        <A href="/profile" onclick={props.close}>
-                          <Row gap={1}>
-                            <RiUserAccountCircleFill />
-                            Profile
-                          </Row>
+                    </DropdownSummary>
+                    <DropdownContent end={true}>
+                      <Menu>
+                        <A
+                          href="/profile"
+                          onclick={props.close}
+                          class={menuChildClass}
+                        >
+                          Profile
                         </A>
-                        <Button onClick={logout} size="small" color="danger">
-                          <Row gap={1}>
-                            <RiSystemLogoutBoxRLine />
-                            Logout
-                          </Row>
-                        </Button>
-                      </Stack>
+                        <button onClick={logout} class={menuChildClass}>
+                          Log out
+                        </button>
+                      </Menu>
                     </DropdownContent>
                   </>
                 );
@@ -235,11 +243,11 @@ const Application: Component = () => {
                 class={chipClass}
                 activeClass={activeChipClass}
               >
-                <RiDesignFocus2Line class={iconClass} />
+                <RiDeviceServerLine class={iconClass} />
               </A>
             </ContentNavStart>
             <a href={ADMIN_PANEL_URL} title="Admin Panel" class={chipClass}>
-              <RiUserAdminFill class={iconClass} />
+              <RiUserAdminLine class={iconClass} />
             </a>
           </ContentNav>
         </div>
@@ -249,12 +257,13 @@ const Application: Component = () => {
             <Route path="/profile" component={Profile} />
             <Route path="/stations" component={Stations} />
             <Route
-              path="/stations/:stationId"
+              path="/stations/:stationId/*"
               component={() => {
                 const { stationId } = useParams<{ stationId: string }>();
+
                 return (
                   <PbStationApiProvider stationId={stationId}>
-                    <StationsShow />
+                    <Station />
                   </PbStationApiProvider>
                 );
               }}
@@ -265,5 +274,3 @@ const Application: Component = () => {
     </Root>
   );
 };
-
-export default Application;

@@ -5,23 +5,16 @@ import { createMutation } from "@tanstack/solid-query";
 import { styled } from "@macaron-css/solid";
 import { style } from "@macaron-css/core";
 
-import Button from "~/ui/Button";
-import ErrorText from "~/ui/ErrorText";
-import InputText from "~/ui/InputText";
+import { Button } from "~/ui/Button";
+import { ErrorText } from "~/ui/ErrorText";
+import { InputText } from "~/ui/InputText";
 import { ADMIN_PANEL_URL, createMutationForm } from "~/data/utils";
-import { Card, CardBody, CardHeader } from "~/ui/Card";
+import { Card, CardBody, CardHeader, CardHeaderTitle } from "~/ui/Card";
 import { LayoutCenter } from "~/ui/Layouts";
 import { usePb } from "~/data/pb";
-import { Stack, utility } from "~/ui/utility";
-import ThemeSwitcher from "~/ui/ThemeSwitcher";
+import { ThemeSwitcher, ThemeSwitcherIcon } from "~/ui/ThemeSwitcher";
 import { theme } from "~/ui/theme";
-
-const Title = styled("div", {
-  base: {
-    fontWeight: "bold",
-    fontSize: "x-large",
-  },
-});
+import { utility } from "~/ui/utility";
 
 const Center = styled("div", {
   base: {
@@ -37,14 +30,25 @@ const Right = styled("div", {
   },
 });
 
-const themeSwitcherClass = style({
-  ":active": {
-    opacity: theme.opacity.active,
+const Title = styled("div", {
+  base: {
+    ...utility.textLine(),
   },
 });
 
-const iconClass = style({
-  ...utility.icon(),
+const Stack = styled("div", {
+  base: {
+    ...utility.stack("4"),
+  },
+});
+
+const themeSwitcherClass = style({
+  display: "flex",
+  alignItems: "center",
+  borderRadius: theme.borderRadius,
+  ":hover": {
+    backgroundColor: theme.color.Surface2,
+  },
 });
 
 type LoginMutation = {
@@ -60,23 +64,24 @@ const useLoginMutation = (pb: PocketBase) =>
         .authWithPassword(data.usernameOrEmail, data.password),
   });
 
-const Login: Component = () => {
+export const Login: Component = () => {
   const [form, { Form, Field }] = createForm<LoginMutation, ResponseData>({});
   const [formSubmit, formErrors] = createMutationForm(
-    useLoginMutation(usePb()),
-    form
+    useLoginMutation(usePb())
   );
 
   return (
     <LayoutCenter>
       <Card>
         <CardHeader>
-          <Title>IPCManView</Title>
-          <ThemeSwitcher class={themeSwitcherClass} iconClass={iconClass} />
+          <CardHeaderTitle>IPCManView</CardHeaderTitle>
+          <ThemeSwitcher class={themeSwitcherClass}>
+            <ThemeSwitcherIcon class={style({ ...utility.size("6") })} />
+          </ThemeSwitcher>
         </CardHeader>
         <CardBody>
           <Form onSubmit={formSubmit}>
-            <Stack gap={4}>
+            <Stack>
               <Field
                 name="usernameOrEmail"
                 validate={[required("Please enter your username or email.")]}
@@ -130,5 +135,3 @@ const Login: Component = () => {
     </LayoutCenter>
   );
 };
-
-export default Login;

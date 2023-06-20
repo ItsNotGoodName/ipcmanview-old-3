@@ -1,12 +1,9 @@
+import { FieldValues, FormError, FormErrors } from "@modular-forms/solid";
 import {
-  FieldValues,
-  FormError,
-  FormErrors,
-  FormStore,
-  reset,
-  ResponseData,
-} from "@modular-forms/solid";
-import { CreateMutationResult, CreateQueryResult } from "@tanstack/solid-query";
+  CreateMutationResult,
+  CreateQueryResult,
+  MutateOptions,
+} from "@tanstack/solid-query";
 import { ClientResponseError } from "pocketbase";
 import { Accessor, createMemo } from "solid-js";
 
@@ -15,7 +12,7 @@ export function formatDateTime(date: Date | string): string {
   return d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }
 
-export function nameToInitials(name: string): string {
+export function initialFromName(name: string): string {
   const words = name.split(" ");
   if (words.length < 1) return "?";
 
@@ -53,7 +50,7 @@ export function createMutationForm<
     ClientResponseError,
     TVariables
   >,
-  formStore: FormStore<TFieldValues, ResponseData>
+  mutateOptions?: MutateOptions<unknown, ClientResponseError, TVariables>
 ): [
   (data: TVariables) => Promise<unknown>,
   Accessor<FormError<TFieldValues> | null>
@@ -61,11 +58,7 @@ export function createMutationForm<
   return [
     async (d) => {
       try {
-        return await mutationResult.mutateAsync(d, {
-          onSuccess: () => {
-            reset(formStore);
-          },
-        });
+        return await mutationResult.mutateAsync(d, mutateOptions);
       } catch (e) {
         console.log(e);
       }

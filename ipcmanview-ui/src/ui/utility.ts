@@ -1,5 +1,4 @@
 import { CSSProperties, keyframes } from "@macaron-css/core";
-import { styled } from "@macaron-css/solid";
 
 import { theme } from "./theme";
 
@@ -21,51 +20,33 @@ export const utility = {
     boxShadow: `0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`,
   } as CSSProperties,
 
-  icon(space?: keyof typeof theme["space"]) {
-    space = space ?? "6";
+  textLine(): CSSProperties {
     return {
-      height: theme.space[space],
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    };
+  },
+
+  stack(space: keyof typeof theme["space"]): CSSProperties {
+    return {
+      display: "flex",
+      flexDirection: "column",
+      gap: theme.space[space],
+    };
+  },
+
+  row(space: keyof typeof theme["space"]): CSSProperties {
+    return {
+      display: "flex",
+      gap: theme.space[space],
+    };
+  },
+
+  size(space: keyof typeof theme["space"]): CSSProperties {
+    return {
       width: theme.space[space],
-    } as CSSProperties;
+      height: theme.space[space],
+    };
   },
 };
-
-export const Row = styled("div", {
-  base: {
-    display: "flex",
-    alignItems: "center",
-  },
-  variants: {
-    gap: {
-      1: {
-        gap: theme.space[1],
-      },
-      2: {
-        gap: theme.space[2],
-      },
-      4: {
-        gap: theme.space[4],
-      },
-    },
-  },
-});
-
-export const Stack = styled("div", {
-  base: {
-    display: "flex",
-    flexDirection: "column",
-  },
-  variants: {
-    gap: {
-      1: {
-        gap: theme.space[1],
-      },
-      2: {
-        gap: theme.space[2],
-      },
-      4: {
-        gap: theme.space[4],
-      },
-    },
-  },
-});

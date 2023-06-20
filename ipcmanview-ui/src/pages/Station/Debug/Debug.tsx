@@ -36,11 +36,12 @@ import {
   HookFileFilter,
   HookFileQuery,
 } from "~/data/station/hooks";
-import ErrorText from "~/ui/ErrorText";
+import { ErrorText } from "~/ui/ErrorText";
 import { createPaging, formatDateTime } from "~/data/utils";
-import Button from "~/ui/Button";
+import { Button } from "~/ui/Button";
 import { Card, CardBody, CardHeader } from "~/ui/Card";
 import { useStationApi } from "~/data/station";
+import { LayoutDefault } from "~/ui/Layouts";
 
 const FilesViewer: Component = () => {
   const [filter, setFilter] = createSignal<HookFileFilter>({});
@@ -104,218 +105,222 @@ const FilesViewer: Component = () => {
   const cameras = useCameras(api);
 
   return (
-    <div class="flex flex-col gap-4 2xl:flex-row">
-      <div class="flex-1">
-        <Card>
-          <div class="flex h-96 justify-center lg:h-[calc(80vh)]">
-            <img
-              ref={image!}
-              onLoad={() => {
-                setImageLoading(false);
-              }}
-              class="h-full object-scale-down"
-              classList={{ blur: imageLoading() }}
-              src={selectedUrl()}
-            />
-          </div>
-        </Card>
-      </div>
-      <div class="flex flex-col gap-4 md:flex-row">
-        <div class="flex flex-1 flex-col gap-4 2xl:w-64">
-          <div class="join flex shadow">
-            <div class="join-item tooltip tooltip-bottom" data-tip="First">
-              <Button
-                disabled={!(query().after || query().before)}
-                loading={files.isLoading}
-                onClick={() => {
-                  setQuery({
-                    ...query(),
-                    before: undefined,
-                    after: undefined,
-                  });
-                }}
-              >
-                ««
-              </Button>
-            </div>
-            <div class="join-item tooltip tooltip-bottom" data-tip="Previous">
-              <Button
-                disabled={!files.data?.has_before}
-                loading={files.isLoading}
-                onClick={() => {
-                  setQuery({
-                    ...query(),
-                    before: files.data?.before,
-                    after: undefined,
-                  });
-                }}
-              >
-                «
-              </Button>
-            </div>
-            <div
-              class="join-item tooltip tooltip-bottom flex-1"
-              data-tip="Total Files"
-            >
-              <Button class="w-full">
-                <Switch>
-                  <Match when={filesTotal.isLoading}>
-                    <div class="loading" />
-                  </Match>
-                  <Match when={filesTotal.isError}>
-                    <RiSystemAlertFill class="h-6 w-6 fill-error" />
-                  </Match>
-                  <Match when={filesTotal.data}>{filesTotal.data?.total}</Match>
-                </Switch>
-              </Button>
-            </div>
-            <div class="join-item tooltip tooltip-bottom" data-tip="Next">
-              <Button
-                disabled={!files.data?.has_after}
-                loading={files.isLoading}
-                onClick={() => {
-                  setQuery({
-                    ...query(),
-                    after: files.data?.after,
-                    before: undefined,
-                  });
-                }}
-              >
-                »
-              </Button>
-            </div>
-          </div>
+    <LayoutDefault>
+      <div class="flex flex-col gap-4 2xl:flex-row">
+        <div class="flex-1">
           <Card>
-            <CardHeader
-              right={<div class="inline-flex items-center">{estimate()}</div>}
-            >
-              Files
-            </CardHeader>
-            <ul class="menu menu-sm overflow-x-auto bg-base-200">
-              <Show when={files.data}>
-                <For each={files.data!.files}>
-                  {(file) => (
-                    <li>
-                      <div
-                        class="flex justify-between"
-                        classList={{ active: file.id == selectedFileId() }}
-                        onClick={[setSelectedFileId, file.id]}
-                      >
-                        <div>{formatDateTime(file.start_time)}</div>
-                        <div class="flex items-center">
-                          <Switch>
-                            <Match when={file.kind == "jpg"}>
-                              <RiMediaImageFill class="fill-success" />
-                            </Match>
-                            <Match when={file.kind == "dav"}>
-                              <RiMediaVideoFill class="fill-error" />
-                            </Match>
-                          </Switch>
-                        </div>
-                      </div>
-                    </li>
-                  )}
-                </For>
-              </Show>
-            </ul>
+            <div class="flex h-96 justify-center lg:h-[calc(80vh)]">
+              <img
+                ref={image!}
+                onLoad={() => {
+                  setImageLoading(false);
+                }}
+                class="h-full object-scale-down"
+                classList={{ blur: imageLoading() }}
+                src={selectedUrl()}
+              />
+            </div>
           </Card>
         </div>
-        <div class="flex flex-1 flex-col gap-4 2xl:w-64">
-          <Card>
-            <CardHeader>Files Filter</CardHeader>
-            <CardBody>
-              <div class="flex flex-col gap-2">
-                <div class="form-control">
-                  <label class="label">
-                    <span class="label-text">Start Time</span>
-                  </label>
-                  <input
-                    class="input-bordered input input-sm"
-                    onChange={(e) => {
-                      let date: Date = new Date(e.currentTarget.value);
-                      if (isNaN(date.getTime())) {
-                        return;
-                      }
-                      setFilter({
-                        ...filter(),
-                        start: date,
-                      });
-                    }}
-                    type="datetime-local"
-                  />
-                </div>
-                <div class="form-control">
-                  <label class="label">
-                    <span class="label-text">End Time</span>
-                  </label>
-                  <input
-                    class="input-bordered input input-sm"
-                    onChange={(e) => {
-                      let date: Date = new Date(e.currentTarget.value);
-                      if (isNaN(date.getTime())) {
-                        return;
-                      }
-                      setFilter({
-                        ...filter(),
-                        end: date,
-                      });
-                    }}
-                    type="datetime-local"
-                  />
-                </div>
-                <div class="form-control">
-                  <label class="label">
-                    <span class="label-text">Kind</span>
-                  </label>
-                  <select
-                    multiple
-                    class="select-bordered select select-sm"
-                    onChange={(e) => {
-                      const kinds = [];
-                      for (const i of e.target.selectedOptions) {
-                        kinds.push(i.value);
-                      }
-                      setFilter({ ...filter(), kinds: kinds });
-                    }}
-                  >
-                    <option value="jpg">jpg</option>
-                    <option value="dav">dav</option>
-                  </select>
-                </div>
-                <div class="form-control">
-                  <label class="label">
-                    <span class="label-text">Cameras</span>
-                  </label>
-                  <select
-                    multiple
-                    class="select-bordered select select-sm"
-                    onChange={(e) => {
-                      const ids = [];
-                      for (const i of e.target.selectedOptions) {
-                        ids.push(parseInt(i.value));
-                      }
-                      setFilter({ ...filter(), camera_ids: ids });
-                    }}
-                  >
-                    <Show when={cameras.data}>
-                      <For each={cameras.data!}>
-                        {(camera) => (
-                          <option value={camera.id}>{camera.ip}</option>
-                        )}
-                      </For>
-                    </Show>
-                  </select>
-                </div>
+        <div class="flex flex-col gap-4 md:flex-row">
+          <div class="flex flex-1 flex-col gap-4 2xl:w-64">
+            <div class="join flex shadow">
+              <div class="join-item tooltip tooltip-bottom" data-tip="First">
+                <Button
+                  disabled={!(query().after || query().before)}
+                  loading={files.isLoading}
+                  onClick={() => {
+                    setQuery({
+                      ...query(),
+                      before: undefined,
+                      after: undefined,
+                    });
+                  }}
+                >
+                  ««
+                </Button>
               </div>
-            </CardBody>
-          </Card>
+              <div class="join-item tooltip tooltip-bottom" data-tip="Previous">
+                <Button
+                  disabled={!files.data?.has_before}
+                  loading={files.isLoading}
+                  onClick={() => {
+                    setQuery({
+                      ...query(),
+                      before: files.data?.before,
+                      after: undefined,
+                    });
+                  }}
+                >
+                  «
+                </Button>
+              </div>
+              <div
+                class="join-item tooltip tooltip-bottom flex-1"
+                data-tip="Total Files"
+              >
+                <Button class="w-full">
+                  <Switch>
+                    <Match when={filesTotal.isLoading}>
+                      <div class="loading" />
+                    </Match>
+                    <Match when={filesTotal.isError}>
+                      <RiSystemAlertFill class="h-6 w-6 fill-error" />
+                    </Match>
+                    <Match when={filesTotal.data}>
+                      {filesTotal.data?.total}
+                    </Match>
+                  </Switch>
+                </Button>
+              </div>
+              <div class="join-item tooltip tooltip-bottom" data-tip="Next">
+                <Button
+                  disabled={!files.data?.has_after}
+                  loading={files.isLoading}
+                  onClick={() => {
+                    setQuery({
+                      ...query(),
+                      after: files.data?.after,
+                      before: undefined,
+                    });
+                  }}
+                >
+                  »
+                </Button>
+              </div>
+            </div>
+            <Card>
+              <CardHeader
+                right={<div class="inline-flex items-center">{estimate()}</div>}
+              >
+                Files
+              </CardHeader>
+              <ul class="menu menu-sm overflow-x-auto bg-base-200">
+                <Show when={files.data}>
+                  <For each={files.data!.files}>
+                    {(file) => (
+                      <li>
+                        <div
+                          class="flex justify-between"
+                          classList={{ active: file.id == selectedFileId() }}
+                          onClick={[setSelectedFileId, file.id]}
+                        >
+                          <div>{formatDateTime(file.start_time)}</div>
+                          <div class="flex items-center">
+                            <Switch>
+                              <Match when={file.kind == "jpg"}>
+                                <RiMediaImageFill class="fill-success" />
+                              </Match>
+                              <Match when={file.kind == "dav"}>
+                                <RiMediaVideoFill class="fill-error" />
+                              </Match>
+                            </Switch>
+                          </div>
+                        </div>
+                      </li>
+                    )}
+                  </For>
+                </Show>
+              </ul>
+            </Card>
+          </div>
+          <div class="flex flex-1 flex-col gap-4 2xl:w-64">
+            <Card>
+              <CardHeader>Files Filter</CardHeader>
+              <CardBody>
+                <div class="flex flex-col gap-2">
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Start Time</span>
+                    </label>
+                    <input
+                      class="input-bordered input input-sm"
+                      onChange={(e) => {
+                        let date: Date = new Date(e.currentTarget.value);
+                        if (isNaN(date.getTime())) {
+                          return;
+                        }
+                        setFilter({
+                          ...filter(),
+                          start: date,
+                        });
+                      }}
+                      type="datetime-local"
+                    />
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">End Time</span>
+                    </label>
+                    <input
+                      class="input-bordered input input-sm"
+                      onChange={(e) => {
+                        let date: Date = new Date(e.currentTarget.value);
+                        if (isNaN(date.getTime())) {
+                          return;
+                        }
+                        setFilter({
+                          ...filter(),
+                          end: date,
+                        });
+                      }}
+                      type="datetime-local"
+                    />
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Kind</span>
+                    </label>
+                    <select
+                      multiple
+                      class="select-bordered select select-sm"
+                      onChange={(e) => {
+                        const kinds = [];
+                        for (const i of e.target.selectedOptions) {
+                          kinds.push(i.value);
+                        }
+                        setFilter({ ...filter(), kinds: kinds });
+                      }}
+                    >
+                      <option value="jpg">jpg</option>
+                      <option value="dav">dav</option>
+                    </select>
+                  </div>
+                  <div class="form-control">
+                    <label class="label">
+                      <span class="label-text">Cameras</span>
+                    </label>
+                    <select
+                      multiple
+                      class="select-bordered select select-sm"
+                      onChange={(e) => {
+                        const ids = [];
+                        for (const i of e.target.selectedOptions) {
+                          ids.push(parseInt(i.value));
+                        }
+                        setFilter({ ...filter(), camera_ids: ids });
+                      }}
+                    >
+                      <Show when={cameras.data}>
+                        <For each={cameras.data!}>
+                          {(camera) => (
+                            <option value={camera.id}>{camera.ip}</option>
+                          )}
+                        </For>
+                      </Show>
+                    </select>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+          </div>
         </div>
       </div>
-    </div>
+    </LayoutDefault>
   );
 };
 
-const StationShow: Component = () => {
+export const StationDebug: Component = () => {
   const api = useStationApi();
 
   const cameras = useCameras(api);
@@ -418,6 +423,7 @@ const StationShow: Component = () => {
                       class="w-full"
                       loading={deleteCamera.isLoading}
                       onClick={() => deleteCamera.mutate(cameraId())}
+                      color="danger"
                     >
                       Delete Camera
                     </Button>
@@ -485,5 +491,3 @@ const JsonCard: ParentComponent<{
     </div>
   </Card>
 );
-
-export default StationShow;

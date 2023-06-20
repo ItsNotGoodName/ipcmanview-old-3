@@ -2,6 +2,7 @@ import { styled } from "@macaron-css/solid";
 import { ParentComponent } from "solid-js";
 
 import { theme } from "./theme";
+import { utility } from "./utility";
 
 const Center = styled("div", {
   base: {
@@ -13,10 +14,8 @@ const Center = styled("div", {
 
 const CenterChild = styled("div", {
   base: {
+    ...utility.stack("4"),
     flex: "1",
-    display: "flex",
-    flexDirection: "column",
-    gap: theme.space[4],
     maxWidth: theme.space[96],
   },
 });
@@ -26,3 +25,9 @@ export const LayoutCenter: ParentComponent = (props) => (
     <CenterChild>{props.children}</CenterChild>
   </Center>
 );
+
+export const LayoutDefault = styled("div", {
+  base: {
+    padding: theme.space[4],
+  },
+});

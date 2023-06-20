@@ -17,7 +17,7 @@ import {
   useContext,
 } from "solid-js";
 
-import { PbAuth, UserRecord } from "./records";
+import { PbAuth, StationRecord, UserRecord } from "./records";
 import { StationApi, StationContext, StationContextType } from "~/data/station";
 
 const STATIONS_URI = "/app/stations";
@@ -177,9 +177,14 @@ export const PbStationApiProvider: ParentComponent<PbStationApiContextProps> = (
   props
 ) => {
   const pb = usePb();
+  const station = createQuery(
+    () => ["stations", props.stationId],
+    () => pb.collection("stations").getOne<StationRecord>(props.stationId)
+  );
 
   const store: StationContextType = {
     api: new PbStationApi(pb, () => props.stationId),
+    station,
   };
 
   return (

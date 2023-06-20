@@ -9,7 +9,7 @@
  * ---------------------------------------------------------------
  */
 
-export interface Camera {
+export type Camera = {
   /** @format date-time */
   created_at: Date | string;
   /** @format int64 */
@@ -20,7 +20,7 @@ export interface Camera {
   username: string;
 }
 
-export interface CameraDetail {
+export type CameraDetail = {
   device_class: string;
   device_type: string;
   hardware_version: string;
@@ -30,7 +30,7 @@ export interface CameraDetail {
   vendor: string;
 }
 
-export interface CameraFile {
+export type CameraFile = {
   /** @format int64 */
   camera_id: number;
   /** @format date-time */
@@ -48,7 +48,7 @@ export interface CameraFile {
   updated_at: Date | string;
 }
 
-export interface CameraFileQuery {
+export type CameraFileQuery = {
   after?: string | null;
   before?: string | null;
   camera_ids?: number[];
@@ -62,7 +62,7 @@ export interface CameraFileQuery {
   start?: Date | string | null;
 }
 
-export interface CameraFileQueryResult {
+export type CameraFileQueryResult = {
   after: string;
   before: string;
   /** @format int32 */
@@ -72,7 +72,7 @@ export interface CameraFileQueryResult {
   has_before: boolean;
 }
 
-export interface CameraFileTotalQuery {
+export type CameraFileTotalQuery = {
   camera_ids?: number[];
   /** @format date-time */
   end?: Date | string | null;
@@ -82,7 +82,7 @@ export interface CameraFileTotalQuery {
   start?: Date | string | null;
 }
 
-export interface CameraLicense {
+export type CameraLicense = {
   abroad_info: string;
   all_type: boolean;
   /**
@@ -111,7 +111,7 @@ export interface CameraLicense {
   username: string;
 }
 
-export interface CameraShow {
+export type CameraShow = {
   /** @format date-time */
   created_at: Date | string;
   detail: CameraDetail;
@@ -127,7 +127,7 @@ export interface CameraShow {
   username: string;
 }
 
-export interface CameraSoftware {
+export type CameraSoftware = {
   build: string;
   build_date: string;
   security_base_line_version: string;
@@ -135,27 +135,27 @@ export interface CameraSoftware {
   web_version: string;
 }
 
-export interface CreateCameraRequest {
+export type CreateCameraRequest = {
   ip: string;
   password: string;
   username: string;
 }
 
-export interface DateTimeRange {
+export type DateTimeRange = {
   /** @format date-time */
   end: Date | string;
   /** @format date-time */
   start: Date | string;
 }
 
-export interface PageQuery {
+export type PageQuery = {
   /** @format int32 */
   page?: number;
   /** @format int32 */
   per_page?: number;
 }
 
-export interface ScanActive {
+export type ScanActive = {
   /** @format int64 */
   camera_id: number;
   /** @format int64 */
@@ -175,7 +175,7 @@ export interface ScanActive {
   upserted: number;
 }
 
-export interface ScanCompleted {
+export type ScanCompleted = {
   /** @format int64 */
   camera_id: number;
   can_retry: boolean;
@@ -203,7 +203,7 @@ export interface ScanCompleted {
   upserted: number;
 }
 
-export interface ScanCompletedPageResult {
+export type ScanCompletedPageResult = {
   items: ScanCompleted[];
   /** @format int32 */
   page: number;
@@ -215,7 +215,7 @@ export interface ScanCompletedPageResult {
   total_pages: number;
 }
 
-export interface ScanPending {
+export type ScanPending = {
   /** @format int64 */
   camera_id: number;
   /** @format int64 */
@@ -227,12 +227,12 @@ export interface ScanPending {
   range_start: Date | string;
 }
 
-export interface TotalQueryResult {
+export type TotalQueryResult = {
   /** @format int32 */
   total: number;
 }
 
-export interface UpdateCameraRequest {
+export type UpdateCameraRequest = {
   /** @format int64 */
   id: number;
   ip?: string | null;
