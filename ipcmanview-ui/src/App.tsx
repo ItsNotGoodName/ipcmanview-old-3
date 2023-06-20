@@ -22,7 +22,6 @@ const Root = styled("div", {
     background: theme.color.Base,
     color: theme.color.Text,
     position: "fixed",
-    overflowY: "auto",
     inset: 0,
   },
 });

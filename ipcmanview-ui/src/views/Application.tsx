@@ -22,7 +22,6 @@ import { Menu, menuChildClass } from "~/ui/Menu";
 
 const Root = styled("div", {
   base: {
-    minWidth: "200px",
     display: "flex",
     flexDirection: "column",
     height: "100%",
