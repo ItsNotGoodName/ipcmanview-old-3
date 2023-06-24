@@ -8,9 +8,11 @@ import { utility } from "~/ui/utility";
 
 const TheDrawer = styled("div", {});
 
-const TheDrawerButton = styled("div", {
+const TheDrawerButton = styled("button", {
   base: {
     ...utility.shadowXl,
+    color: theme.color.Text,
+    cursor: "pointer",
     display: "flex",
     alignContent: "center",
     margin: theme.space[2],
@@ -55,8 +57,10 @@ const RelativePositioner = styled("div", {
         position: "absolute",
         width: theme.space[0],
         paddingRight: theme.space[4],
+        cursor: "pointer",
         selectors: {
           [`${TheDrawer}[data-open] &`]: {
+            cursor: "unset",
             width: theme.space[40],
             paddingRight: theme.space[0],
           },
