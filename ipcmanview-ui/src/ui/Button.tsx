@@ -4,8 +4,6 @@ import { theme } from "./theme";
 
 export const Button = styled("button", {
   base: {
-    whiteSpace: "nowrap",
-    overflow: "hidden",
     appearance: "none",
     border: "none",
     borderRadius: theme.borderRadius,

@@ -60,8 +60,8 @@ export const Dropdown: Component<DropdownProps> = (props) => {
 
 export const DropdownSummary = styled("summary", {
   base: {
+    height: "100%",
     cursor: "pointer",
-    overflow: "hidden",
     selectors: {
       ["&::marker"]: {
         content: "",
@@ -72,11 +72,9 @@ export const DropdownSummary = styled("summary", {
 
 export const DropdownButton = styled("summary", {
   base: {
-    whiteSpace: "nowrap",
-    overflow: "hidden",
+    height: "100%",
     borderRadius: theme.borderRadius,
     cursor: "pointer",
-    userSelect: "none",
     selectors: {
       ["&::marker"]: {
         content: "",
