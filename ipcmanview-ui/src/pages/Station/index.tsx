@@ -43,7 +43,7 @@ const activeLinkClass = style({
   color: theme.color.Mantle,
   background: theme.color.Mauve,
   ":hover": {
-    background: theme.color.Mauve,
+    background: theme.color.Mauve2,
   },
 });
 
