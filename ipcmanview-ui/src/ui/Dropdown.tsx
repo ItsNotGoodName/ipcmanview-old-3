@@ -73,6 +73,7 @@ export const DropdownSummary = styled("summary", {
 export const DropdownButton = styled("summary", {
   base: {
     height: "100%",
+    whiteSpace: "nowrap",
     borderRadius: theme.borderRadius,
     cursor: "pointer",
     selectors: {

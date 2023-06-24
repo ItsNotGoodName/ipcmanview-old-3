@@ -5,6 +5,7 @@ import { theme } from "./theme";
 export const Button = styled("button", {
   base: {
     appearance: "none",
+    whiteSpace: "nowrap",
     border: "none",
     borderRadius: theme.borderRadius,
     cursor: "pointer",
