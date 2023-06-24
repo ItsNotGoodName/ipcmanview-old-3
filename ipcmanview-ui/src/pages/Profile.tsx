@@ -168,7 +168,6 @@ const ProfileFormCard: Component = () => {
                 {...props}
                 label="New name"
                 placeholder="New name"
-                disabled={form.submitting}
                 value={field.value || ""}
                 error={field.error || formErrors()?.errors.name}
               />
@@ -181,7 +180,6 @@ const ProfileFormCard: Component = () => {
                 {...props}
                 label="New username"
                 placeholder="New username"
-                disabled={form.submitting}
                 value={field.value || ""}
                 error={field.error || formErrors()?.errors.username}
               />
@@ -228,7 +226,6 @@ const PasswordFormCard: Component = () => {
                 type="password"
                 placeholder="Old password"
                 autocomplete="current-password"
-                disabled={form.submitting}
                 value={field.value || ""}
                 error={field.error || formErrors()?.errors.oldPassword}
               />
@@ -243,7 +240,6 @@ const PasswordFormCard: Component = () => {
                 type="password"
                 placeholder="New password"
                 autocomplete="new-password"
-                disabled={form.submitting}
                 value={field.value || ""}
                 error={field.error || formErrors()?.errors.password}
               />
@@ -258,7 +254,6 @@ const PasswordFormCard: Component = () => {
                 type="password"
                 placeholder="Confirm new password"
                 autocomplete="new-password"
-                disabled={form.submitting}
                 value={field.value || ""}
                 error={field.error || formErrors()?.errors.passwordConfirm}
               />
