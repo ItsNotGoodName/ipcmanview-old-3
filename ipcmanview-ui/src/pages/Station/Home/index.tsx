@@ -62,7 +62,6 @@ export const StationHome: Component = () => {
                     {...props}
                     label="IP"
                     placeholder="IP"
-                    disabled={form.submitting}
                     value={field.value || ""}
                     error={field.error || formErrors()?.errors.ip}
                   />
@@ -75,7 +74,6 @@ export const StationHome: Component = () => {
                     {...props}
                     label="Username"
                     placeholder="Username"
-                    disabled={form.submitting}
                     value={field.value || ""}
                     error={field.error || formErrors()?.errors.username}
                   />
@@ -89,7 +87,6 @@ export const StationHome: Component = () => {
                     type="password"
                     label="Password"
                     placeholder="Password"
-                    disabled={form.submitting}
                     value={field.value || ""}
                     error={field.error || formErrors()?.errors.password}
                   />
