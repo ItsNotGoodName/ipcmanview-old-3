@@ -30,25 +30,28 @@ const Content = styled("div", {
   },
 });
 
-const linkClass = style({
-  color: theme.color.Text,
+const inactiveLinkClass = style({
   borderRadius: theme.borderRadius,
   padding: theme.space[1],
+  color: theme.color.Text,
   ":hover": {
     background: theme.color.Surface2,
   },
 });
 
 const activeLinkClass = style({
+  borderRadius: theme.borderRadius,
+  padding: theme.space[1],
   color: theme.color.Mantle,
   background: theme.color.Mauve,
-  ":hover": {
-    background: theme.color.Mauve2,
-  },
 });
 
 const Link: Component<LinkProps> = (props) => (
-  <A {...props} class={linkClass} activeClass={activeLinkClass} />
+  <A
+    {...props}
+    inactiveClass={inactiveLinkClass}
+    activeClass={activeLinkClass}
+  />
 );
 
 const LinkTitle = styled("div", {
